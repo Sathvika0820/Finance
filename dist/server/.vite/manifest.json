@@ -1,0 +1,201 @@
+{
+  "%23tanstack-start-plugin-adapters": {
+    "file": "assets/__23tanstack-start-plugin-adapters-Cwee5PKy.js",
+    "name": "__23tanstack-start-plugin-adapters",
+    "src": "%23tanstack-start-plugin-adapters",
+    "isDynamicEntry": true
+  },
+  "C:/Users/Sri Mahi/OneDrive/Desktop/Mahi/OU/Finance-main/src/styles.css": {
+    "file": "assets/styles-C4ld-0wN.css",
+    "src": "C:/Users/Sri Mahi/OneDrive/Desktop/Mahi/OU/Finance-main/src/styles.css"
+  },
+  "_AppShell-DRDzLEVy.js": {
+    "file": "assets/AppShell-DRDzLEVy.js",
+    "name": "AppShell",
+    "imports": [
+      "_server-C_uSFjLe.js",
+      "_landmark-DIQBLidJ.js",
+      "_BottomNav-CKff3Ait.js"
+    ]
+  },
+  "_BankCard-BDDfEon9.js": {
+    "file": "assets/BankCard-BDDfEon9.js",
+    "name": "BankCard",
+    "imports": [
+      "_server-C_uSFjLe.js",
+      "_landmark-DIQBLidJ.js",
+      "_router-BZ6dAzIz.js",
+      "_BottomNav-CKff3Ait.js"
+    ]
+  },
+  "_BottomNav-CKff3Ait.js": {
+    "file": "assets/BottomNav-CKff3Ait.js",
+    "name": "BottomNav",
+    "imports": [
+      "_landmark-DIQBLidJ.js",
+      "_server-C_uSFjLe.js",
+      "_router-BZ6dAzIz.js"
+    ]
+  },
+  "_chevron-left-BE41Xhx1.js": {
+    "file": "assets/chevron-left-BE41Xhx1.js",
+    "name": "chevron-left",
+    "imports": [
+      "_landmark-DIQBLidJ.js"
+    ]
+  },
+  "_landmark-DIQBLidJ.js": {
+    "file": "assets/landmark-DIQBLidJ.js",
+    "name": "landmark",
+    "imports": [
+      "_server-C_uSFjLe.js"
+    ]
+  },
+  "_router-BZ6dAzIz.js": {
+    "file": "assets/router-BZ6dAzIz.js",
+    "name": "router",
+    "isDynamicEntry": true,
+    "imports": [
+      "_server-C_uSFjLe.js"
+    ],
+    "dynamicImports": [
+      "src/routes/favorites.tsx?tsr-split=component",
+      "src/routes/dashboard.tsx?tsr-split=component",
+      "src/routes/banks.tsx?tsr-split=component",
+      "src/routes/index.tsx?tsr-split=component",
+      "src/routes/banks.$bankId.tsx?tsr-split=component",
+      "src/routes/banks.$bankId.tsx?tsr-split=errorComponent",
+      "src/routes/banks.$bankId.tsx?tsr-split=notFoundComponent"
+    ],
+    "assets": [
+      "assets/styles-C4ld-0wN.css"
+    ]
+  },
+  "_server-C_uSFjLe.js": {
+    "file": "assets/server-C_uSFjLe.js",
+    "name": "server",
+    "isDynamicEntry": true,
+    "dynamicImports": [
+      "tanstack-start-manifest:v",
+      "_router-BZ6dAzIz.js",
+      "src/start.ts",
+      "%23tanstack-start-plugin-adapters"
+    ]
+  },
+  "_worker-entry-D8eceCaf.js": {
+    "file": "assets/worker-entry-D8eceCaf.js",
+    "name": "worker-entry",
+    "dynamicImports": [
+      "_server-C_uSFjLe.js"
+    ]
+  },
+  "src/routes/banks.$bankId.tsx?tsr-split=component": {
+    "file": "assets/banks._bankId-DpQjZevp.js",
+    "name": "banks._bankId",
+    "src": "src/routes/banks.$bankId.tsx?tsr-split=component",
+    "isDynamicEntry": true,
+    "imports": [
+      "_server-C_uSFjLe.js",
+      "_router-BZ6dAzIz.js",
+      "_landmark-DIQBLidJ.js",
+      "_BottomNav-CKff3Ait.js",
+      "_chevron-left-BE41Xhx1.js"
+    ]
+  },
+  "src/routes/banks.$bankId.tsx?tsr-split=errorComponent": {
+    "file": "assets/banks._bankId--XjIIXsD.js",
+    "name": "banks._bankId",
+    "src": "src/routes/banks.$bankId.tsx?tsr-split=errorComponent",
+    "isDynamicEntry": true,
+    "imports": [
+      "_server-C_uSFjLe.js"
+    ]
+  },
+  "src/routes/banks.$bankId.tsx?tsr-split=notFoundComponent": {
+    "file": "assets/banks._bankId-CxjGzdp1.js",
+    "name": "banks._bankId",
+    "src": "src/routes/banks.$bankId.tsx?tsr-split=notFoundComponent",
+    "isDynamicEntry": true,
+    "imports": [
+      "_server-C_uSFjLe.js",
+      "_router-BZ6dAzIz.js"
+    ]
+  },
+  "src/routes/banks.tsx?tsr-split=component": {
+    "file": "assets/banks-B8FnWyEf.js",
+    "name": "banks",
+    "src": "src/routes/banks.tsx?tsr-split=component",
+    "isDynamicEntry": true,
+    "imports": [
+      "_server-C_uSFjLe.js",
+      "_router-BZ6dAzIz.js",
+      "_landmark-DIQBLidJ.js",
+      "_BankCard-BDDfEon9.js",
+      "_AppShell-DRDzLEVy.js",
+      "_chevron-left-BE41Xhx1.js",
+      "_BottomNav-CKff3Ait.js"
+    ]
+  },
+  "src/routes/dashboard.tsx?tsr-split=component": {
+    "file": "assets/dashboard-DeNT1nuv.js",
+    "name": "dashboard",
+    "src": "src/routes/dashboard.tsx?tsr-split=component",
+    "isDynamicEntry": true,
+    "imports": [
+      "_server-C_uSFjLe.js",
+      "_router-BZ6dAzIz.js",
+      "_landmark-DIQBLidJ.js",
+      "_BankCard-BDDfEon9.js",
+      "_BottomNav-CKff3Ait.js",
+      "_AppShell-DRDzLEVy.js"
+    ]
+  },
+  "src/routes/favorites.tsx?tsr-split=component": {
+    "file": "assets/favorites-Dadha3NH.js",
+    "name": "favorites",
+    "src": "src/routes/favorites.tsx?tsr-split=component",
+    "isDynamicEntry": true,
+    "imports": [
+      "_server-C_uSFjLe.js",
+      "_router-BZ6dAzIz.js",
+      "_landmark-DIQBLidJ.js",
+      "_BottomNav-CKff3Ait.js",
+      "_AppShell-DRDzLEVy.js"
+    ]
+  },
+  "src/routes/index.tsx?tsr-split=component": {
+    "file": "assets/index-CXMGZW2E.js",
+    "name": "index",
+    "src": "src/routes/index.tsx?tsr-split=component",
+    "isDynamicEntry": true,
+    "imports": [
+      "_server-C_uSFjLe.js",
+      "_router-BZ6dAzIz.js",
+      "_landmark-DIQBLidJ.js"
+    ]
+  },
+  "src/start.ts": {
+    "file": "assets/start-0s63CNwI.js",
+    "name": "start",
+    "src": "src/start.ts",
+    "isDynamicEntry": true,
+    "imports": [
+      "_worker-entry-D8eceCaf.js"
+    ]
+  },
+  "tanstack-start-manifest:v": {
+    "file": "assets/_tanstack-start-manifest_v-Ck4iLVqd.js",
+    "name": "_tanstack-start-manifest_v",
+    "src": "tanstack-start-manifest:v",
+    "isDynamicEntry": true
+  },
+  "virtual:cloudflare/worker-entry": {
+    "file": "index.js",
+    "name": "index",
+    "src": "virtual:cloudflare/worker-entry",
+    "isEntry": true,
+    "imports": [
+      "_worker-entry-D8eceCaf.js"
+    ]
+  }
+}

@@ -1,0 +1,1 @@
+import{j as e}from"./index-DhmkQLbQ.js";const t=({error:n,reset:r})=>e.jsxs("div",{className:"min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center",children:[e.jsx("p",{children:n.message}),e.jsx("button",{onClick:r,className:"text-sm underline",children:"Try again"})]});export{t as errorComponent};

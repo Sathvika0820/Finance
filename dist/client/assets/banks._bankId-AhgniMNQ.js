@@ -1,0 +1,1 @@
+import{j as e,L as n}from"./index-DhmkQLbQ.js";const s=()=>e.jsxs("div",{className:"min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center",children:[e.jsx("h1",{className:"text-2xl font-bold",children:"Bank not found"}),e.jsx(n,{to:"/banks",className:"text-sm underline",children:"Back to all banks"})]});export{s as notFoundComponent};
