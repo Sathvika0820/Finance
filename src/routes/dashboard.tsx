@@ -130,7 +130,7 @@ function Dashboard() {
   );
   
   const popular = useMemo(
-    () => ["bob", "boi", "canara", "pnb", "union"].map((id) => BANKS.find((b) => b.id === id)!),
+    () => ["sbi", "hdfc", "icici", "axis", "pnb", "bob"].map((id) => BANKS.find((b) => b.id === id)!),
     []
   );
 
