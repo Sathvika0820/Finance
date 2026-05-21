@@ -40,11 +40,9 @@ export default defineConfig({
   vite: {
     resolve: {
       alias: {
-        // framer-motion's root package export points at a browser-only bundle
-        // that breaks server rendering. Use the SSR-safe CJS entry instead.
-        "framer-motion": isVercel
-          ? path.resolve(__dirname, "src/framer-motion-shim.ts")
-          : path.resolve(__dirname, "node_modules/framer-motion/dist/cjs/index.js"),
+        // framer-motion's package builds can break server rendering in this
+        // TanStack Start setup, so use the local SSR-safe motion shim.
+        "framer-motion": path.resolve(__dirname, "src/framer-motion-shim.ts"),
       },
     },
     ssr: {

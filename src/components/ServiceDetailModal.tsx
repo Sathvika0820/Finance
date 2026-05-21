@@ -1,0 +1,184 @@
+import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState } from "react";
+import { X, ExternalLink, Mail, CreditCard, Wallet, PiggyBank, Globe, MapPin, Shield, Activity, Home, HeartHandshake, Award } from "lucide-react";
+import { FinanceService, getServiceName, getServiceDescription } from "@/data/services";
+import { logoUrl } from "@/data/banks";
+import { openServiceAction } from "@/lib/serviceRedirect";
+
+const SERVICE_ICONS: Record<string, any> = {
+  Mail,
+  CreditCard,
+  Wallet,
+  PiggyBank,
+  Globe,
+  MapPin,
+  Shield,
+  Activity,
+  Home,
+  HeartHandshake,
+  Award
+};
+
+function isPostOfficeService(service: FinanceService) {
+  return service.category === "post_office" || service.category === "post_office_bank";
+}
+
+interface ServiceDetailModalProps {
+  service: FinanceService | null;
+  lang: string;
+  onClose: () => void;
+}
+
+const LOCALIZED: Record<string, {
+  trustNote: string;
+  categoryPostOffice: string;
+  categoryInsurance: string;
+  close: string;
+  officialActions: string;
+}> = {
+  english: {
+    trustNote: "Bank Hub redirects only to official service websites. No credentials are stored.",
+    categoryPostOffice: "Post Office",
+    categoryInsurance: "Insurance",
+    close: "Close",
+    officialActions: "Official Actions"
+  },
+  hindi: {
+    trustNote: "आपको केवल आधिकारिक सेवा वेबसाइटों पर भेजा जाएगा। Bank Hub कोई क्रेडेंशियल सेव नहीं करता।",
+    categoryPostOffice: "डाकघर",
+    categoryInsurance: "बीमा",
+    close: "बंद करें",
+    officialActions: "आधिकारिक सेवाएं"
+  },
+  telugu: {
+    trustNote: "మీరు అధికారిక సేవా వెబ్సైట్లకే పంపబడతారు. Bank Hub ఎలాంటి క్రెడెన్షియల్స్ను సేవ్ చేయదు.",
+    categoryPostOffice: "పోస్టాఫీస్",
+    categoryInsurance: "ఇన్సూరెన్స్",
+    close: "మూసివేయి",
+    officialActions: "అధికారిక సేవలు"
+  }
+};
+
+export function ServiceDetailModal({ service, lang, onClose }: ServiceDetailModalProps) {
+  const [logoErrored, setLogoErrored] = useState(false);
+
+  useEffect(() => {
+    setLogoErrored(false);
+    if (!service || typeof window === "undefined") return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [service, onClose]);
+
+  if (!service) return null;
+
+  const currentLang = lang === "hindi" || lang === "telugu" ? lang : "english";
+  const t = LOCALIZED[currentLang] || LOCALIZED.english;
+  
+  const serviceName = getServiceName(service, lang);
+  const serviceDescription = getServiceDescription(service, lang);
+  const Icon = SERVICE_ICONS[service.iconName] || Mail;
+  const categoryLabel = isPostOfficeService(service) ? t.categoryPostOffice : t.categoryInsurance;
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center px-0 sm:px-4">
+        {/* Backdrop */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="absolute inset-0 bg-black/40 backdrop-blur-[3px]"
+        />
+        
+        {/* Modal Sheet Container */}
+        <motion.div
+          initial={{ y: "100%", opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: "100%", opacity: 0 }}
+          transition={{ type: "spring", damping: 25, stiffness: 350 }}
+          className="relative w-full sm:max-w-md max-h-[85vh] overflow-y-auto bg-white rounded-t-[28px] sm:rounded-[24px] shadow-2xl border border-border/65 p-5 pb-6 flex flex-col no-scrollbar"
+          role="dialog"
+          aria-modal="true"
+          aria-label={serviceName}
+        >
+          {/* Top handle bar for mobile sheets */}
+          <div className="w-12 h-1 bg-muted rounded-full mx-auto -mt-2 mb-4 shrink-0 sm:hidden" />
+
+          {/* Header */}
+          <div className="flex items-start justify-between gap-4 shrink-0">
+            <div className="flex items-start gap-3.5 min-w-0">
+              {!logoErrored && service.logoDomain ? (
+                <div className="w-12 h-12 rounded-2xl bg-white shadow-soft shrink-0 overflow-hidden flex items-center justify-center border border-border/60 p-2.5 transition-transform hover:scale-105">
+                  <img
+                    src={logoUrl(service.logoDomain)}
+                    alt={`${serviceName} logo`}
+                    onError={() => setLogoErrored(true)}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              ) : (
+                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${service.accent} text-white flex items-center justify-center shadow-soft shrink-0`}>
+                  <Icon className="w-6 h-6 stroke-[2.5]" />
+                </div>
+              )}
+              <div className="min-w-0">
+                <h3 className="text-[17px] font-extrabold leading-tight text-foreground tracking-tight">{serviceName}</h3>
+                <p className="inline-flex mt-1.5 px-2.5 py-0.5 rounded-full bg-muted text-[10px] font-extrabold text-muted-foreground tracking-wide uppercase">
+                  {categoryLabel}
+                </p>
+              </div>
+            </div>
+            
+            <button
+              onClick={onClose}
+              className="p-2 rounded-full bg-muted/40 hover:bg-muted text-foreground transition-colors shrink-0 outline-none focus:ring-2 focus:ring-ring/30"
+              aria-label={t.close}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Description */}
+          <p className="text-[13px] font-medium text-muted-foreground leading-relaxed mt-4">
+            {serviceDescription}
+          </p>
+
+          {/* Localized Trust Note */}
+          <div className="mt-4 rounded-2xl bg-blue-50/70 border border-blue-100/60 px-4 py-3 shrink-0">
+            <p className="text-[11.5px] font-semibold text-blue-900/85 leading-relaxed">
+              {t.trustNote}
+            </p>
+          </div>
+
+          {/* Action Buttons List */}
+          <div className="mt-5 flex-1">
+            <h4 className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted-foreground mb-3">
+              {t.officialActions}
+            </h4>
+            <div className="grid grid-cols-1 gap-2.5">
+              {service.actions?.map((action) => {
+                const actionLabel = action.label[currentLang] || action.label.english;
+                return (
+                  <button
+                    key={action.id}
+                    onClick={(event) => openServiceAction(service.id, action.id, event)}
+                    className="w-full min-h-12 px-4 py-3 rounded-2xl bg-foreground hover:bg-foreground/90 text-background font-bold text-[13px] tracking-tight flex items-center justify-between gap-3 active:scale-[0.985] transition-all outline-none focus:ring-2 focus:ring-ring/30 cursor-pointer"
+                  >
+                    <span className="text-left leading-snug">{actionLabel}</span>
+                    <ExternalLink className="w-4 h-4 shrink-0 opacity-80" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+}

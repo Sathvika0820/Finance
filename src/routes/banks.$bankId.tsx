@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { ChevronLeft, ExternalLink, Heart, Smartphone, Globe, Check } from "lucide-react";
 import { useEffect } from "react";
 import { getBankById, getBankDisplayName } from "@/data/banks";
+import { getOfficialLink } from "@/data/officialLinks";
 import { BankLogo } from "@/components/BankLogo";
 import { useFavorites, pushRecent } from "@/lib/favorites";
 import { BottomNav } from "@/components/BottomNav";
@@ -102,30 +103,46 @@ function BankDetail() {
         </div>
 
         <div className="grid grid-cols-1 gap-3">
-          <button
-            onClick={() => openBank(bank, "bank_detail_website")}
-            className="w-full bg-foreground text-background rounded-2xl p-4 flex items-center justify-between active:scale-[0.98] transition-transform shadow-soft"
-          >
-            <span className="flex items-center gap-3">
-              <Globe className="w-5 h-5" />
-              <span className="font-semibold text-sm">{t("openWebsite")}</span>
-            </span>
-            <ExternalLink className="w-4 h-4 opacity-70" />
-          </button>
-          {bank.appLink && (
-            <a
-              href={bank.appLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="glass shadow-soft rounded-2xl p-4 flex items-center justify-between active:scale-[0.98] transition-transform"
-            >
-              <span className="flex items-center gap-3">
-                <Smartphone className="w-5 h-5" />
-                <span className="font-semibold text-sm">{t("openBankingApp")}</span>
-              </span>
-              <ExternalLink className="w-4 h-4 opacity-70" />
-            </a>
-          )}
+          {(() => {
+            const officialUrl = getOfficialLink("banks", bank.id);
+            const isVerified = !!officialUrl;
+
+            return (
+              <>
+                <button
+                  disabled={!isVerified}
+                  onClick={() => isVerified && openBank(bank, "bank_detail_website")}
+                  className={`w-full rounded-2xl p-4 flex items-center justify-between transition-all ${
+                    isVerified
+                      ? "bg-foreground text-background active:scale-[0.98] cursor-pointer shadow-soft"
+                      : "bg-muted text-muted-foreground/60 cursor-not-allowed opacity-75"
+                  }`}
+                >
+                  <span className="flex items-center gap-3">
+                    <Globe className="w-5 h-5" />
+                    <span className="font-semibold text-sm">
+                      {isVerified ? t("openWebsite") : "Official link not verified yet."}
+                    </span>
+                  </span>
+                  {isVerified && <ExternalLink className="w-4 h-4 opacity-70" />}
+                </button>
+                {bank.appLink && isVerified && (
+                  <a
+                    href={bank.appLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="glass shadow-soft rounded-2xl p-4 flex items-center justify-between active:scale-[0.98] transition-transform"
+                  >
+                    <span className="flex items-center gap-3">
+                      <Smartphone className="w-5 h-5" />
+                      <span className="font-semibold text-sm">{t("openBankingApp")}</span>
+                    </span>
+                    <ExternalLink className="w-4 h-4 opacity-70" />
+                  </a>
+                )}
+              </>
+            );
+          })()}
         </div>
 
         <section className="glass shadow-soft rounded-3xl p-5">
@@ -140,7 +157,7 @@ function BankDetail() {
               </li>
             ))}
           </ul>
-        </section> section
+        </section>
       </div>
       <BottomNav />
     </div>

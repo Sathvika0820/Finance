@@ -10,11 +10,11 @@ let welcomeSpoken = false;
 function normalizeLanguage(value: string | null) {
   const v = String(value || "").toLowerCase();
 
-  if (v === "hi" || v === "hi-in" || v.includes("हिन्दी") || v.includes("hindi")) {
+  if (v === "hi" || v === "hi-in" || v.includes("à¤¹à¤¿à¤¨à¥�à¤¦à¥€") || v.includes("hindi")) {
     return "hindi";
   }
 
-  if (v === "te" || v === "te-in" || v.includes("తెలుగు") || v.includes("telugu")) {
+  if (v === "te" || v === "te-in" || v.includes("à°¤à±†à°²à±�à°—à±�") || v.includes("telugu")) {
     return "telugu";
   }
 
@@ -37,6 +37,11 @@ export function openBank(bank: Bank, source = "unknown", event?: any) {
   }
 
   const url = getSafeBankUrl(bank);
+  if (!url || url.trim() === "") {
+    console.warn("Blocked attempt to open unverified bank website for:", bank?.name);
+    return;
+  }
+
   console.count("OPEN_BANK_CALLED");
   console.log("OPEN_BANK_SOURCE:", source, bank?.name);
   console.count("WINDOW_OPEN_EXECUTED");
@@ -76,7 +81,7 @@ function getBestVoice(language: string) {
     return voices.find(v => v.lang === "te-IN") ||
            voices.find(v => v.lang.toLowerCase().startsWith("te")) ||
            voices.find(v => v.name.includes("Telugu")) ||
-           voices.find(v => v.name.includes("తెలుగు")) ||
+           voices.find(v => v.name.includes("à°¤à±†à°²à±�à°—à±�")) ||
            null;
   }
   
@@ -112,6 +117,8 @@ export function speakVoice(eventKey: string, payload: any = {}) {
     bank?.name ||
     payload.bankName ||
     "";
+    
+  const serviceName = payload.serviceName || "";
 
   const voiceLines: Record<string, Record<string, string>> = {
     english: {
@@ -120,7 +127,15 @@ export function speakVoice(eventKey: string, payload: any = {}) {
       bankRemoved: `${bankName} removed from favourites.`,
       openingBank: `Opening ${bankName} website.`,
       muted: "Voice assistant muted.",
-      unmuted: "Voice assistant enabled."
+      unmuted: "Voice assistant enabled.",
+      showingGuidance: "Showing smart banking guidance.",
+      showingGuidanceOption: `Showing guidance for ${serviceName}.`,
+      showingSafety: "Showing banking safety shield.",
+      showingFinancialHelp: "Showing financial inclusion help.",
+      showingTopic: `Showing ${serviceName}.`,
+      showingComparison: "Showing banking service comparison.",
+      showingRuralSupport: "Showing rural banking support.",
+      openingService: `Opening ${serviceName} official website.`
     },
     hindi: {
       welcome: "बैंक हब में आपका स्वागत है। कृपया अपने पसंदीदा बैंक चुनें।",
@@ -128,19 +143,60 @@ export function speakVoice(eventKey: string, payload: any = {}) {
       bankRemoved: `${bankName} पसंदीदा सूची से हटा दिया गया।`,
       openingBank: `${bankName} की वेबसाइट खोली जा रही है।`,
       muted: "वॉइस असिस्टेंट म्यूट कर दिया गया है।",
-      unmuted: "वॉइस असिस्टेंट चालू कर दिया गया है।"
+      unmuted: "वॉइस असिस्टेंट चालू कर दिया गया है।",
+      showingGuidance: "स्मार्ट बैंकिंग मार्गदर्शन दिखाया जा रहा है।",
+      showingGuidanceOption: `${serviceName} के लिए मार्गदर्शन दिखाया जा रहा है।`,
+      showingSafety: "बैंकिंग सुरक्षा कवच दिखाया जा रहा है।",
+      showingFinancialHelp: "वित्तीय समावेशन सहायता दिखाया जा रहा है।",
+      showingTopic: `${serviceName} दिखाया जा रहा है।`,
+      showingComparison: "बैंकिंग सेवा तुलना दिखाया जा रहा है।",
+      showingRuralSupport: "ग्रामीण बैंकिंग सहायता दिखाया जा रहा है।",
+      openingService: `${serviceName} की आधिकारिक वेबसाइट खोली जा रही है।`
     },
     telugu: {
-      welcome: "బ్యాంక్ హబ్కు స్వాగతం. దయచేసి మీకు కావలసిన బ్యాంకులను ఎంచుకోండి.",
+      welcome: "బ్యాంక్ హబ్‌కు స్వాగతం. దయచేసి మీకు కావలసిన బ్యాంకులను ఎంచుకోండి.",
       bankSelected: `${bankName} ఎంపిక చేయబడింది.`,
       bankRemoved: `${bankName} ఫేవరెట్ల నుండి తీసివేయబడింది.`,
-      openingBank: `${bankName} వెబ్సైట్ తెరవబడుతోంది.`,
+      openingBank: `${bankName} వెబ్‌సైట్ తెరవబడుతోంది.`,
       muted: "వాయిస్ అసిస్టెంట్ మ్యూట్ చేయబడింది.",
-      unmuted: "వాయిస్ అసిస్టెంట్ ఆన్ చేయబడింది."
+      unmuted: "వాయిస్ అసిస్టెంట్ ఆన్ చేయబడింది.",
+      showingGuidance: "స్మార్ట్ బ్యాంకింగ్ మార్గదర్శనం చూపబడుతోంది.",
+      showingGuidanceOption: `${serviceName} కోసం మార్గదర్శనం చూపబడుతోంది.`,
+      showingSafety: "బ్యాంకింగ్ సేఫ్టీ షీల్డ్ చూపబడుతోంది.",
+      showingFinancialHelp: "ఆర్థిక చేర్పు సహాయం చూపబడుతోంది.",
+      showingTopic: `${serviceName} చూపబడుతోంది.`,
+      showingComparison: "బ్యాంకింగ్ సేవల పోలిక చూపబడుతోంది.",
+      showingRuralSupport: "గ్రామీణ బ్యాంకింగ్ సహాయం చూపబడుతోంది.",
+      openingService: `${serviceName} అధికారిక వెబ్‌సైట్ తెరవబడుతోంది.`
     }
   };
 
-  const text = voiceLines[safeLanguage]?.[eventKey];
+  let text = voiceLines[safeLanguage]?.[eventKey];
+
+  if (eventKey === "openingService") {
+    text = {
+      english: `Opening ${serviceName} official website.`,
+      hindi: `${serviceName} की आधिकारिक वेबसाइट खोली जा रही है।`,
+      telugu: `${serviceName} అధికారిక వెబ్‌సైట్ తెరవబడుతోంది.`,
+    }[safeLanguage];
+  }
+
+  if (eventKey === "showingServiceDetails") {
+    text = {
+      english: `Showing ${serviceName} services.`,
+      hindi: `${serviceName} सेवाएं दिखाई जा रही हैं।`,
+      telugu: `${serviceName} సేవలు చూపబడుతున్నాయి.`,
+    }[safeLanguage];
+  }
+
+  if (eventKey === "openingServiceAction") {
+    const actionName = payload.actionName || "";
+    text = {
+      english: `Opening ${actionName}.`,
+      hindi: `${actionName} खोला जा रहा है।`,
+      telugu: `${actionName} తెరవబడుతోంది.`,
+    }[safeLanguage];
+  }
 
   console.log("VOICE_EVENT:", eventKey);
   console.log("VOICE_LANGUAGE:", selectedLanguage);
