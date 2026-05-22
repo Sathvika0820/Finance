@@ -26,6 +26,12 @@ export interface LoanComparisonEntry {
   safetyNote: Record<string, string>;
 }
 
+export interface NormalizedLoanComparisonEntry extends LoanComparisonEntry {
+  numericRate: number | null;
+  officialApplyLink: string;
+  verified: boolean;
+}
+
 export const VERIFIED_LOAN_COMPARISONS: LoanComparisonEntry[] = [
   // ──── PERSONAL LOANS ────
   {
@@ -1099,7 +1105,7 @@ export const VERIFIED_LOAN_COMPARISONS: LoanComparisonEntry[] = [
     }
   },
   {
-    bankId: "au",
+    bankId: "ausfb",
     bankName: "AU Small Finance Bank",
     loanType: "women_entrepreneur_loan",
     loanTypeLabel: { english: "Women Entrepreneur Loan", hindi: "महिला उद्यमी ऋण" },
@@ -1338,3 +1344,15 @@ export const VERIFIED_LOAN_COMPARISONS: LoanComparisonEntry[] = [
     }
   }
 ];
+
+export const LOAN_COMPARISON_DATA: NormalizedLoanComparisonEntry[] =
+  VERIFIED_LOAN_COMPARISONS.map((entry) => {
+    const verified = entry.officialWebsite.startsWith("https://");
+
+    return {
+      ...entry,
+      numericRate: entry.interestRate > 0 ? entry.interestRate : null,
+      officialApplyLink: verified ? entry.officialWebsite : "",
+      verified,
+    };
+  });

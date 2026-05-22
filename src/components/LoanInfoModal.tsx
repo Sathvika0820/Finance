@@ -50,6 +50,22 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
   const safetyNote = l(entry.safetyNote);
   const documents = lArr(entry.documentsRequired);
   const benefits = lArr(entry.benefits);
+  const officialLoanUrl = entry.officialWebsite.startsWith("https://") ? entry.officialWebsite : "";
+  const hasVerifiedProcessingFee =
+    !!officialLoanUrl && processingFee && !/check official website/i.test(processingFee);
+  const hasVerifiedRepaymentPeriod =
+    !!officialLoanUrl && repaymentPeriod && !/check official website/i.test(repaymentPeriod);
+  const displayDocuments = [
+    "Identity proof",
+    "Address proof",
+    "Income proof",
+    "Bank statements",
+    "Employment proof or business proof",
+    ...documents,
+  ].filter((doc, index, list) => {
+    const normalized = doc.toLowerCase().replace(/\s+/g, " ").trim();
+    return list.findIndex((item) => item.toLowerCase().replace(/\s+/g, " ").trim() === normalized) === index;
+  });
 
   // Document checklist toggle
   const toggleDoc = (idx: number) => {
@@ -126,9 +142,15 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
                   <Calendar className="w-4 h-4" />
                   <span className="text-[10px] font-bold uppercase tracking-wider">Repayment Period</span>
                 </div>
-                <p className="text-[14px] font-extrabold text-foreground leading-snug">
-                  {repaymentPeriod}
-                </p>
+                {hasVerifiedRepaymentPeriod ? (
+                  <p className="text-[14px] font-extrabold text-foreground leading-snug">
+                    {repaymentPeriod}
+                  </p>
+                ) : (
+                  <p className="text-[12px] font-bold text-amber-700 leading-snug">
+                    Check official website
+                  </p>
+                )}
               </div>
             </div>
 
@@ -139,8 +161,8 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
                 <h4 className="text-[13px] font-bold text-foreground">All About the Loan</h4>
               </div>
               <p className="text-[12px] font-semibold text-muted-foreground leading-relaxed">
-                This loan product from {bankDisplayName} provides finance options tailored specifically for {loanTypeLabel.toLowerCase()} requirements. 
-                {processingFee && ` Standard processing fee: ${processingFee}.`}
+                This loan product from {bankDisplayName} provides finance options tailored specifically for {loanTypeLabel.toLowerCase()} requirements.
+                {hasVerifiedProcessingFee ? ` Standard processing fee: ${processingFee}.` : " Processing fee should be checked on the official bank website."}
               </p>
             </div>
 
@@ -185,7 +207,7 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
             )}
 
             {/* Required Documents Checklist */}
-            {documents.length > 0 && (
+            {displayDocuments.length > 0 && (
               <div className="bg-white border border-border/40 rounded-2xl p-4 shadow-sm space-y-3">
                 <div className="flex items-center gap-2 text-slate-800">
                   <FileText className="w-4 h-4 text-purple-600" />
@@ -195,7 +217,7 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
                   </div>
                 </div>
                 <div className="space-y-2">
-                  {documents.map((doc, idx) => {
+                  {displayDocuments.map((doc, idx) => {
                     const isChecked = !!checkedDocs[idx];
                     return (
                       <button
@@ -247,12 +269,17 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
           <div className="shrink-0 p-4 border-t border-border/40 bg-white flex flex-col gap-3 relative z-10">
             {/* Localized Disclaimer */}
             <p className="text-[9.5px] font-bold text-center text-muted-foreground/90 leading-tight">
-              ⚠️ Interest rates may change. Please verify the latest rate on the official bank website before applying.
+              Interest rates may change. Please verify latest details on the official bank website before applying.
             </p>
 
             <OfficialLinkButton
-              url={entry.officialWebsite}
+              item={{
+                name: `${entry.bankName} ${loanTypeLabel}`,
+                officialWebsite: entry.officialWebsite,
+                verified: !!officialLoanUrl,
+              }}
               label={`Apply at Official ${entry.bankName}`}
+              unverifiedLabel="Official loan link not verified yet."
               className="w-full py-3 text-[13px]"
             />
           </div>

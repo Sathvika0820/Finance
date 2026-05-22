@@ -1,3 +1,5 @@
+import { getOfficialLink } from "./officialLinks";
+
 export type BankCategory =
   | "Public Sector"
   | "Private Sector"
@@ -17,9 +19,11 @@ export interface Bank {
   };
   category: BankCategory;
   website: string;
+  officialWebsite: string;
   officialWebsiteUrl: string;
   fallbackSearchUrl: string;
   appLink: string;
+  verified: boolean;
   description: string;
   services: string[];
   accent: string;
@@ -60,6 +64,8 @@ function bank(
   services: string[] = ["Savings", "Loans", "Cards", "Mobile Banking"],
 ): Bank {
   const idx = id.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % accents.length;
+  const officialWebsite = getOfficialLink("banks", id) || "";
+  const verified = officialWebsite.startsWith("https://");
   return {
     id,
     name,
@@ -70,10 +76,12 @@ function bank(
       telugu: names.telugu || name,
     },
     category,
-    website,
-    officialWebsiteUrl: website,
-    fallbackSearchUrl: `https://www.google.com/search?q=${encodeURIComponent(name + ' official website')}`,
-    appLink: website,
+    website: officialWebsite,
+    officialWebsite,
+    officialWebsiteUrl: officialWebsite,
+    fallbackSearchUrl: "",
+    appLink: officialWebsite,
+    verified,
     description,
     services,
     accent: accents[idx],

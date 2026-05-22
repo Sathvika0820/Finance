@@ -17,6 +17,8 @@ export interface FinanceService {
   category: ServiceCategory;
   description: LocalizedText;
   officialUrl: string;
+  officialWebsite: string;
+  verified: boolean;
   verifiedFallbackUrl?: string;
   keywords: string[];
   icon: string;
@@ -42,7 +44,7 @@ export function getServiceDescription(service: FinanceService, lang: AppLanguage
 const postOfficeUrl = (id: string) => getOfficialLink("postOffice", id) || "";
 const insuranceUrl = (id: string) => getOfficialLink("insurance", id) || "";
 
-export const SERVICES_DATA: FinanceService[] = [
+const RAW_SERVICES_DATA: Omit<FinanceService, "officialWebsite" | "verified">[] = [
   // ==================== POST OFFICE SERVICES (13 Services) ====================
   {
     id: "india-post",
@@ -992,3 +994,14 @@ export const SERVICES_DATA: FinanceService[] = [
     ],
   },
 ];
+
+export const SERVICES_DATA: FinanceService[] = RAW_SERVICES_DATA.map((service) => {
+  const officialWebsite = service.officialUrl || "";
+  const verified = officialWebsite.startsWith("https://");
+
+  return {
+    ...service,
+    officialWebsite,
+    verified,
+  };
+});

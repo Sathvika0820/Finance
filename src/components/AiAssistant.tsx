@@ -81,7 +81,7 @@ const LOCALIZED_TEXTS = {
   english: {
     welcome: "Hello! I am your BankHub AI Assistant. How can I help you today with bank services, loans, government schemes, or scam safety? Ask me anything!",
     safetyWarning: "For your safety, do not share OTP, PIN, CVV, card numbers, or banking passwords in BankHub.",
-    fallback: "I could not verify this from official sources. Please check the official bank/government website.",
+    fallback: "I could not verify this from official sources. Please check the official website.",
     micUnsupported: "Voice input is not supported in this browser. Please use text input.",
     micListening: "Listening... Speak now.",
     micProcessing: "Processing speech query...",
@@ -463,6 +463,306 @@ export function AiAssistant() {
     return value[lang] || value["english"] || "";
   };
 
+  const exactSensitiveWarning = LOCALIZED_TEXTS.english.safetyWarning;
+  const exactFallback = LOCALIZED_TEXTS.english.fallback;
+
+  const isHttpsOfficialUrl = (url?: string) => Boolean(url && /^https:\/\//i.test(url));
+
+  const formatList = (items: string[]) => items.map(item => `- ${item}`).join("\n");
+
+  const localizedServiceName = (service: { name: Record<string, string> }) =>
+    service.name[activeLang as keyof typeof service.name] || service.name.english;
+
+  const localizedServiceDescription = (service: { description: Record<string, string> }) =>
+    service.description[activeLang as keyof typeof service.description] || service.description.english;
+
+  const containsSensitiveData = (message: string) => {
+    const lower = message.toLowerCase();
+    const sensitiveKeyword = /\b(otp|one\s*time\s*password|pin|atm\s*pin|upi\s*pin|cvv|cvv2|card\s*(number|no)?|banking\s*password|net\s*banking\s*password|password|passcode)\b/i;
+    const aadhaarOrCardLikeNumber = /\b\d{4,16}\b/;
+    return sensitiveKeyword.test(lower) || (/(aadhaar|card|upi|pin|otp|password)/i.test(lower) && aadhaarOrCardLikeNumber.test(lower));
+  };
+
+  const findBankInMessage = (message: string) => {
+    const lower = message.toLowerCase();
+    return BANKS.find(bank => {
+      const bankNames = [
+        bank.id,
+        bank.shortName,
+        bank.name,
+        bank.names.english,
+        bank.names.hindi,
+        bank.names.telugu
+      ].filter(Boolean).map(value => value.toLowerCase());
+
+      return bankNames.some(name => lower.includes(name));
+    });
+  };
+
+  const findServiceInMessage = (message: string) => {
+    const lower = message.toLowerCase();
+    return SERVICES_DATA.find(service => {
+      const serviceNames = [
+        service.id,
+        service.name.english,
+        service.name.hindi,
+        service.name.telugu,
+        ...service.keywords
+      ].filter(Boolean).map(value => value.toLowerCase());
+
+      return serviceNames.some(name => lower.includes(name));
+    });
+  };
+
+  const detectVerifiedIntent = (message: string) => {
+    const lower = message.toLowerCase();
+
+    if (/\b(official\s*(link|website|url)|website|portal|url|open\s+official|link)\b/.test(lower)) {
+      return "officialLink";
+    }
+    if (/\b(fraud|scam|fake\s*sms|phishing|cyber|cybercrime|upi\s*fraud|spam|fake\s*call|fake\s*message)\b/.test(lower)) {
+      return "fraud";
+    }
+    if (/\b(post\s*office|india\s*post|postal|ippb|speed\s*post|parcel|tracking|savings\s*scheme)\b/.test(lower)) {
+      return "postOffice";
+    }
+    if (/\b(insurance|lic|irdai|policy|premium|claim|health\s*insurance|life\s*insurance|bima)\b/.test(lower)) {
+      return "insurance";
+    }
+    if (/\b(scheme|schemes|student\s*scheme|student\s*schemes|scholarship|vidya\s*lakshmi|vidyalakshmi|yojana)\b/.test(lower)) {
+      return "scheme";
+    }
+    if (/\b(loan|home\s*loan|housing\s*loan|education\s*loan|student\s*loan|personal\s*loan)\b/.test(lower)) {
+      return "loan";
+    }
+    if (/\b(which\s*banks|banks?\s*(are\s*)?available|bank\s*list|supported\s*banks|banks?\s*in\s*bankhub|available\s*banks)\b/.test(lower)) {
+      return "bankList";
+    }
+
+    return "fallback";
+  };
+
+  const getLoanIdFromMessage = (message: string) => {
+    const lower = message.toLowerCase();
+    if (/\b(home|housing|house)\b/.test(lower)) return "home_loan";
+    if (/\b(education|student|study)\b/.test(lower)) return "education_loan";
+    if (/\b(personal|unsecured)\b/.test(lower)) return "personal_loan";
+    if (/\b(gold|jewel|jewellery|jewelry)\b/.test(lower)) return "gold_loan";
+    if (/\b(vehicle|car|auto|two\s*wheeler|bike)\b/.test(lower)) return "vehicle_loan";
+    return "";
+  };
+
+  const isLoanComparisonRequest = (message: string) => {
+    const lower = message.toLowerCase();
+    return /\b(compare|comparison|lowest|least|cheapest|best\s*rate|interest\s*rate|rate\s*of\s*interest|roi)\b/.test(lower)
+      && /\b(loan|home|housing|education|student|personal|gold|vehicle|car|auto|bike)\b/.test(lower);
+  };
+
+  const buildLoanComparisonReply = (message: string): Pick<Message, "text" | "actionUrl" | "actionLabel"> => {
+    const loanId = getLoanIdFromMessage(message);
+    if (!loanId) {
+      return {
+        text: "I do not have verified official interest rate data for this yet. Please check the official bank website."
+      };
+    }
+
+    const comparisonEntries = VERIFIED_LOAN_COMPARISONS
+      .filter(entry => entry.loanType === loanId)
+      .sort((a, b) => {
+        const aHasRate = a.interestRate > 0;
+        const bHasRate = b.interestRate > 0;
+        if (aHasRate && !bHasRate) return -1;
+        if (!aHasRate && bHasRate) return 1;
+        if (!aHasRate && !bHasRate) return a.bankName.localeCompare(b.bankName);
+        return a.interestRate - b.interestRate;
+      });
+
+    if (comparisonEntries.length === 0 || comparisonEntries.every(entry => entry.interestRate <= 0)) {
+      return {
+        text: "I do not have verified official interest rate data for this yet. Please check the official bank website."
+      };
+    }
+
+    const labelSource = comparisonEntries[0];
+    const loanTypeLabel = labelSource.loanTypeLabel[activeLang] || labelSource.loanTypeLabel.english || loanId.replace(/_/g, " ");
+    const rankedLines = comparisonEntries.map((entry, index) => {
+      const bank = BANKS.find(item => item.id === entry.bankId);
+      const bankName = bank ? getBankDisplayName(bank, activeLang) : entry.bankName;
+      const rate = entry.interestRate > 0
+        ? (entry.interestRateDisplay[activeLang] || entry.interestRateDisplay.english || `${entry.interestRate}% p.a.`)
+        : "Check official website";
+
+      return `${index + 1}. ${bankName} — ${rate}`;
+    });
+
+    const lowestVerified = comparisonEntries.find(entry => entry.interestRate > 0);
+    const linkedEntry = comparisonEntries.find(entry => isHttpsOfficialUrl(entry.officialWebsite));
+    const linkNote = linkedEntry
+      ? `\n\nOfficial reference link available for ${BANKS.find(bank => bank.id === linkedEntry.bankId)?.name || linkedEntry.bankName}.`
+      : "";
+
+    return {
+      text: `Here is the verified ${loanTypeLabel.toLowerCase()} comparison available in BankHub:\n\n${rankedLines.join("\n")}\n\nLowest verified rate is shown first.\nInterest rates may change. Please verify latest details on the official bank website.${linkNote}`,
+      actionUrl: linkedEntry?.officialWebsite,
+      actionLabel: linkedEntry ? `Open official ${lowestVerified?.bankName || linkedEntry.bankName} loan page` : undefined
+    };
+  };
+
+  const createVerifiedAssistantReply = (message: string): Pick<Message, "text" | "isWarning" | "actionUrl" | "actionLabel"> => {
+    if (containsSensitiveData(message)) {
+      return {
+        text: exactSensitiveWarning,
+        isWarning: true
+      };
+    }
+
+    if (isLoanComparisonRequest(message)) {
+      return buildLoanComparisonReply(message);
+    }
+
+    const intent = detectVerifiedIntent(message);
+
+    if (intent === "bankList") {
+      const bankNames = BANKS.map(bank => getBankDisplayName(bank, activeLang));
+      return {
+        text: `BankHub currently has ${bankNames.length} verified bank entries:\n${formatList(bankNames)}\n\nBankHub redirects only to official service websites. No credentials are stored.`
+      };
+    }
+
+    if (intent === "loan") {
+      const loanId = getLoanIdFromMessage(message);
+      if (!loanId) {
+        const loanNames = VERIFIED_LOANS.map(loan => getLocalizedValue(loan.name, activeLang));
+        return {
+          text: `Verified loan topics in BankHub data:\n${formatList(loanNames)}\n\nAsk for a specific loan type, such as home loan, education loan, or personal loan.`
+        };
+      }
+
+      const loan = VERIFIED_LOANS.find(item => item.id === loanId);
+      if (!loan) {
+        return { text: exactFallback };
+      }
+
+      const bankNames = loan.verifiedBanks
+        .map(bankId => BANKS.find(bank => bank.id === bankId))
+        .filter((bank): bank is NonNullable<typeof bank> => Boolean(bank))
+        .map(bank => getBankDisplayName(bank, activeLang));
+
+      return {
+        text: `${getLocalizedValue(loan.name, activeLang)} is available in BankHub verified data for these banks:\n${formatList(bankNames)}\n\n${getLocalizedValue(loan.description, activeLang)}\n\nNo interest rate or approval claim is shown here because those must be checked on official bank websites.`,
+        actionUrl: isHttpsOfficialUrl(loan.officialInfoPage) ? loan.officialInfoPage : undefined,
+        actionLabel: isHttpsOfficialUrl(loan.officialInfoPage) ? "Open official information page" : undefined
+      };
+    }
+
+    if (intent === "scheme") {
+      const studentSchemes = VERIFIED_SCHEMES.filter(scheme => scheme.category === "student");
+      const verifiedItems = studentSchemes.length > 0
+        ? studentSchemes
+        : VERIFIED_LOANS.filter(loan => loan.id === "education_loan").map(loan => ({
+            id: loan.id,
+            name: loan.name,
+            authority: "Vidya Lakshmi / participating official bank portals",
+            description: loan.description,
+            officialUrl: loan.officialInfoPage
+          }));
+
+      if (verifiedItems.length === 0) {
+        return { text: exactFallback };
+      }
+
+      const lines = verifiedItems.map(item => {
+        const name = getLocalizedValue(item.name, activeLang);
+        const description = getLocalizedValue(item.description, activeLang);
+        return `${name} - ${description} Official source: ${item.authority}.`;
+      });
+
+      const firstUrl = verifiedItems.find(item => isHttpsOfficialUrl(item.officialUrl))?.officialUrl;
+      return {
+        text: `Verified student support found in BankHub local data:\n${formatList(lines)}\n\nPlease verify eligibility, fees, and subsidy rules only on the official website.`,
+        actionUrl: firstUrl,
+        actionLabel: firstUrl ? "Open official student portal" : undefined
+      };
+    }
+
+    if (intent === "postOffice") {
+      const postServices = SERVICES_DATA.filter(service => service.category === "post_office" && service.isActive && service.sourceAuthority === "official");
+      if (postServices.length === 0) {
+        return { text: exactFallback };
+      }
+
+      const lines = postServices.map(service => `${localizedServiceName(service)} - ${localizedServiceDescription(service)}`);
+      const firstUrl = postServices.find(service => isHttpsOfficialUrl(service.officialUrl))?.officialUrl;
+      return {
+        text: `Official Post Office and India Post services in BankHub:\n${formatList(lines)}\n\nBankHub redirects only to official service websites. No credentials are stored.`,
+        actionUrl: firstUrl,
+        actionLabel: firstUrl ? "Open official Post Office service" : undefined
+      };
+    }
+
+    if (intent === "insurance") {
+      const insuranceServices = SERVICES_DATA.filter(service => service.category === "insurance" && service.isActive && service.sourceAuthority === "official");
+      if (insuranceServices.length === 0) {
+        return { text: exactFallback };
+      }
+
+      const lines = insuranceServices.map(service => `${localizedServiceName(service)} - ${localizedServiceDescription(service)}`);
+      const firstUrl = insuranceServices.find(service => isHttpsOfficialUrl(service.officialUrl))?.officialUrl;
+      return {
+        text: `Official insurance services in BankHub:\n${formatList(lines)}\n\nUse insurer or regulator websites directly. BankHub does not collect policy numbers, passwords, or payment credentials.`,
+        actionUrl: firstUrl,
+        actionLabel: firstUrl ? "Open official insurance service" : undefined
+      };
+    }
+
+    if (intent === "fraud") {
+      const safety = VERIFIED_CYBER_SAFETY;
+      const steps = safety.recoverySteps[activeLang] || safety.recoverySteps.english || [];
+      const tips = safety.tips[activeLang] || safety.tips.english || [];
+      return {
+        text: `If you received a fake SMS, phishing link, or online banking fraud message, use only official reporting channels.\n\nNational Cyber Crime Helpline: ${safety.helpline}\nOfficial complaint portal: ${safety.complaintPortal}\n\nImmediate steps:\n${formatList(steps)}\n\nSafety reminders:\n${formatList(tips)}\n\nDo not search random helpline numbers. Use official bank or government portals only.`,
+        actionUrl: isHttpsOfficialUrl(safety.complaintPortal) ? safety.complaintPortal : undefined,
+        actionLabel: "Open official cybercrime portal"
+      };
+    }
+
+    if (intent === "officialLink") {
+      const matchedBank = findBankInMessage(message);
+      if (matchedBank && isHttpsOfficialUrl(matchedBank.website)) {
+        const bankName = getBankDisplayName(matchedBank, activeLang);
+        return {
+          text: `${bankName} official website:\n${matchedBank.website}\n\nOpen only HTTPS official bank links. BankHub does not store login credentials.`,
+          actionUrl: matchedBank.website,
+          actionLabel: `Open ${matchedBank.shortName} official website`
+        };
+      }
+
+      const matchedService = findServiceInMessage(message);
+      if (matchedService && isHttpsOfficialUrl(matchedService.officialUrl)) {
+        const serviceName = localizedServiceName(matchedService);
+        return {
+          text: `${serviceName} official website:\n${matchedService.officialUrl}\n\nBankHub redirects only to official service websites. No credentials are stored.`,
+          actionUrl: matchedService.officialUrl,
+          actionLabel: `Open ${serviceName}`
+        };
+      }
+
+      return { text: exactFallback };
+    }
+
+    const matchedBank = findBankInMessage(message);
+    if (matchedBank) {
+      const bankName = getBankDisplayName(matchedBank, activeLang);
+      return {
+        text: `${bankName} (${matchedBank.shortName}) is a verified BankHub bank entry.\nCategory: ${matchedBank.category}\nServices listed in BankHub: ${matchedBank.services.join(", ")}\nOfficial website: ${matchedBank.website}\n\nDo not enter OTP, PIN, CVV, card number, or banking password in BankHub.`,
+        actionUrl: isHttpsOfficialUrl(matchedBank.website) ? matchedBank.website : undefined,
+        actionLabel: isHttpsOfficialUrl(matchedBank.website) ? `Open ${matchedBank.shortName} official website` : undefined
+      };
+    }
+
+    return { text: exactFallback };
+  };
+
   // Scroll to bottom on new message
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -639,6 +939,28 @@ export function AiAssistant() {
 
     setMessages(prev => [...prev, userMessage]);
     setInputText("");
+
+    const verifiedReply = createVerifiedAssistantReply(text);
+    setShowWarning(Boolean(verifiedReply.isWarning));
+    setMicState(verifiedReply.isWarning ? "idle" : "processing");
+
+    setTimeout(() => {
+      const botMsg: Message = {
+        id: `bot-reply-${Date.now()}`,
+        sender: "bot",
+        text: verifiedReply.text,
+        isWarning: verifiedReply.isWarning,
+        timestamp: new Date(),
+        actionUrl: verifiedReply.actionUrl,
+        actionLabel: verifiedReply.actionLabel
+      };
+
+      setMessages(prev => [...prev, botMsg]);
+      setMicState("idle");
+      speakText(verifiedReply.text, activeLang);
+    }, verifiedReply.isWarning ? 500 : 700);
+
+    return;
 
     // REAL-TIME CRITICAL SENSITIVE DATA SCANNER
     const sensitiveRegex = /(otp|one time password|pin|atm pin|cvv|cvv2|password|passcode|net banking password|netbanking password|upi pin|card number|card no|aadhaar otp)/i;

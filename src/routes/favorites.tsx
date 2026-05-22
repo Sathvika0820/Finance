@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Trash2, ExternalLink } from "lucide-react";
 import { BANKS } from "@/data/banks";
 import { BankLogo } from "@/components/BankLogo";
+import { OfficialLinkButton, UNVERIFIED_LABEL } from "@/components/OfficialLinkButton";
 import { useFavorites, pushRecent } from "@/lib/favorites";
-import { openBank, speakVoice } from "@/lib/voice";
+import { speakVoice } from "@/lib/voice";
 import { AppShell } from "@/components/AppShell";
 
 export const Route = createFileRoute("/favorites")({
@@ -64,21 +65,24 @@ function FavoritesPage() {
                   transition={{ delay: i * 0.03 }}
                   className="glass shadow-soft rounded-2xl p-4 flex items-center gap-3"
                 >
-                  <button
-                    onClick={(e) => {
-                      pushRecent(b.id);
-                      openBank(b, "favorites_page", e);
-                    }}
-                    className="flex items-center gap-3 flex-1 min-w-0 text-left"
-                  >
+                  <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
                     <BankLogo bank={b} />
                     <div className="min-w-0">
                       <p className="font-semibold truncate text-[15px]">{b.name}</p>
                       <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
-                        <ExternalLink className="w-3 h-3" /> {b.category}
+                        <ExternalLink className="w-3 h-3" /> {b.verified ? b.category : UNVERIFIED_LABEL}
                       </p>
                     </div>
-                  </button>
+                  </div>
+                  <OfficialLinkButton
+                    item={b}
+                    compact
+                    className="shrink-0"
+                    onVerifiedClick={() => {
+                      pushRecent(b.id);
+                      speakVoice("openingBank", { bank: b });
+                    }}
+                  />
                   <button
                     onClick={(e) => {
                       e.stopPropagation();

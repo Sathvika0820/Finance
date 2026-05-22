@@ -18,7 +18,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useState, useMemo } from "react";
-import { VERIFIED_LOAN_COMPARISONS, LoanComparisonEntry } from "@/data/loanData";
+import { LOAN_COMPARISON_DATA, NormalizedLoanComparisonEntry } from "@/data/loanData";
 import { BANKS, Bank, getBankDisplayName } from "@/data/banks";
 import { BankLogo } from "@/components/BankLogo";
 import { OfficialLinkButton } from "@/components/OfficialLinkButton";
@@ -61,16 +61,14 @@ export function CompareBankingModal({
   const [isComparing, setIsComparing] = useState<boolean>(false);
   
   // Selected Loan entry for the details modal
-  const [selectedLoanForModal, setSelectedLoanForModal] = useState<LoanComparisonEntry | null>(null);
-
-  if (!isOpen) return null;
+  const [selectedLoanForModal, setSelectedLoanForModal] = useState<NormalizedLoanComparisonEntry | null>(null);
 
   // Localized string helper
   const l = (obj: Record<string, string>) => obj[lang] || obj["english"] || "";
 
   // Perform filtering and sorting of loan data
   const comparisonResults = useMemo(() => {
-    const rawResults = VERIFIED_LOAN_COMPARISONS.filter((entry) => {
+    const rawResults = LOAN_COMPARISON_DATA.filter((entry) => {
       // 1. Filter by Loan Type
       if (entry.loanType !== selectedLoanType) return false;
 
@@ -94,12 +92,12 @@ export function CompareBankingModal({
     });
 
     // 4. Sort results: lowest interest rate first, unverified rates (0) strictly at the bottom
-    return rawResults.sort((a, b) => {
-      const aRate = a.interestRate;
-      const bRate = b.interestRate;
+    return [...rawResults].sort((a, b) => {
+      const aRate = a.numericRate;
+      const bRate = b.numericRate;
 
-      const aHasRate = aRate > 0;
-      const bHasRate = bRate > 0;
+      const aHasRate = typeof aRate === "number";
+      const bHasRate = typeof bRate === "number";
 
       if (aHasRate && bHasRate) {
         return aRate - bRate; // Ascending order
@@ -128,6 +126,8 @@ export function CompareBankingModal({
 
   const activeLoanTypeLabel =
     LOAN_TYPES.find((t) => t.id === selectedLoanType)?.[lang === "hindi" ? "labelHi" : "labelEn"] || "Loans";
+
+  if (!isOpen) return null;
 
   return (
     <AnimatePresence>
@@ -321,7 +321,7 @@ export function CompareBankingModal({
                       <p className="text-[10px] font-semibold text-amber-900/80 leading-snug">
                         {lang === "hindi"
                           ? "ब्याज दरें बदल सकती हैं। आवेदन करने से पहले आधिकारिक बैंक वेबसाइट पर नवीनतम दर की पुष्टि अवश्य करें।"
-                          : "Interest rates may change. Please verify the latest rate on the official bank website before applying."}
+                          : "Interest rates may change. Please verify latest details on the official bank website before applying."}
                       </p>
                     </div>
 
@@ -330,8 +330,14 @@ export function CompareBankingModal({
                         const bankEntity = BANKS.find((b) => b.id === entry.bankId);
                         if (!bankEntity) return null;
 
-                        const isLowestRate = index === 0 && entry.interestRate > 0;
-                        const hasRate = entry.interestRate > 0;
+                        const isLowestRate = index === 0 && entry.numericRate !== null;
+                        const hasRate = entry.numericRate !== null;
+                        const processingFee = l(entry.processingFee);
+                        const hasVerifiedProcessingFee =
+                          entry.verified && processingFee && !/check official website/i.test(processingFee);
+                        const loanPageUrl =
+                          entry.verified && entry.officialApplyLink.startsWith("https://") ? entry.officialApplyLink : "";
+                        const bankName = getBankDisplayName(bankEntity, lang);
 
                         return (
                           <motion.div
@@ -357,9 +363,21 @@ export function CompareBankingModal({
                             <div className="flex items-center gap-3">
                               <BankLogo bank={bankEntity} size="md" />
                               <div>
-                                <h4 className="font-bold text-[14px] text-foreground leading-tight">
-                                  {getBankDisplayName(bankEntity, lang)}
-                                </h4>
+                                {loanPageUrl ? (
+                                  <a
+                                    href={loanPageUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block font-bold text-[14px] text-foreground leading-tight underline-offset-2 hover:underline"
+                                    aria-label={`Open ${bankName} ${l(entry.loanTypeLabel)} official page`}
+                                  >
+                                    {bankName}
+                                  </a>
+                                ) : (
+                                  <h4 className="font-bold text-[14px] text-foreground leading-tight">
+                                    {bankName}
+                                  </h4>
+                                )}
                                 <span className="text-[10px] font-bold text-muted-foreground">
                                   {l(entry.loanTypeLabel)}
                                 </span>
@@ -387,9 +405,15 @@ export function CompareBankingModal({
                                 <p className="text-[9px] font-extrabold text-muted-foreground uppercase tracking-wider leading-none">
                                   Processing Fee
                                 </p>
-                                <p className="text-[12px] font-bold text-slate-600 mt-1 line-clamp-1 truncate" title={l(entry.processingFee)}>
-                                  {l(entry.processingFee)}
-                                </p>
+                                {hasVerifiedProcessingFee ? (
+                                  <p className="text-[12px] font-bold text-slate-600 mt-1 line-clamp-1 truncate" title={processingFee}>
+                                    {processingFee}
+                                  </p>
+                                ) : (
+                                  <span className="inline-block mt-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">
+                                    Check official website
+                                  </span>
+                                )}
                               </div>
                             </div>
 
@@ -404,8 +428,13 @@ export function CompareBankingModal({
                               </button>
 
                               <OfficialLinkButton
-                                url={entry.officialWebsite}
+                                item={{
+                                  name: `${bankName} ${l(entry.loanTypeLabel)}`,
+                                  officialWebsite: entry.officialApplyLink,
+                                  verified: entry.verified,
+                                }}
                                 label={lang === "hindi" ? "आवेदन करें" : "Apply"}
+                                unverifiedLabel="Official loan link not verified yet."
                                 className="flex-1 py-2.5 text-[11.5px]"
                               />
                             </div>

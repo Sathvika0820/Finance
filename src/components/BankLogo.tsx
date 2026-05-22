@@ -2,7 +2,7 @@ import { useState } from "react";
 import { type Bank, logoUrl } from "@/data/banks";
 
 interface Props {
-  bank: Bank;
+  bank?: Bank;
   size?: "sm" | "md" | "lg" | "xl";
 }
 
@@ -15,15 +15,27 @@ const sizes = {
 
 export function BankLogo({ bank, size = "md" }: Props) {
   const [errored, setErrored] = useState(false);
-  const initials = bank.shortName
+  const initials = (bank?.shortName || "BH")
     .replace(/[^a-zA-Z]/g, "")
     .slice(0, 3)
     .toUpperCase();
+  const accent = bank?.accent || "from-slate-700 to-slate-900";
+
+  if (!bank) {
+    return (
+      <div
+        className={`${sizes[size]} rounded-2xl bg-gradient-to-br ${accent} text-white font-bold flex items-center justify-center shadow-soft shrink-0`}
+        aria-hidden
+      >
+        {initials}
+      </div>
+    );
+  }
 
   if (errored) {
     return (
       <div
-        className={`${sizes[size]} rounded-2xl bg-gradient-to-br ${bank.accent} text-white font-bold flex items-center justify-center shadow-soft shrink-0`}
+        className={`${sizes[size]} rounded-2xl bg-gradient-to-br ${accent} text-white font-bold flex items-center justify-center shadow-soft shrink-0`}
         aria-hidden
       >
         {initials}

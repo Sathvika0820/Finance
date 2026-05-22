@@ -1,15 +1,14 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { ChevronLeft, ExternalLink, Heart, Smartphone, Globe, Check } from "lucide-react";
+import { ChevronLeft, Heart, Smartphone, Check } from "lucide-react";
 import { useEffect } from "react";
 import { getBankById, getBankDisplayName } from "@/data/banks";
-import { getOfficialLink } from "@/data/officialLinks";
 import { BankLogo } from "@/components/BankLogo";
+import { OfficialLinkButton } from "@/components/OfficialLinkButton";
 import { useFavorites, pushRecent } from "@/lib/favorites";
 import { BottomNav } from "@/components/BottomNav";
-import { useUrlHealth } from "@/lib/urlHealth";
 import { useTranslation } from "@/lib/i18n";
-import { openBank } from "@/lib/voice";
+import { speakVoice } from "@/lib/voice";
 
 export const Route = createFileRoute("/banks/$bankId")({
   loader: ({ params }) => {
@@ -60,7 +59,6 @@ function BankDetail() {
   const { t, lang } = useTranslation();
   const { isFavorite, toggle } = useFavorites();
   const fav = isFavorite(bank.id);
-  const safeUrl = useUrlHealth(bank.id, bank.officialWebsiteUrl, bank.fallbackSearchUrl);
   const displayName = getBankDisplayName(bank, lang);
 
   useEffect(() => {
@@ -103,46 +101,29 @@ function BankDetail() {
         </div>
 
         <div className="grid grid-cols-1 gap-3">
-          {(() => {
-            const officialUrl = getOfficialLink("banks", bank.id);
-            const isVerified = !!officialUrl;
-
-            return (
-              <>
-                <button
-                  disabled={!isVerified}
-                  onClick={() => isVerified && openBank(bank, "bank_detail_website")}
-                  className={`w-full rounded-2xl p-4 flex items-center justify-between transition-all ${
-                    isVerified
-                      ? "bg-foreground text-background active:scale-[0.98] cursor-pointer shadow-soft"
-                      : "bg-muted text-muted-foreground/60 cursor-not-allowed opacity-75"
-                  }`}
-                >
-                  <span className="flex items-center gap-3">
-                    <Globe className="w-5 h-5" />
-                    <span className="font-semibold text-sm">
-                      {isVerified ? t("openWebsite") : "Official link not verified yet."}
-                    </span>
-                  </span>
-                  {isVerified && <ExternalLink className="w-4 h-4 opacity-70" />}
-                </button>
-                {bank.appLink && isVerified && (
-                  <a
-                    href={bank.appLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="glass shadow-soft rounded-2xl p-4 flex items-center justify-between active:scale-[0.98] transition-transform"
-                  >
-                    <span className="flex items-center gap-3">
-                      <Smartphone className="w-5 h-5" />
-                      <span className="font-semibold text-sm">{t("openBankingApp")}</span>
-                    </span>
-                    <ExternalLink className="w-4 h-4 opacity-70" />
-                  </a>
-                )}
-              </>
-            );
-          })()}
+          <OfficialLinkButton
+            item={bank}
+            label={t("openWebsite")}
+            className="w-full rounded-2xl p-4 text-sm"
+            onVerifiedClick={() => {
+              pushRecent(bank.id);
+              speakVoice("openingBank", { bank });
+            }}
+          />
+          {bank.appLink && bank.verified && (
+            <a
+              href={bank.appLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="glass shadow-soft rounded-2xl p-4 flex items-center justify-between active:scale-[0.98] transition-transform"
+            >
+              <span className="flex items-center gap-3">
+                <Smartphone className="w-5 h-5" />
+                <span className="font-semibold text-sm">{t("openBankingApp")}</span>
+              </span>
+              <span className="text-xs font-bold text-muted-foreground">Open</span>
+            </a>
+          )}
         </div>
 
         <section className="glass shadow-soft rounded-3xl p-5">

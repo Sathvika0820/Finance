@@ -19,6 +19,7 @@ import { FinancialInclusionModal } from "@/components/FinancialInclusionModal";
 import { CompareBankingModal } from "@/components/CompareBankingModal";
 import { Lightbulb, ShieldCheck, ArrowLeftRight } from "lucide-react";
 import { AiAssistant } from "@/components/AiAssistant";
+import { OfficialLinkButton, UNVERIFIED_LABEL } from "@/components/OfficialLinkButton";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -285,6 +286,11 @@ function ServiceCard({ service, isFav, onToggleFav, onOpen, lang }: ServiceCardP
   const Icon = SERVICE_ICONS[service.iconName] || Mail;
   const serviceName = getServiceName(service, lang);
   const serviceDescription = getServiceDescription(service, lang);
+  const officialItem = {
+    name: serviceName,
+    officialWebsite: service.officialWebsite,
+    verified: service.verified,
+  };
 
   return (
     <div
@@ -339,34 +345,14 @@ function ServiceCard({ service, isFav, onToggleFav, onOpen, lang }: ServiceCardP
           <Heart className={`w-4 h-4 ${isFav ? "fill-red-500 text-red-500" : "text-muted-foreground/30 hover:text-red-400"}`} />
         </button>
 
-        {(() => {
-          const isVerified = service.officialUrl && service.officialUrl.trim() !== "";
-          return (
-            <button
-              disabled={!isVerified}
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                if (isVerified) {
-                  onOpen(e);
-                }
-              }}
-              className={`p-1.5 rounded-full transition-colors focus:outline-none ${
-                isVerified 
-                  ? "hover:bg-blue-50/80 cursor-pointer" 
-                  : "cursor-not-allowed opacity-40 hover:bg-transparent"
-              }`}
-              title={isVerified ? undefined : "Official link not verified yet."}
-              aria-label={isVerified ? "Launch official website" : "Official link not verified yet."}
-            >
-              <ExternalLink className={`w-4 h-4 transition-colors ${
-                isVerified 
-                  ? "text-muted-foreground/60 group-hover:text-blue-600" 
-                  : "text-muted-foreground/30"
-              }`} />
-            </button>
-          );
-        })()}
+        <OfficialLinkButton
+          item={officialItem}
+          compact
+          className="px-2 py-1.5"
+          onVerifiedClick={(event) => {
+            event.stopPropagation();
+          }}
+        />
       </div>
     </div>
   );

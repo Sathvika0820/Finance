@@ -3,8 +3,9 @@ import { motion } from "framer-motion";
 import { ExternalLink, Info, Heart } from "lucide-react";
 import { Bank, getBankDisplayName } from "@/data/banks";
 import { BankLogo } from "./BankLogo";
+import { OfficialLinkButton, UNVERIFIED_LABEL } from "./OfficialLinkButton";
 import { pushRecent, useFavorites } from "@/lib/favorites";
-import { openBank, speakVoice } from "@/lib/voice";
+import { speakVoice } from "@/lib/voice";
 import { useTranslation } from "@/lib/i18n";
 
 function getCatKey(cat: string) {
@@ -33,22 +34,24 @@ export function BankCard({ bank, index = 0 }: { bank: Bank; index?: number }) {
       transition={{ duration: 0.3, delay: Math.min(index, 10) * 0.03 }}
       className="glass shadow-soft rounded-2xl flex items-center gap-3 active:scale-[0.99] transition-transform"
     >
-      <button
-        onClick={(e) => {
-          pushRecent(bank.id);
-          openBank(bank, "bank_card", e);
-        }}
-        className="flex items-center gap-3 flex-1 min-w-0 p-4 text-left"
-        aria-label={`Open ${displayName} official website`}
-      >
+      <div className="flex items-center gap-3 flex-1 min-w-0 p-4 text-left">
         <BankLogo bank={bank} />
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-foreground truncate text-[15px]">{displayName}</p>
           <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
-            <ExternalLink className="w-3 h-3" /> {t(getCatKey(bank.category))}
+            <ExternalLink className="w-3 h-3" /> {bank.verified ? t(getCatKey(bank.category)) : UNVERIFIED_LABEL}
           </p>
         </div>
-      </button>
+      </div>
+      <OfficialLinkButton
+        item={bank}
+        compact
+        className="mr-1 shrink-0"
+        onVerifiedClick={() => {
+          pushRecent(bank.id);
+          speakVoice("openingBank", { bank });
+        }}
+      />
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -88,19 +91,21 @@ export function BankTile({ bank }: { bank: Bank }) {
   
   return (
     <div className="glass shadow-soft rounded-2xl p-4 flex flex-col items-center gap-2 min-w-[110px] relative">
-      <button
-        onClick={(e) => {
-          pushRecent(bank.id);
-          openBank(bank, "bank_tile", e);
-        }}
-        className="flex flex-col items-center gap-2"
-        aria-label={`Open ${displayName} official website`}
-      >
+      <div className="flex flex-col items-center gap-2">
         <BankLogo bank={bank} size="lg" />
         <p className="text-[11px] font-medium text-foreground text-center line-clamp-1">
           {displayName}
         </p>
-      </button>
+      </div>
+      <OfficialLinkButton
+        item={bank}
+        compact
+        className="mt-1 px-2 py-1 text-[10px]"
+        onVerifiedClick={() => {
+          pushRecent(bank.id);
+          speakVoice("openingBank", { bank });
+        }}
+      />
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -130,13 +135,19 @@ export function BankGridCard({ bank }: { bank: Bank }) {
   
   return (
     <div className="glass shadow-soft rounded-2xl p-4 flex flex-col items-center text-center gap-2 relative">
-      <button onClick={(e) => {
-          pushRecent(bank.id);
-          openBank(bank, "bank_grid_card", e);
-        }} className="contents" aria-label={`Open ${displayName}`}>
+      <div className="contents">
         <BankLogo bank={bank} size="lg" />
         <p className="text-xs font-semibold text-foreground line-clamp-2 mt-2">{displayName}</p>
-      </button>
+      </div>
+      <OfficialLinkButton
+        item={bank}
+        compact
+        className="mt-1 px-2 py-1 text-[10px]"
+        onVerifiedClick={() => {
+          pushRecent(bank.id);
+          speakVoice("openingBank", { bank });
+        }}
+      />
       <button
         onClick={(e) => {
           e.stopPropagation();

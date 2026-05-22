@@ -5,10 +5,18 @@ import {
   Smartphone, CreditCard, QrCode, KeyRound, UserX, Globe,
   ExternalLink, Search, Info, PhoneCall, ChevronDown
 } from "lucide-react";
+import type { ElementType } from "react";
+import { OfficialLinkButton } from "@/components/OfficialLinkButton";
+import {
+  CYBER_COMPLAINT_PORTAL,
+  CYBER_FRAUD_HELPLINE,
+  CYBER_FRAUD_WARNING,
+  CYBER_SCAM_CATEGORIES,
+} from "@/data/cyberSafetyData";
 
 /* ─── Official Links (single source of truth) ─── */
-const CYBER_COMPLAINT_URL = "https://cybercrime.gov.in/";
-const HELPLINE_NUMBER = "1930";
+const CYBER_COMPLAINT_URL = CYBER_COMPLAINT_PORTAL.officialWebsite;
+const HELPLINE_NUMBER = CYBER_FRAUD_HELPLINE;
 
 /* ─── Types ─── */
 interface SafetyShieldModalProps {
@@ -23,7 +31,7 @@ interface ScamCategory {
   id: string;
   title: string;
   description: string;
-  icon: React.ElementType;
+  icon: ElementType;
   color: string;
   bg: string;
   steps: string[];
@@ -168,6 +176,23 @@ const SCAM_CATEGORIES: ScamCategory[] = [
   },
 ];
 
+const SCAM_ICON_MAP: Record<string, ElementType> = {
+  globe: Globe,
+  message: MessageSquare,
+  phone: Phone,
+  qr: QrCode,
+  smartphone: Smartphone,
+  key: KeyRound,
+  userx: UserX,
+  link: Link2,
+  "phone-call": PhoneCall,
+};
+
+const ACTIVE_SCAM_CATEGORIES: ScamCategory[] = CYBER_SCAM_CATEGORIES.map((scam) => ({
+  ...scam,
+  icon: SCAM_ICON_MAP[scam.icon],
+}));
+
 /* ─── Checker keywords ─── */
 const SUSPICIOUS_KEYWORDS = [
   "otp", "pin", "cvv", "password", "verify", "kyc", "urgent", "suspended",
@@ -176,10 +201,63 @@ const SUSPICIOUS_KEYWORDS = [
   "account deactivated", "credit card blocked",
 ];
 
-function analyzeInput(text: string): boolean {
-  if (!text.trim()) return false;
-  const lower = text.toLowerCase();
-  return SUSPICIOUS_KEYWORDS.some((kw) => lower.includes(kw));
+type CheckerInputType = "url" | "phone" | "message";
+
+const CHECKER_GUIDANCE: Record<CheckerInputType, { title: string; tone: string; steps: string[] }> = {
+  url: {
+    title: "Suspicious website or link guidance",
+    tone: "bg-red-50 border-red-200 text-red-800",
+    steps: [
+      "Do not click suspicious links.",
+      "Do not enter OTP, PIN, CVV, or password.",
+      "Verify only through official bank website/app.",
+      "If money is lost, call 1930 immediately.",
+    ],
+  },
+  message: {
+    title: "Suspicious SMS or message guidance",
+    tone: "bg-amber-50 border-amber-200 text-amber-900",
+    steps: [
+      "Do not trust urgent KYC/OTP messages.",
+      "Do not click links from SMS.",
+      "Do not share OTP or UPI PIN.",
+      "Contact bank only through official website/app.",
+    ],
+  },
+  phone: {
+    title: "Suspicious phone number or caller guidance",
+    tone: "bg-rose-50 border-rose-200 text-rose-800",
+    steps: [
+      "Do not share OTP, PIN, CVV, or banking password.",
+      "Do not install apps suggested by unknown callers.",
+      "Verify customer care number from official bank website.",
+    ],
+  },
+};
+
+function getCheckerInputType(text: string): CheckerInputType {
+  const trimmed = text.trim();
+  const lower = trimmed.toLowerCase();
+  const compactPhone = trimmed.replace(/[\s()+-]/g, "");
+
+  if (/^(https?:\/\/|www\.)\S+/i.test(trimmed) || /\b[a-z0-9.-]+\.[a-z]{2,}\b/i.test(trimmed)) {
+    return "url";
+  }
+
+  if (/^\d{7,15}$/.test(compactPhone)) {
+    return "phone";
+  }
+
+  if (SUSPICIOUS_KEYWORDS.some((kw) => lower.includes(kw))) {
+    return "message";
+  }
+
+  return "message";
+}
+
+function analyzeInput(text: string): CheckerInputType | null {
+  if (!text.trim()) return null;
+  return getCheckerInputType(text);
 }
 
 /* ─── Main Component ─── */
@@ -189,7 +267,7 @@ export function SafetyShieldModal({
 }: SafetyShieldModalProps) {
   const [selectedScam, setSelectedScam] = useState<ScamCategory | null>(null);
   const [checkerText, setCheckerText] = useState("");
-  const [checkerResult, setCheckerResult] = useState<"suspicious" | "neutral" | null>(null);
+  const [checkerResult, setCheckerResult] = useState<CheckerInputType | null>(null);
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const checkerRef = useRef<HTMLTextAreaElement>(null);
 
@@ -197,7 +275,7 @@ export function SafetyShieldModal({
 
   const handleCheck = () => {
     if (!checkerText.trim()) return;
-    setCheckerResult(analyzeInput(checkerText) ? "suspicious" : "neutral");
+    setCheckerResult(analyzeInput(checkerText));
   };
 
   const handleScamSelect = (scam: ScamCategory) => {
@@ -265,14 +343,11 @@ export function SafetyShieldModal({
                   <p className="text-[32px] font-black leading-none tracking-tight">{HELPLINE_NUMBER}</p>
                   <p className="text-[12px] font-medium opacity-90 mt-1">Call immediately if money is lost</p>
                 </div>
-                <button
-                  onClick={openCyberPortal}
-                  className="flex flex-col items-center gap-1 bg-white/20 hover:bg-white/30 active:scale-95 transition-all rounded-[12px] px-4 py-3 text-white text-center"
-                  aria-label="File Cyber Complaint on official portal"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  <span className="text-[10px] font-bold leading-tight">File Cyber<br />Complaint</span>
-                </button>
+                <OfficialLinkButton
+                  item={CYBER_COMPLAINT_PORTAL}
+                  label="File Cyber Complaint"
+                  className="flex-col gap-1 bg-white/20 hover:bg-white/30 rounded-[12px] px-4 py-3 text-white text-center shadow-none"
+                />
               </div>
             </div>
 
@@ -280,7 +355,7 @@ export function SafetyShieldModal({
             <div className="mx-4 mt-3 rounded-[12px] bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
               <p className="text-[12px] font-semibold text-amber-800 leading-snug">
-                If money is lost in online fraud, immediately call <strong>1930</strong> and file a complaint on the official cyber crime portal.
+                {CYBER_FRAUD_WARNING}
               </p>
             </div>
 
@@ -292,7 +367,7 @@ export function SafetyShieldModal({
               </h3>
 
               <div className="space-y-2">
-                {SCAM_CATEGORIES.map((scam) => {
+                {ACTIVE_SCAM_CATEGORIES.map((scam) => {
                   const Icon = scam.icon;
                   const isExpanded = expandedCard === scam.id;
                   return (
@@ -370,19 +445,16 @@ export function SafetyShieldModal({
                               </div>
 
                               {/* File complaint button */}
-                              <button
-                                onClick={openCyberPortal}
-                                className="w-full flex items-center justify-center gap-2 py-3 bg-foreground text-background rounded-[12px] font-bold text-[13px] active:scale-[0.98] transition-transform"
-                                aria-label="File Cyber Complaint - opens official cybercrime.gov.in"
-                              >
-                                <ExternalLink className="w-4 h-4" />
-                                File Cyber Complaint
-                              </button>
+                              <OfficialLinkButton
+                                item={CYBER_COMPLAINT_PORTAL}
+                                label="File Cyber Complaint"
+                                className="w-full py-3 rounded-[12px] text-[13px]"
+                              />
 
                               {/* Warning */}
                               <div className="bg-amber-50 border border-amber-200 rounded-[10px] px-3 py-2.5">
                                 <p className="text-[11px] font-semibold text-amber-800 leading-snug">
-                                  ⚠️ If money is lost in online fraud, immediately call <strong>1930</strong> and file a complaint on the official cyber crime portal.
+                                  {CYBER_FRAUD_WARNING}
                                 </p>
                               </div>
                             </div>
@@ -415,7 +487,7 @@ export function SafetyShieldModal({
                     setCheckerText(e.target.value);
                     setCheckerResult(null);
                   }}
-                  placeholder="Paste suspicious text, URL, SMS text or phone number here…"
+                  placeholder="Paste suspicious URL, SMS, message, or phone number. Do not paste OTP, PIN, CVV, passwords, or account details."
                   rows={3}
                   className="w-full px-4 py-3 text-[13px] font-medium bg-muted/10 border border-border/80 rounded-[12px] resize-none outline-none focus:border-blue-400 transition-colors placeholder:text-muted-foreground/60 placeholder:font-normal"
                   aria-label="Enter suspicious message or URL"
@@ -431,7 +503,7 @@ export function SafetyShieldModal({
 
                 {/* Disclaimer — always visible once checker is shown */}
                 <p className="text-[11px] text-muted-foreground text-center font-medium">
-                  ℹ️ This is basic safety guidance, not guaranteed scam detection.
+                  This is basic safety guidance, not guaranteed scam detection. Do not enter sensitive banking data.
                 </p>
 
                 {/* Result */}
@@ -441,40 +513,31 @@ export function SafetyShieldModal({
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 8 }}
-                      className={`rounded-[14px] p-4 border ${
-                        checkerResult === "suspicious"
-                          ? "bg-red-50 border-red-200"
-                          : "bg-green-50 border-green-200"
-                      }`}
+                      className={`rounded-[14px] p-4 border ${CHECKER_GUIDANCE[checkerResult].tone}`}
                     >
-                      {checkerResult === "suspicious" ? (
+                      {true ? (
                         <>
-                          <p className="font-bold text-[13px] text-red-700 flex items-center gap-2 mb-3">
+                          <p className="font-bold text-[13px] flex items-center gap-2 mb-3">
                             <AlertTriangle className="w-4 h-4" />
-                            Suspicious patterns detected — follow these precautions:
+                            {CHECKER_GUIDANCE[checkerResult].title}
                           </p>
                           <ul className="space-y-2 mb-4">
-                            {[
-                              "Do NOT enter OTP, UPI PIN, CVV or net banking password.",
-                              "Do NOT click any links in this message.",
-                              "Verify only through the official bank website or official app.",
-                              "Do NOT share your Aadhaar, PAN or account number.",
-                              "Call 1930 immediately if money is lost.",
-                              "File complaint at cybercrime.gov.in",
-                            ].map((tip, i) => (
-                              <li key={i} className="flex items-start gap-2 text-[12px] text-red-800 font-medium">
-                                <span className="text-red-500 mt-0.5">•</span>
+                            {CHECKER_GUIDANCE[checkerResult].steps.map((tip, i) => (
+                              <li key={i} className="flex items-start gap-2 text-[12px] font-medium">
+                                <span className="mt-0.5">•</span>
                                 {tip}
                               </li>
                             ))}
                           </ul>
-                          <button
-                            onClick={openCyberPortal}
-                            className="w-full py-2.5 bg-red-600 text-white rounded-[10px] font-bold text-[12px] flex items-center justify-center gap-2 active:scale-95 transition-transform"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                            File Cyber Complaint
-                          </button>
+                          <div className="rounded-[12px] bg-white/70 border border-current/10 p-3 mb-3">
+                            <p className="text-[10px] font-bold uppercase tracking-wider opacity-75">Cyber fraud helpline</p>
+                            <p className="text-[24px] font-black leading-tight">{HELPLINE_NUMBER}</p>
+                          </div>
+                          <OfficialLinkButton
+                            item={CYBER_COMPLAINT_PORTAL}
+                            label="File Cyber Complaint"
+                            className="w-full py-2.5 bg-foreground text-background rounded-[10px] text-[12px] shadow-none"
+                          />
                         </>
                       ) : (
                         <div className="text-center">
@@ -503,7 +566,7 @@ export function SafetyShieldModal({
                   { name: "RBI Sachet Portal", url: "https://sachet.rbi.org.in/", badge: "Sachet" },
                   { name: "CERT-In", url: "https://www.cert-in.org.in/", badge: "CERT‑In" },
                   { name: "NPCI / UPI Safety", url: "https://www.npci.org.in/", badge: "NPCI" },
-                ].map((link) => (
+                ].filter((link) => link.url === CYBER_COMPLAINT_URL).map((link) => (
                   <div
                     key={link.url}
                     className="flex items-center justify-between bg-white border border-border/60 px-4 py-3 rounded-[14px]"
