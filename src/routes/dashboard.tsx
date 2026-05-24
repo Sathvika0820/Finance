@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { memo, useMemo, useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, ChevronDown, Search, ExternalLink, ArrowDownUp, Settings, Landmark, Building2, Wallet, CreditCard, Home, Users, X, Mail, PiggyBank, Globe, MapPin, Shield, Activity, HeartHandshake, Award } from "lucide-react";
 import { BANKS, CATEGORIES, getBankDisplayName, Bank, logoUrl, bankMatchesSearch } from "@/data/banks";
@@ -13,11 +13,10 @@ import { SettingsModal } from "@/components/SettingsModal";
 import { CrestLogo } from "@/components/CrestLogo";
 import { useVoiceAssistant } from "@/lib/voice";
 import { LANGUAGE_OPTIONS, useTranslation } from "@/lib/i18n";
-import { SmartGuidanceModal } from "@/components/SmartGuidanceModal";
 import { SafetyShieldModal } from "@/components/SafetyShieldModal";
 import { FinancialInclusionModal } from "@/components/FinancialInclusionModal";
 import { CompareBankingModal } from "@/components/CompareBankingModal";
-import { Lightbulb, ShieldCheck, ArrowLeftRight } from "lucide-react";
+import { ShieldCheck, ArrowLeftRight } from "lucide-react";
 import { OfficialLinkButton, UNVERIFIED_LABEL } from "@/components/OfficialLinkButton";
 
 export const Route = createFileRoute("/dashboard")({
@@ -144,6 +143,97 @@ function PopularBankRow({ bank, openBankSafely, t, lang }: { bank: Bank, openBan
     </button>
   );
 }
+
+interface AddBankSearchPanelProps {
+  banks: Bank[];
+  isFavorite: (id: string) => boolean;
+  toggle: (id: string) => void;
+  speakVoice: (eventKey: string, payload?: any) => void;
+  t: (key: string) => string;
+  lang: string;
+}
+
+const AddBankSearchPanel = memo(function AddBankSearchPanel({
+  banks,
+  isFavorite,
+  toggle,
+  speakVoice,
+  t,
+  lang,
+}: AddBankSearchPanelProps) {
+  const [query, setQuery] = useState("");
+
+  const results = useMemo(() => {
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) return banks;
+
+    return banks.filter((bank) =>
+      bankMatchesSearch(bank, trimmedQuery, lang, [t(getCatKey(bank.category))])
+    );
+  }, [banks, lang, query, t]);
+
+  return (
+    <div className="p-3 flex flex-col h-[60vh] bg-background/20">
+      <div className="relative mb-3 shrink-0">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground stroke-[2.5]" />
+        <input
+          type="search"
+          placeholder={t("searchBanks")}
+          value={query}
+          onChange={(event) => setQuery(event.currentTarget.value)}
+          className={`w-full pl-10 pr-4 py-2.5 text-[13px] font-medium ${CONTROL_INPUT} placeholder:font-normal`}
+          autoComplete="off"
+          spellCheck={false}
+        />
+      </div>
+
+      <div className="overflow-y-auto pr-1 flex-1 relative bg-white/90 rounded-xl border border-border/50 divide-y divide-border/30">
+        {results.map((bank) => {
+          const fav = isFavorite(bank.id);
+          const displayName = getBankDisplayName(bank, lang);
+          const bankOfficialUrl = getOfficialLink("banks", bank.id);
+          const isBankVerified = !!bankOfficialUrl;
+
+          return (
+            <div key={bank.id} className={`flex items-center gap-3 p-3 transition-colors ${
+              isBankVerified ? "hover:bg-muted/30" : "opacity-75"
+            }`}>
+              <BankLogo bank={bank} size="sm" />
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-[13px] truncate text-foreground leading-snug">{displayName}</p>
+                <p className={`text-[10px] font-semibold mt-0.5 leading-tight ${
+                  isBankVerified ? "text-muted-foreground" : "text-amber-600/90"
+                }`}>
+                  {isBankVerified ? t(getCatKey(bank.category)) : "Official link not verified yet."}
+                </p>
+              </div>
+              <button
+                disabled={!isBankVerified}
+                onClick={(event) => {
+                  if (!isBankVerified) return;
+                  event.stopPropagation();
+                  event.preventDefault();
+                  speakVoice(fav ? "bankRemoved" : "bankSelected", { bank });
+                  toggle(bank.id);
+                }}
+                className={`p-2 -mr-1 rounded-lg transition-colors focus:outline-none shrink-0 ${
+                  isBankVerified ? "cursor-pointer" : "cursor-not-allowed opacity-40"
+                }`}
+                title={isBankVerified ? undefined : "Official link not verified yet."}
+              >
+                <Heart className={`w-4 h-4 ${fav ? "fill-red-500 text-red-500" : "text-border/80"}`} />
+              </button>
+            </div>
+          );
+        })}
+
+        {results.length === 0 && (
+          <p className="text-center text-[13px] font-medium text-muted-foreground py-8">{t("noBanksFound")}</p>
+        )}
+      </div>
+    </div>
+  );
+});
 
 const SERVICE_FAV_KEY = "bankHubFavoriteServices";
 const LEGACY_SERVICE_FAV_KEY = "bankhub:serviceFavorites";
@@ -637,11 +727,13 @@ function Dashboard() {
   
   const [isAdding, setIsAdding] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isGuidanceOpen, setIsGuidanceOpen] = useState(false);
   const [isSafetyOpen, setIsSafetyOpen] = useState(false);
   const [isFinancialHelpOpen, setIsFinancialHelpOpen] = useState(false);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
-  const [addQuery, setAddQuery] = useState("");
+  const [isExplorerOpen, setIsExplorerOpen] = useState(false);
+  const [nearbyBankSearch, setNearbyBankSearch] = useState("");
+  const [nearbyBankId, setNearbyBankId] = useState("");
+  const [selectedSearchType, setSelectedSearchType] = useState<"branch" | "atm" | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeServiceCategory, setActiveServiceCategory] = useState<ServiceGroupKey | null>(null);
   const [selectedService, setSelectedService] = useState<FinanceService | null>(null);
@@ -670,12 +762,29 @@ function Dashboard() {
     []
   );
 
-  const addResults = useMemo(() => {
-    if (!addQuery.trim()) return allBanksSorted;
-    return allBanksSorted.filter((b) =>
-      bankMatchesSearch(b, addQuery, lang, [t(getCatKey(b.category))])
-    );
-  }, [addQuery, allBanksSorted, lang, t]);
+  const selectedNearbyBank = useMemo(
+    () => BANKS.find((bank) => bank.id === nearbyBankId) || null,
+    [nearbyBankId]
+  );
+
+  const nearbyBankResults = useMemo(() => {
+    const query = nearbyBankSearch.trim();
+    if (!query) return allBanksSorted.slice(0, 8);
+    return allBanksSorted
+      .filter((bank) => bankMatchesSearch(bank, query, lang, [bank.shortName, bank.name]))
+      .slice(0, 8);
+  }, [allBanksSorted, lang, nearbyBankSearch]);
+
+  const openGoogleMapsNearby = useCallback((placeType: "branch" | "atm") => {
+    setSelectedSearchType(placeType);
+    const typedBankName = nearbyBankSearch.trim();
+    const bankName = selectedNearbyBank ? selectedNearbyBank.shortName || selectedNearbyBank.name : typedBankName;
+    const target = placeType === "atm" ? "ATM" : "branch";
+    const genericTarget = placeType === "atm" ? "ATM" : "bank branch";
+    const query = bankName ? `${bankName} ${target} near me` : `${genericTarget} near me`;
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }, [nearbyBankSearch, selectedNearbyBank]);
 
   const openServiceDetails = useCallback((service: FinanceService, event?: any) => {
     event?.stopPropagation?.();
@@ -707,16 +816,8 @@ function Dashboard() {
 
   return (
     <div className="space-y-8 pb-6 pt-2">
-      <header className={`${SURFACE_CARD} flex items-start justify-between -mt-2 p-5`}>
-        <div className="flex-1 pr-4">
-          <p className="text-[12px] uppercase tracking-[0.08em] text-muted-foreground font-bold leading-tight">{t("welcomeTo")}</p>
-          <h1 className="text-[33px] font-bold text-foreground leading-none mt-2">{t("bankHub")}</h1>
-          <p className="text-[15px] font-bold text-muted-foreground mt-3 leading-[1.3] max-w-[200px] sm:max-w-none">
-            {t("tagline")}
-          </p>
-        </div>
-        <div className="flex flex-col items-end gap-3 shrink-0">
-          <div className="flex items-center gap-2">
+      <header className={`${SURFACE_CARD} -mt-2 px-4 py-5 sm:p-6`}>
+        <div className="flex items-center justify-end gap-2">
             <select
               value={lang}
               onChange={(event) => setLang(event.target.value)}
@@ -737,8 +838,15 @@ function Dashboard() {
             >
               <Settings className="w-5 h-5 stroke-[2.5]" />
             </button>
-          </div>
-          <div className="h-20 w-auto opacity-95 -mr-1 flex items-center justify-end">
+        </div>
+
+        <div className="mx-auto flex w-full max-w-[38rem] flex-col items-center px-1 text-center sm:px-3">
+          <p className="text-[12px] uppercase tracking-[0.08em] text-muted-foreground font-bold leading-tight">{t("welcomeTo")}</p>
+          <h1 className="text-[33px] font-bold text-foreground leading-none mt-2">{t("bankHub")}</h1>
+          <p className="mx-auto mt-3 w-full max-w-[22.5rem] px-1 text-center text-[16px] sm:max-w-[34rem] sm:text-[17px] font-bold leading-[1.32] sm:leading-[1.35] tracking-0 text-muted-foreground [text-wrap:balance] [word-break:keep-all] [overflow-wrap:normal] hyphens-none">
+            {t("tagline")}
+          </p>
+          <div className="mt-4 h-16 sm:h-20 w-auto opacity-95 flex items-center justify-center">
              <CrestLogo className="h-full w-auto" />
           </div>
         </div>
@@ -812,64 +920,14 @@ function Dashboard() {
                 exit={{ height: 0 }}
                 className="overflow-hidden border-t border-border/50"
               >
-                <div className="p-3 flex flex-col h-[60vh] bg-background/20">
-                  <div className="relative mb-3 shrink-0">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground stroke-[2.5]" />
-                    <input
-                      type="text"
-                      placeholder={t("searchBanks")}
-                      value={addQuery}
-                      onChange={(e) => setAddQuery(e.target.value)}
-                      className={`w-full pl-10 pr-4 py-2.5 text-[13px] font-medium ${CONTROL_INPUT} placeholder:font-normal`}
-                    />
-                  </div>
-                  <div className="overflow-y-auto pr-1 flex-1 relative bg-white/90 rounded-xl border border-border/50 divide-y divide-border/30">
-                    {addResults.map((b) => {
-                      const fav = isFavorite(b.id);
-                      const displayName = getBankDisplayName(b, lang);
-                      const bankOfficialUrl = getOfficialLink("banks", b.id);
-                      const isBankVerified = !!bankOfficialUrl;
-                      return (
-                        <div key={b.id} className={`flex items-center gap-3 p-3 transition-colors ${
-                          isBankVerified ? "hover:bg-muted/30" : "opacity-75"
-                        }`}>
-                          <BankLogo bank={b} size="sm" />
-                          <div className="flex-1 min-w-0">
-                            <p className="font-bold text-[13px] truncate text-foreground leading-snug">{displayName}</p>
-                            <p className={`text-[10px] font-semibold mt-0.5 leading-tight ${
-                              isBankVerified ? "text-muted-foreground" : "text-amber-600/90"
-                            }`}>
-                              {isBankVerified ? t(getCatKey(b.category)) : "Official link not verified yet."}
-                            </p>
-                          </div>
-                          <button
-                            disabled={!isBankVerified}
-                            onClick={(e) => {
-                              if (!isBankVerified) return;
-                              e.stopPropagation();
-                              e.preventDefault();
-                              if (!fav) {
-                                speakVoice("bankSelected", { bank: b });
-                              } else {
-                                speakVoice("bankRemoved", { bank: b });
-                              }
-                              toggle(b.id);
-                            }}
-                            className={`p-2 -mr-1 rounded-lg transition-colors focus:outline-none shrink-0 ${
-                              isBankVerified ? "cursor-pointer" : "cursor-not-allowed opacity-40"
-                            }`}
-                            title={isBankVerified ? undefined : "Official link not verified yet."}
-                          >
-                            <Heart className={`w-4 h-4 ${fav ? "fill-red-500 text-red-500" : "text-border/80"}`} />
-                          </button>
-                        </div>
-                      );
-                    })}
-                    {addResults.length === 0 && (
-                      <p className="text-center text-[13px] font-medium text-muted-foreground py-8">{t("noBanksFound")}</p>
-                    )}
-                  </div>
-                </div>
+                <AddBankSearchPanel
+                  banks={allBanksSorted}
+                  isFavorite={isFavorite}
+                  toggle={toggle}
+                  speakVoice={speakVoice}
+                  t={t}
+                  lang={lang}
+                />
               </motion.div>
             )}
           </AnimatePresence>
@@ -1030,27 +1088,24 @@ function Dashboard() {
         </div>
       </section>
 
-      {/* Smart Services */}
+      {/* Banking Tools */}
       <section>
-        <h3 className="font-bold text-[15px] text-foreground mb-1">{t("smartServices")}</h3>
-        <p className="text-[12px] text-muted-foreground font-medium mb-4">{t("guidanceSubtitle")}</p>
+        <h3 className="font-bold text-[15px] text-foreground mb-1">{t("bankingTools")}</h3>
+        <p className="text-[12px] text-muted-foreground font-medium mb-4">{t("bankingToolsSubtitle")}</p>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className={`${SURFACE_CARD_INTERACTIVE} p-4 flex flex-col gap-3`}>
+          <div className={`${SURFACE_CARD_INTERACTIVE} p-4 flex flex-col gap-3 sm:col-span-2`}>
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-[12px] bg-amber-50 flex items-center justify-center shrink-0">
-                <Lightbulb className="w-5 h-5 text-amber-500" />
+              <div className="w-10 h-10 rounded-[12px] bg-emerald-50 flex items-center justify-center shrink-0">
+                <MapPin className="w-5 h-5 text-emerald-700" />
               </div>
-              <div>
-                <h4 className="font-bold text-[14px] text-foreground">{t("smartBankingGuidance")}</h4>
-                <p className="text-[12px] font-medium text-muted-foreground mt-0.5">{t("findRightBankingService")}</p>
+              <div className="min-w-0">
+                <h4 className="font-bold text-[14px] text-foreground">{t("nearestBranchAtm")}</h4>
+                <p className="text-[12px] font-medium text-muted-foreground mt-0.5">{t("findNearbyBranchAtm")}</p>
               </div>
             </div>
             <button
-              onClick={() => {
-                speakVoice("showingGuidance");
-                setIsGuidanceOpen(true);
-              }}
+              onClick={() => setIsExplorerOpen(true)}
               className={`w-full mt-1 py-2.5 text-[13px] ${PRIMARY_ACTION}`}
             >
               {t("explore")}
@@ -1132,7 +1187,124 @@ function Dashboard() {
       </div>
 
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
-      <SmartGuidanceModal isOpen={isGuidanceOpen} onClose={() => setIsGuidanceOpen(false)} t={t} lang={lang} openBankSafely={openBankSafely} speakVoice={speakVoice} />
+      <AnimatePresence>
+        {isExplorerOpen && (
+          <motion.div
+            className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center bg-slate-950/45 px-3 py-4 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 26, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 18, scale: 0.98 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="w-full max-w-md rounded-[22px] border border-white/70 bg-white shadow-2xl overflow-hidden"
+            >
+              <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-[13px] bg-slate-900 text-white flex items-center justify-center shrink-0">
+                    <MapPin className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-[15px] font-bold text-foreground leading-tight">{t("nearestBranchAtm")}</h3>
+                    <p className="text-[12px] font-medium text-muted-foreground mt-1 leading-snug">
+                      {t("nearestExplorerDescription")}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsExplorerOpen(false)}
+                  className="tap-target rounded-xl p-2 text-muted-foreground hover:bg-slate-100 hover:text-foreground transition-colors"
+                  aria-label={t("close")}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-4">
+                <div>
+                  <label className="text-[12px] font-bold text-foreground">{t("bankSearchSelect")}</label>
+                  <div className="relative mt-2">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground stroke-[2.5]" />
+                    <input
+                      value={nearbyBankSearch}
+                      onChange={(event) => {
+                        setNearbyBankSearch(event.target.value);
+                        setNearbyBankId("");
+                      }}
+                      placeholder={t("typeBankNameExample")}
+                      className={`w-full pl-10 pr-4 py-3 text-[13px] font-semibold ${CONTROL_INPUT} placeholder:font-normal`}
+                      autoComplete="off"
+                    />
+                  </div>
+                </div>
+
+                <div className="max-h-48 overflow-y-auto rounded-2xl border border-border/60 bg-slate-50/60 p-1.5">
+                  <button
+                    onClick={() => {
+                      setNearbyBankId("");
+                      setNearbyBankSearch("");
+                    }}
+                    className={`w-full rounded-xl px-3 py-2.5 text-left text-[13px] font-bold transition-colors ${
+                      !nearbyBankId && !nearbyBankSearch.trim()
+                        ? "bg-white text-slate-950 shadow-soft"
+                        : "text-muted-foreground hover:bg-white/80"
+                    }`}
+                  >
+                    {t("anyBank")}
+                  </button>
+                  {nearbyBankResults.map((bank) => {
+                    const active = nearbyBankId === bank.id;
+                    return (
+                      <button
+                        key={bank.id}
+                        onClick={() => {
+                          setNearbyBankId(bank.id);
+                          setNearbyBankSearch(getBankDisplayName(bank, lang));
+                        }}
+                        className={`w-full rounded-xl px-3 py-2.5 text-left transition-colors ${
+                          active ? "bg-white text-slate-950 shadow-soft" : "hover:bg-white/80"
+                        }`}
+                      >
+                        <span className="block text-[13px] font-bold leading-tight">{getBankDisplayName(bank, lang)}</span>
+                        <span className="block text-[10px] font-semibold text-muted-foreground mt-0.5">{bank.shortName}</span>
+                      </button>
+                    );
+                  })}
+                  {nearbyBankResults.length === 0 && (
+                    <p className="px-3 py-5 text-center text-[12px] font-semibold text-muted-foreground">
+                      {t("noBanksFound")}
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    onClick={() => openGoogleMapsNearby("branch")}
+                    className={`w-full py-3 px-3 text-[13px] ${PRIMARY_ACTION} inline-flex items-center justify-center gap-2 ${
+                      selectedSearchType === "branch" ? "ring-2 ring-slate-900/10" : ""
+                    }`}
+                  >
+                    <Building2 className="w-4 h-4" />
+                    <span>{t("findBranch")}</span>
+                  </button>
+                  <button
+                    onClick={() => openGoogleMapsNearby("atm")}
+                    className={`w-full py-3 px-3 text-[13px] ${SECONDARY_ACTION} inline-flex items-center justify-center gap-2 ${
+                      selectedSearchType === "atm" ? "ring-2 ring-slate-900/10" : ""
+                    }`}
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    <span>{t("findAtm")}</span>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <SafetyShieldModal isOpen={isSafetyOpen} onClose={() => setIsSafetyOpen(false)} t={t} lang={lang} speakVoice={speakVoice} />
       <FinancialInclusionModal isOpen={isFinancialHelpOpen} onClose={() => setIsFinancialHelpOpen(false)} t={t} speakVoice={speakVoice} />
       <CompareBankingModal isOpen={isCompareOpen} onClose={() => setIsCompareOpen(false)} t={t} lang={lang} openBankSafely={openBankSafely} speakVoice={speakVoice} />
