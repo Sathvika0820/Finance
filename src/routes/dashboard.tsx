@@ -616,26 +616,19 @@ function ServiceGroup({
                 />
               </div>
 
-              <div className="space-y-2">
-                {groupedServices.map(([subCategory, servicesInGroup]) => (
-                  <div key={subCategory} className="space-y-1.5">
-                    <div className="px-2 py-1 rounded-2xl bg-slate-100 text-[10px] font-semibold text-slate-700">
-                      {subCategory}
-                    </div>
-                    <div className="grid grid-cols-1 gap-1.5">
-                      {servicesInGroup.map((service) => (
-                        <ServiceCard
-                          key={service.id}
-                          service={service}
-                          isFav={service.isFavorite || isServiceFav(service.id)}
-                          onToggleFav={() => toggleServiceFav(service.id)}
-                          onOpen={(e) => onServiceSelect(service, e)}
-                          lang={lang}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
+              <div className="grid grid-cols-1 gap-1.5">
+                {groupedServices.flatMap(([, servicesInGroup]) =>
+                  servicesInGroup.map((service) => (
+                    <ServiceCard
+                      key={service.id}
+                      service={service}
+                      isFav={service.isFavorite || isServiceFav(service.id)}
+                      onToggleFav={() => toggleServiceFav(service.id)}
+                      onOpen={(e) => onServiceSelect(service, e)}
+                      lang={lang}
+                    />
+                  ))
+                )}
               </div>
 
               {filteredServices.length === 0 && (
