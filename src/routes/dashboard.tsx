@@ -351,7 +351,7 @@ const LOCAL_STRINGS: Record<string, Record<string, string>> = {
 type ServiceGroupKey = "post_office" | "insurance";
 
 function isPostOfficeService(service: FinanceService) {
-  return service.category === "post_office" || service.category === "post_office_bank";
+  return ["india-post", "ippb", "postal-life-insurance", "rural-postal-life-insurance"].includes(service.id);
 }
 
 function isInsuranceService(service: FinanceService) {
