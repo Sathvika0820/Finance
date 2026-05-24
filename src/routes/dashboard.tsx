@@ -134,7 +134,7 @@ function PopularBankRow({ bank, openBankSafely, t, lang }: { bank: Bank, openBan
       <div className="flex items-center gap-3 min-w-0">
         <BankLogo bank={bank} size="sm" />
         <div className="text-left min-w-0">
-          <p className="font-bold text-[13px] text-foreground truncate">{displayName}</p>
+          <p className="font-bold text-[12px] text-foreground truncate">{displayName}</p>
           <p className="text-[10px] font-semibold text-muted-foreground mt-0.5 leading-tight">
             {isVerified ? t(getCatKey(bank.category)) : "Official link not verified yet."}
           </p>
@@ -1300,7 +1300,7 @@ function Dashboard() {
                           active ? "bg-white text-slate-950 shadow-soft" : "hover:bg-white/80"
                         }`}
                       >
-                        <span className="block text-[13px] font-bold leading-tight">{getBankDisplayName(bank, lang)}</span>
+                        <span className="block text-[12px] font-bold leading-tight">{getBankDisplayName(bank, lang)}</span>
                         <span className="block text-[10px] font-semibold text-muted-foreground mt-0.5">{bank.shortName}</span>
                       </button>
                     );
