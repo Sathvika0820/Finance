@@ -69,9 +69,9 @@ function SchemeCard({
             officialWebsite: officialEntry?.officialLink || "",
             verified: Boolean(officialEntry?.verified),
           }}
-          label="Open"
+          iconOnly
           unverifiedLabel={t("officialLinkNotVerifiedYet")}
-          className="h-9 px-3"
+          className="h-9 w-9 rounded-xl border border-border/70 bg-slate-50 text-slate-700 transition-colors hover:bg-slate-100"
         />
       </div>
     </article>
