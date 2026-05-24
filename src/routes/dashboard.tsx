@@ -824,10 +824,9 @@ function Dashboard() {
 
   const nearbyBankResults = useMemo(() => {
     const query = nearbyBankSearch.trim();
-    if (!query) return allBanksSorted.slice(0, 8);
+    if (!query) return allBanksSorted;
     return allBanksSorted
-      .filter((bank) => bankMatchesSearch(bank, query, lang, [bank.shortName, bank.name]))
-      .slice(0, 8);
+      .filter((bank) => bankMatchesSearch(bank, query, lang, [bank.shortName, bank.name]));
   }, [allBanksSorted, lang, nearbyBankSearch]);
 
   const openGoogleMapsNearby = useCallback((placeType: "branch" | "atm") => {
@@ -1280,7 +1279,7 @@ function Dashboard() {
                   </div>
                 </div>
 
-                <div className="max-h-48 overflow-y-auto rounded-2xl border border-border/60 bg-slate-50/60 p-1.5">
+                <div className="max-h-80 overflow-y-auto rounded-2xl border border-border/60 bg-slate-50/60 p-1.5">
                   <button
                     onClick={() => {
                       setNearbyBankId("");
