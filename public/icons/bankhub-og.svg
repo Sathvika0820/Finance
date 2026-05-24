@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-label="BankHub — All your banks, one smart gateway">
+  <rect width="1200" height="630" fill="#0f172a"/>
+  <circle cx="1030" cy="120" r="210" fill="#34d399" opacity=".14"/>
+  <circle cx="110" cy="560" r="180" fill="#38bdf8" opacity=".10"/>
+  <g transform="translate(96 110)">
+    <rect width="132" height="132" rx="32" fill="#111827" stroke="#334155" stroke-width="3"/>
+    <path d="M28 62h76v11H28z" fill="#e2e8f0"/>
+    <path d="M36 80h11v28H36zm24 0h11v28H60zm25 0h11v28H85z" fill="#cbd5e1"/>
+    <path d="M24 114h84v11H24z" fill="#e2e8f0"/>
+    <path d="M20 52 66 20l46 32v10H20z" fill="#34d399"/>
+  </g>
+  <text x="96" y="318" fill="#f8fafc" font-family="Inter, Arial, sans-serif" font-size="82" font-weight="800">BankHub</text>
+  <text x="96" y="396" fill="#d1fae5" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="700">All your banks, one smart gateway</text>
+  <text x="96" y="476" fill="#cbd5e1" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="500">AI assistance • Verified official links • Loan comparison • Fraud safety</text>
+</svg>

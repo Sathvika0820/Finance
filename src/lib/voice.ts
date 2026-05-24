@@ -1,24 +1,15 @@
 import { useState, useCallback, useEffect } from "react";
 import { Bank } from "@/data/banks";
 import { getSafeBankUrl } from "@/lib/urlHealth";
+import { SPEECH_LOCALE_BY_LANGUAGE, normalizeLanguage as normalizeAppLanguage, type AppLanguage } from "@/lib/i18n";
 
-export type SupportedLanguage = "english" | "hindi" | "telugu";
+export type SupportedLanguage = AppLanguage;
 
 let globalHasInteracted = false;
 let welcomeSpoken = false;
 
 function normalizeLanguage(value: string | null) {
-  const v = String(value || "").toLowerCase();
-
-  if (v === "hi" || v === "hi-in" || v.includes("à¤¹à¤¿à¤¨à¥�à¤¦à¥€") || v.includes("hindi")) {
-    return "hindi";
-  }
-
-  if (v === "te" || v === "te-in" || v.includes("à°¤à±†à°²à±�à°—à±�") || v.includes("telugu")) {
-    return "telugu";
-  }
-
-  return "english";
+  return normalizeAppLanguage(value);
 }
 
 export function openBank(bank: Bank, source = "unknown", event?: any) {
@@ -41,11 +32,6 @@ export function openBank(bank: Bank, source = "unknown", event?: any) {
     console.warn("Blocked attempt to open unverified bank website for:", bank?.name);
     return;
   }
-
-  console.count("OPEN_BANK_CALLED");
-  console.log("OPEN_BANK_SOURCE:", source, bank?.name);
-  console.count("WINDOW_OPEN_EXECUTED");
-  console.log("Opening bank URL:", bank?.name, url, source);
 
   window.open(url, "_blank", "noopener,noreferrer");
 
@@ -76,6 +62,12 @@ if (typeof window !== "undefined") {
 
 function getBestVoice(language: string) {
   const voices = window.speechSynthesis.getVoices();
+  const speechLocale = SPEECH_LOCALE_BY_LANGUAGE[normalizeLanguage(language)];
+  const speechPrefix = speechLocale.split("-")[0].toLowerCase();
+  const matchedVoice =
+    voices.find(v => v.lang === speechLocale) ||
+    voices.find(v => v.lang.toLowerCase().startsWith(speechPrefix));
+  if (matchedVoice) return matchedVoice;
   
   if (language === "telugu") {
     return voices.find(v => v.lang === "te-IN") ||
@@ -104,7 +96,6 @@ export function speakVoice(eventKey: string, payload: any = {}) {
 
   const isMuted = localStorage.getItem("bankHubVoiceMuted") === "true";
   if (isMuted && eventKey !== "muted" && eventKey !== "unmuted") {
-    console.log("Voice skipped because muted");
     return;
   }
 
@@ -113,7 +104,7 @@ export function speakVoice(eventKey: string, payload: any = {}) {
 
   const bank = payload.bank;
   const bankName =
-    bank?.names?.[safeLanguage] ||
+    bank?.names?.[safeLanguage as keyof typeof bank.names] ||
     bank?.name ||
     payload.bankName ||
     "";
@@ -198,12 +189,6 @@ export function speakVoice(eventKey: string, payload: any = {}) {
     }[safeLanguage];
   }
 
-  console.log("VOICE_EVENT:", eventKey);
-  console.log("VOICE_LANGUAGE:", selectedLanguage);
-  console.log("VOICE_TEXT:", text);
-  console.log("VOICE_LANG_CODE:", safeLanguage === "hindi" ? "hi-IN" : safeLanguage === "telugu" ? "te-IN" : "en-IN");
-  console.log("VOICE_MUTED:", isMuted);
-
   if (!text) {
     console.warn("No voice text found for event:", eventKey);
     return;
@@ -216,12 +201,7 @@ export function speakVoice(eventKey: string, payload: any = {}) {
 
   const utterance = new SpeechSynthesisUtterance(text);
 
-  utterance.lang =
-    safeLanguage === "hindi"
-      ? "hi-IN"
-      : safeLanguage === "telugu"
-      ? "te-IN"
-      : "en-IN";
+  utterance.lang = SPEECH_LOCALE_BY_LANGUAGE[safeLanguage];
 
   const bestVoice = getBestVoice(safeLanguage);
 
@@ -235,16 +215,13 @@ export function speakVoice(eventKey: string, payload: any = {}) {
     console.warn("No native English voice found. Browser/device is using fallback voice.");
   }
 
-  console.log("Using voice:", bestVoice?.name, bestVoice?.lang);
-
-  utterance.onstart = () => console.log("Voice started");
-  utterance.onend = () => console.log("Voice ended");
+  utterance.onstart = () => undefined;
+  utterance.onend = () => undefined;
   utterance.onerror = (e) => console.warn("Voice error:", e);
 
   window.speechSynthesis.cancel();
 
   setTimeout(() => {
-    console.log("SPEAK_CALLED_NOW");
     window.speechSynthesis.speak(utterance);
   }, 50);
 }

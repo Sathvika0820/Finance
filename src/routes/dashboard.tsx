@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, ChevronDown, Search, ExternalLink, ArrowDownUp, Settings, Landmark, Building2, Wallet, CreditCard, Home, Users, X, Mail, PiggyBank, Globe, MapPin, Shield, Activity, HeartHandshake, Award } from "lucide-react";
-import { BANKS, CATEGORIES, getBankDisplayName, Bank, logoUrl } from "@/data/banks";
+import { BANKS, CATEGORIES, getBankDisplayName, Bank, logoUrl, bankMatchesSearch } from "@/data/banks";
 import { SERVICES_DATA, FinanceService, ServiceCategory, getServiceDescription, getServiceName } from "@/data/services";
 import { openServiceAction } from "@/lib/serviceRedirect";
 import { runServicesHealthCheckBackground } from "@/lib/urlHealth";
@@ -12,20 +12,23 @@ import { AppShell } from "@/components/AppShell";
 import { SettingsModal } from "@/components/SettingsModal";
 import { CrestLogo } from "@/components/CrestLogo";
 import { useVoiceAssistant } from "@/lib/voice";
-import { useTranslation } from "@/lib/i18n";
+import { LANGUAGE_OPTIONS, useTranslation } from "@/lib/i18n";
 import { SmartGuidanceModal } from "@/components/SmartGuidanceModal";
 import { SafetyShieldModal } from "@/components/SafetyShieldModal";
 import { FinancialInclusionModal } from "@/components/FinancialInclusionModal";
 import { CompareBankingModal } from "@/components/CompareBankingModal";
 import { Lightbulb, ShieldCheck, ArrowLeftRight } from "lucide-react";
-import { AiAssistant } from "@/components/AiAssistant";
 import { OfficialLinkButton, UNVERIFIED_LABEL } from "@/components/OfficialLinkButton";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
-      { title: "Dashboard — Bank Hub" },
-      { name: "description", content: "Your one-tap home for Indian banking access." },
+      { title: "BankHub Dashboard — All your banks, one smart gateway" },
+      {
+        name: "description",
+        content:
+          "Access official bank links, AI banking assistance, loan comparison, fraud safety, and financial inclusion support from BankHub.",
+      },
     ],
   }),
   component: () => (
@@ -36,13 +39,19 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 const CATEGORY_ICONS: Record<string, { icon: any, color: string, bg: string }> = {
-  "Public Sector": { icon: Landmark, color: "text-blue-500", bg: "bg-blue-100/50" },
-  "Private Sector": { icon: Building2, color: "text-green-500", bg: "bg-green-100/50" },
-  "Small Finance": { icon: Wallet, color: "text-amber-500", bg: "bg-amber-100/50" },
-  "Payments": { icon: CreditCard, color: "text-purple-500", bg: "bg-purple-100/50" },
-  "Regional Rural": { icon: Home, color: "text-rose-500", bg: "bg-rose-100/50" },
-  "Co-operative": { icon: Users, color: "text-cyan-500", bg: "bg-cyan-100/50" },
+  "Public Sector": { icon: Landmark, color: "text-slate-700", bg: "bg-slate-100" },
+  "Private Sector": { icon: Building2, color: "text-emerald-700", bg: "bg-emerald-50" },
+  "Small Finance": { icon: Wallet, color: "text-amber-700", bg: "bg-amber-50" },
+  "Payments": { icon: CreditCard, color: "text-sky-700", bg: "bg-sky-50" },
+  "Regional Rural": { icon: Home, color: "text-lime-700", bg: "bg-lime-50" },
+  "Co-operative": { icon: Users, color: "text-teal-700", bg: "bg-teal-50" },
 };
+
+const SURFACE_CARD = "fintech-card rounded-[18px]";
+const SURFACE_CARD_INTERACTIVE = "fintech-card-interactive rounded-[18px]";
+const PRIMARY_ACTION = "fintech-button rounded-[12px] font-bold active:scale-[0.98] transition-all";
+const SECONDARY_ACTION = "fintech-button-secondary rounded-[12px] font-bold active:scale-[0.98] transition-all";
+const CONTROL_INPUT = "fintech-input rounded-xl outline-none transition-all";
 
 function getCatKey(cat: string) {
   const map: Record<string, string> = {
@@ -56,6 +65,11 @@ function getCatKey(cat: string) {
   return map[cat] || cat;
 }
 
+const BANKS_BY_CATEGORY = CATEGORIES.reduce<Record<string, Bank[]>>((groups, category) => {
+  groups[category] = BANKS.filter((bank) => bank.category === category);
+  return groups;
+}, {});
+
 import { getOfficialLink } from "@/data/officialLinks";
 
 function SelectedBankTile({ bank, openBankSafely, speakVoice, t, lang }: { bank: Bank, openBankSafely: (b: Bank, source?: string, event?: any) => void, speakVoice: any, t: any, lang: any }) {
@@ -65,8 +79,8 @@ function SelectedBankTile({ bank, openBankSafely, speakVoice, t, lang }: { bank:
   const isVerified = !!officialUrl;
   
   return (
-    <div className="bg-white border border-border/50 shadow-[0_2px_10px_rgba(0,0,0,0.02)] rounded-[18px] p-4 flex flex-col items-center gap-3 min-w-[125px] relative">
-      <button 
+    <div className={`${SURFACE_CARD_INTERACTIVE} p-4 flex flex-col items-center gap-3 min-w-[125px] relative`}>
+      <button
         disabled={!isVerified}
         onClick={(e) => {
           if (!isVerified) return;
@@ -92,7 +106,7 @@ function SelectedBankTile({ bank, openBankSafely, speakVoice, t, lang }: { bank:
           toggle(bank.id);
         }}
         aria-label="Remove from favorites"
-        className="absolute top-2.5 right-2.5"
+        className="absolute top-2.5 right-2.5 rounded-full p-1 hover:bg-rose-50 transition-colors"
       >
         <Heart className="w-4 h-4 fill-red-500 text-red-500" />
       </button>
@@ -113,7 +127,7 @@ function PopularBankRow({ bank, openBankSafely, t, lang }: { bank: Bank, openBan
         pushRecent(bank.id);
         openBankSafely(bank, "popular_bank", e);
       }}
-      className={`w-full flex items-center justify-between p-3 active:bg-muted/50 transition-colors ${
+      className={`w-full flex items-center justify-between p-3 active:bg-muted/50 hover:bg-slate-50/70 transition-colors ${
         isVerified ? "cursor-pointer" : "cursor-not-allowed opacity-60"
       }`}
     >
@@ -286,6 +300,7 @@ function ServiceCard({ service, isFav, onToggleFav, onOpen, lang }: ServiceCardP
   const Icon = SERVICE_ICONS[service.iconName] || Mail;
   const serviceName = getServiceName(service, lang);
   const serviceDescription = getServiceDescription(service, lang);
+  const serviceLogoSrc = service.logoDomain ? logoUrl(service.logoDomain) : "";
   const officialItem = {
     name: serviceName,
     officialWebsite: service.officialWebsite,
@@ -303,13 +318,13 @@ function ServiceCard({ service, isFav, onToggleFav, onOpen, lang }: ServiceCardP
         }
       }}
       aria-label={`Open ${serviceName}`}
-      className="bg-white border border-border/50 shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.04)] rounded-[20px] p-4 flex items-center justify-between gap-3 transition-all hover:scale-[1.01] relative group border-t-2 border-t-transparent hover:border-t-blue-500 min-w-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring/30"
+      className={`${SURFACE_CARD_INTERACTIVE} p-4 flex items-center justify-between gap-3 relative group min-w-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring/30`}
     >
       <div className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer focus:outline-none">
-        {!logoErrored && service.logoDomain ? (
+        {!logoErrored && serviceLogoSrc ? (
           <div className="w-11 h-11 rounded-full bg-white shadow-soft shrink-0 overflow-hidden flex items-center justify-center border border-border/60 p-1.5 transition-transform group-hover:scale-105">
             <img
-              src={logoUrl(service.logoDomain)}
+              src={serviceLogoSrc}
               alt={`${serviceName} logo`}
               loading="lazy"
               onError={() => setLogoErrored(true)}
@@ -317,13 +332,13 @@ function ServiceCard({ service, isFav, onToggleFav, onOpen, lang }: ServiceCardP
             />
           </div>
         ) : (
-          <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${service.accent} text-white flex items-center justify-center shadow-soft shrink-0 transition-transform group-hover:scale-105`}>
+          <div className="w-11 h-11 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-soft shrink-0 transition-transform group-hover:scale-105">
             <Icon className="w-5 h-5 stroke-[2.5]" />
           </div>
         )}
 
         <div className="min-w-0 flex-1 pl-1">
-          <p className="font-bold text-[13px] text-foreground tracking-tight leading-snug group-hover:text-blue-600 transition-colors">
+          <p className="font-bold text-[13px] text-foreground leading-snug group-hover:text-slate-950 transition-colors">
             {serviceName}
           </p>
           <p className="text-[11px] font-medium text-muted-foreground mt-0.5 leading-snug line-clamp-2">
@@ -339,7 +354,7 @@ function ServiceCard({ service, isFav, onToggleFav, onOpen, lang }: ServiceCardP
             e.preventDefault();
             onToggleFav();
           }}
-          className="p-1.5 rounded-full hover:bg-red-50/80 transition-colors focus:outline-none"
+          className="p-1.5 rounded-full hover:bg-rose-50/80 transition-colors focus:outline-none"
           aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
         >
           <Heart className={`w-4 h-4 ${isFav ? "fill-red-500 text-red-500" : "text-muted-foreground/30 hover:text-red-400"}`} />
@@ -421,7 +436,7 @@ function ServiceGroup({
   );
 
   return (
-    <div className="bg-white border border-border/60 rounded-[20px] overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
+    <div className={`${SURFACE_CARD} overflow-hidden`}>
       <button
         onClick={onToggle}
         className="w-full flex items-center justify-between gap-3 p-4 text-left active:bg-muted/30 transition-colors"
@@ -459,7 +474,7 @@ function ServiceGroup({
                   value={query}
                   onChange={(e) => onQueryChange(e.target.value)}
                   placeholder={placeholder}
-                  className="w-full pl-10 pr-4 py-2.5 text-[13px] font-medium bg-white border border-border/80 rounded-xl outline-none focus:border-foreground/30 transition-colors placeholder:font-normal"
+                  className={`w-full pl-10 pr-4 py-2.5 text-[13px] font-medium ${CONTROL_INPUT} placeholder:font-normal`}
                 />
               </div>
 
@@ -491,6 +506,7 @@ function ServiceGroup({
 
 function ServiceDetailModal({ service, lang, onClose }: { service: FinanceService | null; lang: string; onClose: () => void }) {
   const [logoErrored, setLogoErrored] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     setLogoErrored(false);
@@ -504,11 +520,18 @@ function ServiceDetailModal({ service, lang, onClose }: { service: FinanceServic
 
   if (!service) return null;
 
-  const strings = SERVICE_STRINGS[lang] || SERVICE_STRINGS.english;
+  const localizedServiceStrings = SERVICE_STRINGS[lang] || SERVICE_STRINGS.english;
+  const strings = {
+    ...localizedServiceStrings,
+    officialActions: t("officialActions"),
+    closeServiceDetails: t("closeServiceDetails"),
+    modalTrustNote: t("trustNote"),
+  };
   const serviceName = getServiceName(service, lang);
   const serviceDescription = getServiceDescription(service, lang);
   const Icon = SERVICE_ICONS[service.iconName] || Mail;
   const categoryLabel = isPostOfficeService(service) ? strings.categoryPostOffice : strings.categoryInsurance;
+  const serviceLogoSrc = service.logoDomain ? logoUrl(service.logoDomain) : "";
 
   return (
     <AnimatePresence>
@@ -524,19 +547,19 @@ function ServiceDetailModal({ service, lang, onClose }: { service: FinanceServic
           initial={{ y: 28, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 28, opacity: 0 }}
-          className="relative w-full sm:max-w-md max-h-[88vh] overflow-y-auto bg-white rounded-t-[28px] sm:rounded-[24px] shadow-2xl border border-border/70 p-5"
+          className="relative w-full sm:max-w-md max-h-[88vh] overflow-y-auto bg-white/95 rounded-t-[28px] sm:rounded-[24px] shadow-2xl border border-border/70 p-5 backdrop-blur-xl"
           role="dialog"
           aria-modal="true"
           aria-label={serviceName}
         >
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3 min-w-0">
-              {!logoErrored && service.logoDomain ? (
+              {!logoErrored && serviceLogoSrc ? (
                 <div className="w-12 h-12 rounded-2xl bg-white shadow-soft shrink-0 overflow-hidden flex items-center justify-center border border-border/60 p-2">
-                  <img src={logoUrl(service.logoDomain)} alt={`${serviceName} logo`} onError={() => setLogoErrored(true)} className="w-full h-full object-contain" />
+                  <img src={serviceLogoSrc} alt={`${serviceName} logo`} onError={() => setLogoErrored(true)} className="w-full h-full object-contain" />
                 </div>
               ) : (
-                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${service.accent} text-white flex items-center justify-center shadow-soft shrink-0`}>
+                <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-soft shrink-0">
                   <Icon className="w-6 h-6 stroke-[2.5]" />
                 </div>
               )}
@@ -552,8 +575,8 @@ function ServiceDetailModal({ service, lang, onClose }: { service: FinanceServic
 
           <p className="text-[13px] font-medium text-muted-foreground leading-relaxed mt-4">{serviceDescription}</p>
 
-          <div className="mt-4 rounded-2xl bg-blue-50/70 border border-blue-100 px-4 py-3">
-            <p className="text-[12px] font-medium text-blue-900/80 leading-relaxed">{strings.modalTrustNote}</p>
+          <div className="mt-4 rounded-2xl bg-slate-50/90 border border-slate-200 px-4 py-3">
+            <p className="text-[12px] font-medium text-slate-700 leading-relaxed">{strings.modalTrustNote}</p>
           </div>
 
           <div className="mt-5">
@@ -598,7 +621,7 @@ function ServiceDetailModal({ service, lang, onClose }: { service: FinanceServic
 
 
 function Dashboard() {
-  const { t, lang } = useTranslation();
+  const { t, lang, setLang } = useTranslation();
   const { ids, toggle, isFavorite } = useFavorites();
   const { speakVoice, openBankSafely } = useVoiceAssistant();
   
@@ -648,24 +671,11 @@ function Dashboard() {
   );
 
   const addResults = useMemo(() => {
-    const q = addQuery.trim().toLowerCase();
-    if (!q) return allBanksSorted;
-    return allBanksSorted.filter(
-      (b) => {
-        const catKey = getCatKey(b.category);
-        const catLabel = t(catKey).toLowerCase();
-        return (
-          b.name.toLowerCase().includes(q) || 
-          b.shortName.toLowerCase().includes(q) ||
-          b.names.english.toLowerCase().includes(q) ||
-          b.names.hindi.toLowerCase().includes(q) ||
-          b.names.telugu.toLowerCase().includes(q) ||
-          b.category.toLowerCase().includes(q) ||
-          catLabel.includes(q)
-        );
-      }
+    if (!addQuery.trim()) return allBanksSorted;
+    return allBanksSorted.filter((b) =>
+      bankMatchesSearch(b, addQuery, lang, [t(getCatKey(b.category))])
     );
-  }, [addQuery, allBanksSorted, t]);
+  }, [addQuery, allBanksSorted, lang, t]);
 
   const openServiceDetails = useCallback((service: FinanceService, event?: any) => {
     event?.stopPropagation?.();
@@ -697,33 +707,57 @@ function Dashboard() {
 
   return (
     <div className="space-y-8 pb-6 pt-2">
-      <header className="flex items-start justify-between -mt-2">
+      <header className={`${SURFACE_CARD} flex items-start justify-between -mt-2 p-5`}>
         <div className="flex-1 pr-4">
-          <p className="text-[14px] uppercase tracking-[0.1em] text-muted-foreground font-bold leading-tight">{t("welcomeTo")}</p>
-          <h1 className="text-[34px] font-bold tracking-tighter text-foreground leading-none mt-2">{t("bankHub")}</h1>
+          <p className="text-[12px] uppercase tracking-[0.08em] text-muted-foreground font-bold leading-tight">{t("welcomeTo")}</p>
+          <h1 className="text-[33px] font-bold text-foreground leading-none mt-2">{t("bankHub")}</h1>
           <p className="text-[15px] font-bold text-muted-foreground mt-3 leading-[1.3] max-w-[200px] sm:max-w-none">
             {t("tagline")}
           </p>
         </div>
         <div className="flex flex-col items-end gap-3 shrink-0">
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="p-1 -mr-1 text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Settings"
-          >
-            <Settings className="w-5 h-5 stroke-[2.5]" />
-          </button>
+          <div className="flex items-center gap-2">
+            <select
+              value={lang}
+              onChange={(event) => setLang(event.target.value)}
+              className="max-w-[118px] rounded-xl border border-border/70 bg-white/85 px-2 py-1.5 text-[11px] font-bold text-foreground outline-none focus:ring-2 focus:ring-ring/30"
+              aria-label={t("language")}
+              dir={lang === "urdu" ? "rtl" : "ltr"}
+            >
+              {LANGUAGE_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id} dir={option.dir || "ltr"}>
+                  {option.nativeLabel}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="tap-target rounded-xl p-2 -mr-1 text-muted-foreground hover:bg-slate-100 hover:text-foreground transition-colors"
+              aria-label={t("settings")}
+            >
+              <Settings className="w-5 h-5 stroke-[2.5]" />
+            </button>
+          </div>
           <div className="h-20 w-auto opacity-95 -mr-1 flex items-center justify-end">
              <CrestLogo className="h-full w-auto" />
           </div>
         </div>
       </header>
 
+      <section className="rounded-[18px] border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-[12px] font-semibold text-emerald-950 shadow-soft">
+        <div className="flex items-start gap-2">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
+          <p className="leading-relaxed">
+            We redirect only to official websites. Never share OTP, PIN, CVV, card numbers, or banking passwords. Call 1930 immediately for online financial fraud.
+          </p>
+        </div>
+      </section>
+
       {/* Selected Banks */}
       <section>
         <div className="flex items-baseline justify-between mb-4 mt-2">
           <h3 className="font-bold text-[15px] text-foreground">{t("selectedBanks")} ({favBanks.length})</h3>
-          <Link to="/favorites" className="text-[13px] font-semibold text-blue-500 hover:underline">
+          <Link to="/favorites" className="text-[13px] font-semibold text-slate-600 hover:text-slate-950 hover:underline">
             {t("seeAll")}
           </Link>
         </div>
@@ -735,13 +769,13 @@ function Dashboard() {
             ))}
           </div>
         ) : (
-          <div className="bg-white border rounded-[20px] p-6 text-center text-muted-foreground text-sm shadow-sm">
+          <div className={`${SURFACE_CARD} p-6 text-center text-muted-foreground text-sm`}>
             {t("noBanksSelected")}
           </div>
         )}
 
         {/* Inline Favourites Adder */}
-        <div className="mt-4 bg-white border border-border/60 rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
+        <div className={`mt-4 ${SURFACE_CARD} overflow-hidden`}>
           <div className="w-full flex items-center justify-between p-4 bg-transparent outline-none focus-within:bg-muted/10 transition-colors">
             <button
               onClick={() => setIsAdding((a) => !a)}
@@ -755,7 +789,7 @@ function Dashboard() {
                   e.stopPropagation();
                   setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
                 }}
-                className={`p-1.5 rounded-md transition-colors ${sortDirection === 'desc' ? 'bg-blue-50 text-blue-600' : 'text-muted-foreground/60'}`}
+                className={`p-1.5 rounded-md transition-colors ${sortDirection === 'desc' ? 'bg-slate-100 text-slate-900' : 'text-muted-foreground/60 hover:bg-slate-100'}`}
                 title={sortDirection === 'asc' ? "Sort A-Z" : "Sort Z-A"}
               >
                 <ArrowDownUp className={`w-4 h-4 stroke-[2.5] transition-transform ${sortDirection === 'desc' ? 'rotate-180' : ''}`} />
@@ -786,10 +820,10 @@ function Dashboard() {
                       placeholder={t("searchBanks")}
                       value={addQuery}
                       onChange={(e) => setAddQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 text-[13px] font-medium bg-white border border-border/80 rounded-xl outline-none focus:border-foreground/30 transition-colors placeholder:font-normal"
+                      className={`w-full pl-10 pr-4 py-2.5 text-[13px] font-medium ${CONTROL_INPUT} placeholder:font-normal`}
                     />
                   </div>
-                  <div className="overflow-y-auto pr-1 flex-1 relative bg-white rounded-xl border border-border/50 divide-y divide-border/30">
+                  <div className="overflow-y-auto pr-1 flex-1 relative bg-white/90 rounded-xl border border-border/50 divide-y divide-border/30">
                     {addResults.map((b) => {
                       const fav = isFavorite(b.id);
                       const displayName = getBankDisplayName(b, lang);
@@ -842,22 +876,17 @@ function Dashboard() {
         </div>
       </section>
 
-      {/* AI Banking Assistant */}
-      <section className="space-y-4">
-        <AiAssistant />
-      </section>
-
       {/* Popular Banks */}
       <section>
          <div className="flex items-baseline justify-between mb-4">
           <h3 className="font-bold text-[15px] text-foreground">{t("popularBanks")}</h3>
           <div className="flex items-center gap-3">
-            <Link to="/favorites" className="text-[13px] font-semibold text-blue-500 hover:underline">
+            <Link to="/favorites" className="text-[13px] font-semibold text-slate-600 hover:text-slate-950 hover:underline">
               {t("seeAll")}
             </Link>
           </div>
         </div>
-        <div className="bg-white border border-border/50 rounded-[20px] p-1 shadow-[0_2px_12px_rgba(0,0,0,0.03)] divide-y divide-border/40">
+        <div className={`${SURFACE_CARD} p-1 divide-y divide-border/40`}>
           {popular.map((b) => b && <PopularBankRow key={b.id} bank={b} openBankSafely={openBankSafely} t={t} lang={lang} />)}
         </div>
       </section>
@@ -867,7 +896,7 @@ function Dashboard() {
         <h3 className="font-bold text-[15px] text-foreground mb-4">{t("categories")}</h3>
         <div className="grid grid-cols-2 gap-3 relative">
           {CATEGORIES.map((cat) => {
-            const banksInCat = BANKS.filter((b) => b.category === cat);
+            const banksInCat = BANKS_BY_CATEGORY[cat] || [];
             const ui = CATEGORY_ICONS[cat];
             const Icon = ui?.icon || Landmark;
             const isActive = activeCategory === cat;
@@ -878,7 +907,7 @@ function Dashboard() {
                   onClick={() => {
                     setActiveCategory(isActive ? null : cat);
                   }}
-                  className={`w-full text-left border rounded-[20px] p-3.5 flex items-center justify-between active:scale-[0.98] transition-all shadow-[0_2px_8px_rgba(0,0,0,0.02)] ${isActive ? 'bg-muted/50 border-input' : 'bg-white border-border/50'}`}
+                  className={`w-full text-left border rounded-[18px] p-3.5 flex items-center justify-between active:scale-[0.98] transition-all ${isActive ? 'bg-slate-100/90 border-slate-300 shadow-soft' : 'fintech-card-interactive'}`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className={`w-8 h-8 rounded-[9px] ${ui?.bg || "bg-muted"} flex items-center justify-center shrink-0`}>
@@ -898,7 +927,7 @@ function Dashboard() {
                       initial={{ opacity: 0, scale: 0.95, y: 10 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                      className="absolute left-0 right-0 top-full mt-2 z-[50] bg-white border border-border shadow-xl rounded-2xl p-3 min-w-[280px]"
+                      className="absolute left-0 right-0 top-full mt-2 z-[50] bg-white/95 border border-border shadow-xl rounded-2xl p-3 min-w-[280px] backdrop-blur-xl"
                       style={{ width: "calc(200% + 12px)", left: CATEGORIES.indexOf(cat) % 2 === 0 ? 0 : "auto", right: CATEGORIES.indexOf(cat) % 2 === 0 ? "auto" : 0 }}
                     >
                       <div className="flex items-center justify-between mb-3 px-1">
@@ -957,16 +986,16 @@ function Dashboard() {
       {/* Post Office & Insurance Section */}
       <section className="space-y-6">
         <h3 className="font-bold text-[15px] text-foreground">
-          {SERVICE_STRINGS[lang]?.postOfficeInsurance || SERVICE_STRINGS.english.postOfficeInsurance}
+          {t("postOfficeInsurance")}
         </h3>
         
         <div className="grid grid-cols-1 gap-3.5">
           <ServiceGroup
             category="post_office"
-            title={SERVICE_STRINGS[lang]?.postOfficeServices || SERVICE_STRINGS.english.postOfficeServices}
-            countLabel={SERVICE_STRINGS[lang]?.services || SERVICE_STRINGS.english.services}
-            placeholder={SERVICE_STRINGS[lang]?.searchPostOffice || SERVICE_STRINGS.english.searchPostOffice}
-            noResultsLabel={SERVICE_STRINGS[lang]?.noMatchingServices || SERVICE_STRINGS.english.noMatchingServices}
+            title={t("postOfficeServices")}
+            countLabel={t("services")}
+            placeholder={t("searchPostOffice")}
+            noResultsLabel={t("noMatchingServices")}
             services={postOfficeServices}
             isOpen={activeServiceCategory === "post_office"}
             query={serviceQueries.post_office}
@@ -982,10 +1011,10 @@ function Dashboard() {
 
           <ServiceGroup
             category="insurance"
-            title={SERVICE_STRINGS[lang]?.insuranceServices || SERVICE_STRINGS.english.insuranceServices}
-            countLabel={SERVICE_STRINGS[lang]?.services || SERVICE_STRINGS.english.services}
-            placeholder={SERVICE_STRINGS[lang]?.searchInsurance || SERVICE_STRINGS.english.searchInsurance}
-            noResultsLabel={SERVICE_STRINGS[lang]?.noMatchingServices || SERVICE_STRINGS.english.noMatchingServices}
+            title={t("insuranceServices")}
+            countLabel={t("services")}
+            placeholder={t("searchInsurance")}
+            noResultsLabel={t("noMatchingServices")}
             services={insuranceServices}
             isOpen={activeServiceCategory === "insurance"}
             query={serviceQueries.insurance}
@@ -1007,7 +1036,7 @@ function Dashboard() {
         <p className="text-[12px] text-muted-foreground font-medium mb-4">{t("guidanceSubtitle")}</p>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="bg-white border border-border/50 rounded-[20px] p-4 shadow-[0_2px_12px_rgba(0,0,0,0.03)] flex flex-col gap-3">
+          <div className={`${SURFACE_CARD_INTERACTIVE} p-4 flex flex-col gap-3`}>
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-[12px] bg-amber-50 flex items-center justify-center shrink-0">
                 <Lightbulb className="w-5 h-5 text-amber-500" />
@@ -1022,16 +1051,16 @@ function Dashboard() {
                 speakVoice("showingGuidance");
                 setIsGuidanceOpen(true);
               }}
-              className="w-full mt-1 bg-foreground text-background py-2.5 rounded-[12px] font-bold text-[13px] active:scale-[0.98] transition-transform"
+              className={`w-full mt-1 py-2.5 text-[13px] ${PRIMARY_ACTION}`}
             >
               {t("explore")}
             </button>
           </div>
 
-          <div className="bg-white border border-border/50 rounded-[20px] p-4 shadow-[0_2px_12px_rgba(0,0,0,0.03)] flex flex-col gap-3">
+          <div className={`${SURFACE_CARD_INTERACTIVE} p-4 flex flex-col gap-3`}>
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-[12px] bg-green-50 flex items-center justify-center shrink-0">
-                <ShieldCheck className="w-5 h-5 text-green-500" />
+              <div className="w-10 h-10 rounded-[12px] bg-emerald-50 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-5 h-5 text-emerald-600" />
               </div>
               <div>
                 <h4 className="font-bold text-[14px] text-foreground">{t("bankingSafetyShield")}</h4>
@@ -1043,16 +1072,16 @@ function Dashboard() {
                 speakVoice("showingSafety");
                 setIsSafetyOpen(true);
               }}
-              className="w-full mt-1 bg-foreground text-background py-2.5 rounded-[12px] font-bold text-[13px] active:scale-[0.98] transition-transform"
+              className={`w-full mt-1 py-2.5 text-[13px] ${PRIMARY_ACTION}`}
             >
               {t("explore")}
             </button>
           </div>
 
-          <div className="bg-white border border-border/50 rounded-[20px] p-4 shadow-[0_2px_12px_rgba(0,0,0,0.03)] flex flex-col gap-3">
+          <div className={`${SURFACE_CARD_INTERACTIVE} p-4 flex flex-col gap-3`}>
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-[12px] bg-blue-50 flex items-center justify-center shrink-0">
-                <Users className="w-5 h-5 text-blue-500" />
+              <div className="w-10 h-10 rounded-[12px] bg-sky-50 flex items-center justify-center shrink-0">
+                <Users className="w-5 h-5 text-sky-700" />
               </div>
               <div>
                 <h4 className="font-bold text-[14px] text-foreground">{t("financialInclusionHelp")}</h4>
@@ -1064,16 +1093,16 @@ function Dashboard() {
                 speakVoice("showingFinancialHelp");
                 setIsFinancialHelpOpen(true);
               }}
-              className="w-full mt-1 bg-foreground text-background py-2.5 rounded-[12px] font-bold text-[13px] active:scale-[0.98] transition-transform"
+              className={`w-full mt-1 py-2.5 text-[13px] ${PRIMARY_ACTION}`}
             >
               {t("explore")}
             </button>
           </div>
 
-          <div className="bg-white border border-border/50 rounded-[20px] p-4 shadow-[0_2px_12px_rgba(0,0,0,0.03)] flex flex-col gap-3">
+          <div className={`${SURFACE_CARD_INTERACTIVE} p-4 flex flex-col gap-3`}>
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-[12px] bg-purple-50 flex items-center justify-center shrink-0">
-                <ArrowLeftRight className="w-5 h-5 text-purple-500" />
+              <div className="w-10 h-10 rounded-[12px] bg-slate-100 flex items-center justify-center shrink-0">
+                <ArrowLeftRight className="w-5 h-5 text-slate-700" />
               </div>
               <div>
                 <h4 className="font-bold text-[14px] text-foreground">{t("compareBankingServices")}</h4>
@@ -1085,7 +1114,7 @@ function Dashboard() {
                 speakVoice("showingComparison");
                 setIsCompareOpen(true);
               }}
-              className="w-full mt-1 bg-foreground text-background py-2.5 rounded-[12px] font-bold text-[13px] active:scale-[0.98] transition-transform"
+              className={`w-full mt-1 py-2.5 text-[13px] ${PRIMARY_ACTION}`}
             >
               {t("explore")}
             </button>

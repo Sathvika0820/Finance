@@ -1,16 +1,12 @@
 import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "@tanstack/react-router";
+import { AiAssistant } from "@/components/AiAssistant";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation();
   return (
-    <div className="min-h-screen bg-background relative overflow-x-hidden">
-      {/* ambient backdrop */}
-      <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute -top-32 -left-24 w-80 h-80 rounded-full bg-foreground/5 blur-3xl" />
-        <div className="absolute top-1/3 -right-24 w-72 h-72 rounded-full bg-foreground/5 blur-3xl" />
-      </div>
+    <div className="min-h-screen fintech-shell bg-background relative overflow-x-hidden">
       <motion.main
         key={location.pathname}
         initial={{ opacity: 0, y: 8 }}
@@ -20,6 +16,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       >
         {children}
       </motion.main>
+      <AiAssistant />
     </div>
   );
 }

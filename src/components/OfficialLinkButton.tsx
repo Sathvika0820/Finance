@@ -1,5 +1,6 @@
 import { ExternalLink, ShieldCheck } from "lucide-react";
 import type { MouseEvent } from "react";
+import { isVerifiedOfficialUrl } from "@/data/officialLinks";
 
 type OfficialLinkButtonProps = {
   item: {
@@ -24,7 +25,7 @@ export function OfficialLinkButton({
   className = "",
   onVerifiedClick,
 }: OfficialLinkButtonProps) {
-  const url = item.verified && item.officialWebsite.startsWith("https://") ? item.officialWebsite : "";
+  const url = item.verified && isVerifiedOfficialUrl(item.officialWebsite) ? item.officialWebsite : "";
 
   if (!url) {
     return (
@@ -33,7 +34,7 @@ export function OfficialLinkButton({
         disabled
         title={unverifiedLabel}
         aria-label={unverifiedLabel}
-        className={`inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-700 opacity-80 cursor-not-allowed ${className}`}
+        className={`inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-800 opacity-90 cursor-not-allowed ${className}`}
       >
         <ShieldCheck className="w-3.5 h-3.5" />
         <span>{unverifiedLabel}</span>
@@ -48,7 +49,7 @@ export function OfficialLinkButton({
       rel="noopener noreferrer"
       onClick={onVerifiedClick}
       aria-label={`Open ${item.name} official website`}
-      className={`inline-flex items-center justify-center gap-1.5 rounded-xl bg-foreground px-3 py-2 text-[11px] font-bold text-background shadow-soft active:scale-[0.98] transition-all hover:opacity-95 ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-xl fintech-button px-3 py-2 text-[11px] font-bold active:scale-[0.98] transition-all hover:opacity-95 ${className}`}
     >
       <span>{compact ? "Open" : label}</span>
       <ExternalLink className="w-3.5 h-3.5" />

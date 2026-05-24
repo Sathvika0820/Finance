@@ -1,3 +1,5 @@
+import { getOfficialLink } from "./officialLinks";
+
 export const bankingSafetyContent = {
   en: {
     title: "Banking Safety Shield",
@@ -38,10 +40,10 @@ export const bankingSafetyContent = {
       title: "Official safety sources",
       openButton: "Open official source",
       links: [
-        { name: "Reserve Bank of India (RBI)", url: "https://rbi.org.in/" },
-        { name: "National Cyber Crime Portal", url: "https://cybercrime.gov.in/" },
-        { name: "CERT-In", url: "https://www.cert-in.org.in/" },
-        { name: "NPCI", url: "https://www.npci.org.in/" }
+        { name: "Reserve Bank of India (RBI)", url: getOfficialLink("regulators", "rbi") || "" },
+        { name: "National Cyber Crime Portal", url: getOfficialLink("cyberSafety", "cyber-complaint") || "" },
+        { name: "CERT-In", url: getOfficialLink("cyberSafety", "cert-in") || "" },
+        { name: "NPCI", url: getOfficialLink("cyberSafety", "npci") || "" }
       ]
     }
   },
@@ -84,10 +86,10 @@ export const bankingSafetyContent = {
       title: "आधिकारिक सुरक्षा स्रोत",
       openButton: "आधिकारिक स्रोत खोलें",
       links: [
-        { name: "भारतीय रिजर्व बैंक (RBI)", url: "https://rbi.org.in/" },
-        { name: "राष्ट्रीय साइबर अपराध पोर्टल", url: "https://cybercrime.gov.in/" },
-        { name: "CERT-In", url: "https://www.cert-in.org.in/" },
-        { name: "NPCI", url: "https://www.npci.org.in/" }
+        { name: "भारतीय रिजर्व बैंक (RBI)", url: getOfficialLink("regulators", "rbi") || "" },
+        { name: "राष्ट्रीय साइबर अपराध पोर्टल", url: getOfficialLink("cyberSafety", "cyber-complaint") || "" },
+        { name: "CERT-In", url: getOfficialLink("cyberSafety", "cert-in") || "" },
+        { name: "NPCI", url: getOfficialLink("cyberSafety", "npci") || "" }
       ]
     }
   },
@@ -130,10 +132,10 @@ export const bankingSafetyContent = {
       title: "అధికారిక భద్రతా వనరులు",
       openButton: "అధికారిక వనరును తెరవండి",
       links: [
-        { name: "రిజర్వ్ బ్యాంక్ ఆఫ్ ఇండియా (RBI)", url: "https://rbi.org.in/" },
-        { name: "నేషనల్ సైబర్ క్రైమ్ పోర్టల్", url: "https://cybercrime.gov.in/" },
-        { name: "CERT-In", url: "https://www.cert-in.org.in/" },
-        { name: "NPCI", url: "https://www.npci.org.in/" }
+        { name: "రిజర్వ్ బ్యాంక్ ఆఫ్ ఇండియా (RBI)", url: getOfficialLink("regulators", "rbi") || "" },
+        { name: "నేషనల్ సైబర్ క్రైమ్ పోర్టల్", url: getOfficialLink("cyberSafety", "cyber-complaint") || "" },
+        { name: "CERT-In", url: getOfficialLink("cyberSafety", "cert-in") || "" },
+        { name: "NPCI", url: getOfficialLink("cyberSafety", "npci") || "" }
       ]
     }
   }

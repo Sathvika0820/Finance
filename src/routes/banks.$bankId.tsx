@@ -19,7 +19,7 @@ export const Route = createFileRoute("/banks/$bankId")({
   head: ({ loaderData }) => ({
     meta: loaderData
       ? [
-          { title: `${loaderData.bank.name} — Bank Hub` },
+          { title: `${loaderData.bank.name} — BankHub` },
           { name: "description", content: loaderData.bank.description },
         ]
       : [],
@@ -66,9 +66,8 @@ function BankDetail() {
   }, [bank.id]);
 
   return (
-    <div className="min-h-screen bg-background pb-32">
-      <div className={`bg-gradient-to-br ${bank.accent} text-white px-5 pt-6 pb-20 rounded-b-[2.5rem] relative overflow-hidden`}>
-        <div className="absolute -right-12 -bottom-12 w-56 h-56 rounded-full bg-white/10 blur-3xl" />
+    <div className="min-h-screen fintech-shell bg-background pb-32">
+      <div className="gradient-dark text-white px-5 pt-6 pb-20 rounded-b-[2rem] relative overflow-hidden">
         <header className="flex items-center justify-between relative">
           <Link to="/dashboard" className="p-2 -ml-2 rounded-xl bg-white/10 backdrop-blur">
             <ChevronLeft className="w-5 h-5" />
@@ -96,7 +95,7 @@ function BankDetail() {
       </div>
 
       <div className="-mt-12 mx-5 space-y-4 relative">
-        <div className="glass shadow-glow rounded-3xl p-5">
+        <div className="fintech-card rounded-[22px] p-5">
           <p className="text-sm text-foreground/80 leading-relaxed">{bank.description}</p>
         </div>
 
@@ -115,7 +114,7 @@ function BankDetail() {
               href={bank.appLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="glass shadow-soft rounded-2xl p-4 flex items-center justify-between active:scale-[0.98] transition-transform"
+              className="fintech-card-interactive rounded-2xl p-4 flex items-center justify-between active:scale-[0.98] transition-transform"
             >
               <span className="flex items-center gap-3">
                 <Smartphone className="w-5 h-5" />
@@ -126,7 +125,7 @@ function BankDetail() {
           )}
         </div>
 
-        <section className="glass shadow-soft rounded-3xl p-5">
+        <section className="fintech-card rounded-[22px] p-5">
           <h2 className="font-semibold mb-3">{t("servicesOffered")}</h2>
           <ul className="space-y-2">
             {bank.services.map((s: string) => (

@@ -1,3 +1,5 @@
+import { getOfficialLink } from "./officialLinks";
+
 export const bankingSafetyExtended = {
   en: {
     scamCategories: [
@@ -13,7 +15,7 @@ export const bankingSafetyExtended = {
     ],
     emergencyInfo: {
       helpline: "1930",
-      complaintUrl: "https://cybercrime.gov.in/"
+      complaintUrl: getOfficialLink("cyberSafety", "cyber-complaint") || ""
     },
     checkerPlaceholder: "Paste suspicious text, URL or message here…",
     basicGuidance: [
@@ -38,7 +40,7 @@ export const bankingSafetyExtended = {
     ],
     emergencyInfo: {
       helpline: "1930",
-      complaintUrl: "https://cybercrime.gov.in/"
+      complaintUrl: getOfficialLink("cyberSafety", "cyber-complaint") || ""
     },
     checkerPlaceholder: "यहाँ संदिग्ध टेक्स्ट, URL या संदेश पेस्ट करें…",
     basicGuidance: [

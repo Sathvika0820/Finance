@@ -11,8 +11,8 @@ import { AppShell } from "@/components/AppShell";
 export const Route = createFileRoute("/favorites")({
   head: () => ({
     meta: [
-      { title: "Favorites — Bank Hub" },
-      { name: "description", content: "Your saved banks for quick access." },
+      { title: "Favorite Banks — BankHub" },
+      { name: "description", content: "Your saved verified Indian banks for quick official access in BankHub." },
     ],
   }),
   component: () => (
@@ -29,14 +29,14 @@ function FavoritesPage() {
   return (
     <div className="space-y-5">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight">Favorites</h1>
+        <h1 className="text-3xl font-bold">Favorites</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Your saved banks, ready in one tap.
         </p>
       </header>
 
       {favs.length === 0 ? (
-        <div className="glass shadow-soft rounded-3xl p-10 flex flex-col items-center text-center mt-10">
+        <div className="fintech-card rounded-[22px] p-10 flex flex-col items-center text-center mt-10">
           <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center">
             <Heart className="w-7 h-7 text-muted-foreground" />
           </div>
@@ -46,7 +46,7 @@ function FavoritesPage() {
           </p>
           <Link
             to="/banks"
-            className="mt-6 bg-foreground text-background rounded-full px-5 py-2.5 text-sm font-medium"
+            className="mt-6 fintech-button rounded-full px-5 py-2.5 text-sm font-medium"
           >
             Browse banks
           </Link>

@@ -1,9 +1,10 @@
 import { toast } from "sonner";
 import { FinanceService, SERVICES_DATA, getServiceName } from "@/data/services";
-import type { AppLanguage } from "@/lib/i18n";
+import { getCurrentStoredLanguage, type AppLanguage } from "@/lib/i18n";
 import { checkServiceUrlHealth, getServiceHealthStatus } from "./urlHealth";
 import { pushRecent } from "./favorites";
 import { speakVoice } from "./voice";
+import { OFFICIAL_LINK_NOT_VERIFIED_LABEL, isVerifiedOfficialUrl } from "@/data/officialLinks";
 
 const serviceRedirectGuard = {
   key: "",
@@ -15,7 +16,9 @@ const serviceActionRedirectGuard = {
   time: 0
 };
 
-const REDIRECT_STRINGS: Record<AppLanguage, { missing: string; invalid: string; unavailable: string }> = {
+const REDIRECT_STRINGS: Partial<Record<AppLanguage, { missing: string; invalid: string; unavailable: string }>> & {
+  english: { missing: string; invalid: string; unavailable: string };
+} = {
   english: {
     missing: "Official link unavailable",
     invalid: "Invalid official link",
@@ -35,8 +38,7 @@ const REDIRECT_STRINGS: Record<AppLanguage, { missing: string; invalid: string; 
 
 function getCurrentLanguage(): AppLanguage {
   if (typeof window === "undefined") return "english";
-  const lang = window.localStorage.getItem("bankHubLanguage");
-  return lang === "hindi" || lang === "telugu" ? lang : "english";
+  return getCurrentStoredLanguage();
 }
 
 function getRedirectStrings() {
@@ -79,8 +81,8 @@ function openResolvedService(service: FinanceService, event?: any) {
     return;
   }
 
-  if (parsedUrl.protocol !== "https:") {
-    toast.error(strings.invalid);
+  if (parsedUrl.protocol !== "https:" || !isVerifiedOfficialUrl(service.officialUrl)) {
+    toast.error(OFFICIAL_LINK_NOT_VERIFIED_LABEL);
     return;
   }
 
@@ -88,8 +90,7 @@ function openResolvedService(service: FinanceService, event?: any) {
   let targetUrl = service.officialUrl;
 
   if (!health.isHealthy) {
-    if (service.verifiedFallbackUrl?.startsWith("https://")) {
-      console.log(`Redirecting service ${service.name.english} to verified official fallback: ${service.verifiedFallbackUrl}`);
+    if (service.verifiedFallbackUrl?.startsWith("https://") && isVerifiedOfficialUrl(service.verifiedFallbackUrl)) {
       targetUrl = service.verifiedFallbackUrl;
     } else {
       toast.error(strings.unavailable);
@@ -98,7 +99,6 @@ function openResolvedService(service: FinanceService, event?: any) {
     }
   }
 
-  console.log(`[SafeRedirect] Opening service ${service.name.english} safely to: ${targetUrl}`);
   window.open(targetUrl, "_blank", "noopener,noreferrer");
 
   try {
@@ -152,8 +152,8 @@ export function openServiceAction(serviceId: string, actionId: string, event?: a
     return;
   }
 
-  if (parsedUrl.protocol !== "https:") {
-    toast.error(strings.invalid);
+  if (parsedUrl.protocol !== "https:" || !isVerifiedOfficialUrl(action.url)) {
+    toast.error(OFFICIAL_LINK_NOT_VERIFIED_LABEL);
     return;
   }
 
@@ -182,7 +182,6 @@ export function openServiceAction(serviceId: string, actionId: string, event?: a
       serviceId,
       actionId,
       actionName,
-      url: action.url,
       timestamp: Date.now(),
     };
     window.localStorage.setItem("bankhub:lastServiceActivity", JSON.stringify(payload));
@@ -200,4 +199,3 @@ export function openServiceAction(serviceId: string, actionId: string, event?: a
 export async function validateServiceRedirectTarget(service: FinanceService) {
   return checkServiceUrlHealth(service.id, service.officialUrl, service.trustedDomains);
 }
-

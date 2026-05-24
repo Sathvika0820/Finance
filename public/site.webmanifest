@@ -1,0 +1,18 @@
+{
+  "name": "BankHub",
+  "short_name": "BankHub",
+  "description": "A smart Indian banking gateway with AI banking assistance, official bank links, loan comparison, fraud safety, and financial inclusion support.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/icons/bankhub-icon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

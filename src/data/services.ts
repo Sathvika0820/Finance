@@ -1,9 +1,9 @@
 import type { AppLanguage } from "@/lib/i18n";
-import { getOfficialLink } from "./officialLinks";
+import { getOfficialLink, isVerifiedOfficialUrl } from "./officialLinks";
 
 export type ServiceCategory = "post_office" | "insurance";
 
-export type LocalizedText = Record<AppLanguage, string>;
+export type LocalizedText = Partial<Record<AppLanguage, string>> & { english: string };
 
 export interface ServiceAction {
   id: string;
@@ -997,7 +997,7 @@ const RAW_SERVICES_DATA: Omit<FinanceService, "officialWebsite" | "verified">[] 
 
 export const SERVICES_DATA: FinanceService[] = RAW_SERVICES_DATA.map((service) => {
   const officialWebsite = service.officialUrl || "";
-  const verified = officialWebsite.startsWith("https://");
+  const verified = isVerifiedOfficialUrl(officialWebsite);
 
   return {
     ...service,

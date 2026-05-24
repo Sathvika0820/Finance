@@ -209,11 +209,9 @@ export async function runServicesHealthCheckBackground(services: any[]): Promise
 
   // Run only if 24 hours have passed
   if (now - lastCheck < CHECK_INTERVAL) {
-    console.log("Services health check was run recently, skipping.");
     return;
   }
 
-  console.log("Running scheduled 24-hour health check for Post Office and Insurance services...");
   const currentHealth = readServicesHealth();
 
   for (const s of services) {
@@ -235,7 +233,6 @@ export async function runServicesHealthCheckBackground(services: any[]): Promise
 
   writeServicesHealth(currentHealth);
   window.localStorage.setItem(SERVICES_LAST_CHECK_KEY, String(now));
-  console.log("Services health check completed successfully.");
 }
 
 /**

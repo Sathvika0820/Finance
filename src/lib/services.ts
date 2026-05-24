@@ -1,5 +1,7 @@
 import { serviceUrlMap } from "@/data/serviceUrlMap";
 import { speakVoice } from "@/lib/voice";
+import { OFFICIAL_LINK_NOT_VERIFIED_LABEL, getSmartServiceOfficialLink } from "@/data/officialLinks";
+import { toast } from "sonner";
 
 const serviceOpenGuardRef = {
   key: "",
@@ -9,8 +11,8 @@ const serviceOpenGuardRef = {
 function isValidUrl(url?: string): boolean {
   if (!url) return false;
   try {
-    new URL(url);
-    return true;
+    const parsed = new URL(url);
+    return parsed.protocol === "https:";
   } catch {
     return false;
   }
@@ -22,11 +24,13 @@ export function openServicePage(serviceType: string, bankKey: string, source: st
 
   const serviceEntry = serviceUrlMap?.[serviceType]?.[bankKey];
   const serviceLabel = serviceEntry?.label || `${bankKey} ${serviceType}`;
-  const exactUrl = serviceEntry?.url;
+  const officialEntry = getSmartServiceOfficialLink(serviceType, bankKey);
+  const url = officialEntry?.officialLink || serviceEntry?.url;
 
-  const url = isValidUrl(exactUrl)
-    ? exactUrl!
-    : `https://www.google.com/search?q=${encodeURIComponent(serviceLabel + " official website")}`;
+  if (!officialEntry?.verified || !isValidUrl(url)) {
+    toast.warning(OFFICIAL_LINK_NOT_VERIFIED_LABEL);
+    return;
+  }
 
   const openKey = `${serviceType}-${bankKey}`;
   const now = Date.now();

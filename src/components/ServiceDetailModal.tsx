@@ -83,6 +83,7 @@ export function ServiceDetailModal({ service, lang, onClose }: ServiceDetailModa
   const serviceDescription = getServiceDescription(service, lang);
   const Icon = SERVICE_ICONS[service.iconName] || Mail;
   const categoryLabel = isPostOfficeService(service) ? t.categoryPostOffice : t.categoryInsurance;
+  const serviceLogoSrc = service.logoDomain ? logoUrl(service.logoDomain) : "";
 
   return (
     <AnimatePresence>
@@ -102,7 +103,7 @@ export function ServiceDetailModal({ service, lang, onClose }: ServiceDetailModa
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: "100%", opacity: 0 }}
           transition={{ type: "spring", damping: 25, stiffness: 350 }}
-          className="relative w-full sm:max-w-md max-h-[85vh] overflow-y-auto bg-white rounded-t-[28px] sm:rounded-[24px] shadow-2xl border border-border/65 p-5 pb-6 flex flex-col no-scrollbar"
+          className="relative w-full sm:max-w-md max-h-[85vh] overflow-y-auto bg-white/95 rounded-t-[28px] sm:rounded-[24px] shadow-2xl border border-border/65 p-5 pb-6 flex flex-col no-scrollbar backdrop-blur-xl"
           role="dialog"
           aria-modal="true"
           aria-label={serviceName}
@@ -113,22 +114,22 @@ export function ServiceDetailModal({ service, lang, onClose }: ServiceDetailModa
           {/* Header */}
           <div className="flex items-start justify-between gap-4 shrink-0">
             <div className="flex items-start gap-3.5 min-w-0">
-              {!logoErrored && service.logoDomain ? (
+              {!logoErrored && serviceLogoSrc ? (
                 <div className="w-12 h-12 rounded-2xl bg-white shadow-soft shrink-0 overflow-hidden flex items-center justify-center border border-border/60 p-2.5 transition-transform hover:scale-105">
                   <img
-                    src={logoUrl(service.logoDomain)}
+                    src={serviceLogoSrc}
                     alt={`${serviceName} logo`}
                     onError={() => setLogoErrored(true)}
                     className="w-full h-full object-contain"
                   />
                 </div>
               ) : (
-                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${service.accent} text-white flex items-center justify-center shadow-soft shrink-0`}>
+                <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-soft shrink-0">
                   <Icon className="w-6 h-6 stroke-[2.5]" />
                 </div>
               )}
               <div className="min-w-0">
-                <h3 className="text-[17px] font-extrabold leading-tight text-foreground tracking-tight">{serviceName}</h3>
+                <h3 className="text-[17px] font-extrabold leading-tight text-foreground">{serviceName}</h3>
                 <p className="inline-flex mt-1.5 px-2.5 py-0.5 rounded-full bg-muted text-[10px] font-extrabold text-muted-foreground tracking-wide uppercase">
                   {categoryLabel}
                 </p>
@@ -150,8 +151,8 @@ export function ServiceDetailModal({ service, lang, onClose }: ServiceDetailModa
           </p>
 
           {/* Localized Trust Note */}
-          <div className="mt-4 rounded-2xl bg-blue-50/70 border border-blue-100/60 px-4 py-3 shrink-0">
-            <p className="text-[11.5px] font-semibold text-blue-900/85 leading-relaxed">
+          <div className="mt-4 rounded-2xl bg-slate-50 border border-slate-200 px-4 py-3 shrink-0">
+            <p className="text-[11.5px] font-semibold text-slate-700 leading-relaxed">
               {t.trustNote}
             </p>
           </div>
@@ -168,7 +169,7 @@ export function ServiceDetailModal({ service, lang, onClose }: ServiceDetailModa
                   <button
                     key={action.id}
                     onClick={(event) => openServiceAction(service.id, action.id, event)}
-                    className="w-full min-h-12 px-4 py-3 rounded-2xl bg-foreground hover:bg-foreground/90 text-background font-bold text-[13px] tracking-tight flex items-center justify-between gap-3 active:scale-[0.985] transition-all outline-none focus:ring-2 focus:ring-ring/30 cursor-pointer"
+                    className="w-full min-h-12 px-4 py-3 rounded-2xl fintech-button font-bold text-[13px] flex items-center justify-between gap-3 active:scale-[0.985] transition-all outline-none focus:ring-2 focus:ring-ring/30 cursor-pointer"
                   >
                     <span className="text-left leading-snug">{actionLabel}</span>
                     <ExternalLink className="w-4 h-4 shrink-0 opacity-80" />

@@ -12,15 +12,16 @@ import {
   FileSpreadsheet,
   Check,
 } from "lucide-react";
-import { LoanComparisonEntry } from "@/data/loanData";
+import { NormalizedLoanComparisonEntry } from "@/data/loanData";
 import { BANKS, getBankDisplayName } from "@/data/banks";
 import { BankLogo } from "@/components/BankLogo";
 import { OfficialLinkButton } from "@/components/OfficialLinkButton";
+import { useTranslation } from "@/lib/i18n";
 
 interface LoanInfoModalProps {
   isOpen: boolean;
   onClose: () => void;
-  entry: LoanComparisonEntry | null;
+  entry: NormalizedLoanComparisonEntry | null;
   lang: string;
 }
 
@@ -30,6 +31,7 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
   entry,
   lang,
 }) => {
+  const { t } = useTranslation();
   const [checkedDocs, setCheckedDocs] = useState<Record<number, boolean>>({});
 
   if (!isOpen || !entry) return null;
@@ -43,14 +45,15 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
 
   const loanTypeLabel = l(entry.loanTypeLabel);
   const interestRateDisplay = l(entry.interestRateDisplay);
-  const processingFee = l(entry.processingFee);
-  const repaymentPeriod = l(entry.repaymentPeriod);
-  const howToApply = l(entry.howToApply);
-  const eligibility = l(entry.eligibility);
-  const safetyNote = l(entry.safetyNote);
-  const documents = lArr(entry.documentsRequired);
-  const benefits = lArr(entry.benefits);
-  const officialLoanUrl = entry.officialWebsite.startsWith("https://") ? entry.officialWebsite : "";
+  const processingFee = l(entry.processingFeeByLang);
+  const repaymentPeriod = l(entry.repaymentPeriodByLang);
+  const howToApply = l(entry.howToApplyByLang);
+  const eligibility = l(entry.eligibilityByLang);
+  const safetyNote = l(entry.safetyNoteByLang);
+  const documents = lArr(entry.documentsRequiredByLang);
+  const benefits = lArr(entry.benefitsByLang);
+  const officialLoanUrl =
+    entry.verified && entry.officialApplyLink?.startsWith("https://") ? entry.officialApplyLink : "";
   const hasVerifiedProcessingFee =
     !!officialLoanUrl && processingFee && !/check official website/i.test(processingFee);
   const hasVerifiedRepaymentPeriod =
@@ -93,7 +96,7 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: "100%", opacity: 0.5 }}
           transition={{ type: "spring", damping: 26, stiffness: 280 }}
-          className="relative w-full sm:max-w-[480px] max-h-[92vh] sm:max-h-[85vh] bg-white rounded-t-[32px] sm:rounded-[28px] shadow-2xl flex flex-col overflow-hidden border border-border/10"
+          className="relative w-full sm:max-w-[480px] max-h-[92vh] sm:max-h-[85vh] bg-white/95 rounded-t-[28px] sm:rounded-[24px] shadow-2xl flex flex-col overflow-hidden border border-border/70 backdrop-blur-xl"
         >
           {/* Top Notch for mobile */}
           <div className="w-full flex justify-center pt-2.5 pb-1 sm:hidden shrink-0">
@@ -101,22 +104,22 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
           </div>
 
           {/* Header */}
-          <div className="shrink-0 px-6 py-4 border-b border-border/40 flex items-center justify-between bg-white/80 backdrop-blur-md relative z-10">
+          <div className="shrink-0 px-6 py-4 border-b border-border/50 flex items-center justify-between bg-white/90 backdrop-blur-md relative z-10">
             <div className="flex items-center gap-3">
               {bank && <BankLogo bank={bank} size="md" />}
               <div>
                 <h3 className="text-[17px] font-bold text-foreground leading-tight">
                   {bankDisplayName}
                 </h3>
-                <p className="text-[12px] font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md inline-block mt-1">
+                <p className="text-[12px] font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md inline-block mt-1">
                   {loanTypeLabel}
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 bg-muted/65 hover:bg-muted/90 rounded-full transition-colors active:scale-90"
-              aria-label="Close details"
+              className="tap-target p-2 bg-muted/65 hover:bg-muted/90 rounded-full transition-colors active:scale-90"
+              aria-label={t("close")}
             >
               <X className="w-4 h-4 text-muted-foreground" />
             </button>
@@ -128,9 +131,9 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
             {/* highlights grid */}
             <div className="grid grid-cols-2 gap-3.5">
               <div className="bg-white border border-border/40 rounded-2xl p-4 shadow-sm">
-                <div className="flex items-center gap-2 text-purple-600 mb-1.5">
+                <div className="flex items-center gap-2 text-slate-700 mb-1.5">
                   <Sparkles className="w-4 h-4" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Interest Rate</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider">{t("interestRate")}</span>
                 </div>
                 <p className="text-[14px] font-extrabold text-foreground leading-snug">
                   {interestRateDisplay}
@@ -138,9 +141,9 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
               </div>
 
               <div className="bg-white border border-border/40 rounded-2xl p-4 shadow-sm">
-                <div className="flex items-center gap-2 text-indigo-600 mb-1.5">
+                <div className="flex items-center gap-2 text-slate-700 mb-1.5">
                   <Calendar className="w-4 h-4" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Repayment Period</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider">{t("repaymentPeriod")}</span>
                 </div>
                 {hasVerifiedRepaymentPeriod ? (
                   <p className="text-[14px] font-extrabold text-foreground leading-snug">
@@ -148,7 +151,7 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
                   </p>
                 ) : (
                   <p className="text-[12px] font-bold text-amber-700 leading-snug">
-                    Check official website
+                    {t("checkOfficialWebsite")}
                   </p>
                 )}
               </div>
@@ -158,11 +161,11 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
             <div className="bg-white border border-border/40 rounded-2xl p-4 shadow-sm space-y-2">
               <div className="flex items-center gap-2 text-slate-800">
                 <Landmark className="w-4 h-4 text-slate-700" />
-                <h4 className="text-[13px] font-bold text-foreground">All About the Loan</h4>
+                <h4 className="text-[13px] font-bold text-foreground">{t("allAboutLoan")}</h4>
               </div>
               <p className="text-[12px] font-semibold text-muted-foreground leading-relaxed">
                 This loan product from {bankDisplayName} provides finance options tailored specifically for {loanTypeLabel.toLowerCase()} requirements.
-                {hasVerifiedProcessingFee ? ` Standard processing fee: ${processingFee}.` : " Processing fee should be checked on the official bank website."}
+                {hasVerifiedProcessingFee ? ` Standard processing fee: ${processingFee}.` : ` ${t("checkOfficialWebsite")}.`}
               </p>
             </div>
 
@@ -170,7 +173,7 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
             <div className="bg-white border border-border/40 rounded-2xl p-4 shadow-sm space-y-2">
               <div className="flex items-center gap-2 text-slate-800">
                 <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                <h4 className="text-[13px] font-bold text-foreground">How to Apply</h4>
+                <h4 className="text-[13px] font-bold text-foreground">{t("howToApply")}</h4>
               </div>
               <p className="text-[12px] font-medium text-muted-foreground leading-relaxed bg-emerald-50/30 border border-emerald-100/50 p-3 rounded-xl">
                 {howToApply}
@@ -180,10 +183,10 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
             {/* Eligibility */}
             <div className="bg-white border border-border/40 rounded-2xl p-4 shadow-sm space-y-2">
               <div className="flex items-center gap-2 text-slate-800">
-                <CheckCircle2 className="w-4 h-4 text-blue-600" />
-                <h4 className="text-[13px] font-bold text-foreground">Eligibility Criteria</h4>
+                <CheckCircle2 className="w-4 h-4 text-slate-700" />
+                <h4 className="text-[13px] font-bold text-foreground">{t("eligibilityCriteria")}</h4>
               </div>
-              <div className="text-[12px] font-semibold text-muted-foreground leading-relaxed bg-blue-50/20 border border-blue-100/30 p-3 rounded-xl">
+              <div className="text-[12px] font-semibold text-muted-foreground leading-relaxed bg-slate-50 border border-slate-100 p-3 rounded-xl">
                 {eligibility}
               </div>
             </div>
@@ -193,7 +196,7 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
               <div className="bg-white border border-border/40 rounded-2xl p-4 shadow-sm space-y-3">
                 <div className="flex items-center gap-2 text-slate-800">
                   <Award className="w-4 h-4 text-amber-500" />
-                  <h4 className="text-[13px] font-bold text-foreground">Key Benefits</h4>
+                  <h4 className="text-[13px] font-bold text-foreground">{t("keyBenefits")}</h4>
                 </div>
                 <ul className="space-y-2.5">
                   {benefits.map((benefit, idx) => (
@@ -210,10 +213,10 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
             {displayDocuments.length > 0 && (
               <div className="bg-white border border-border/40 rounded-2xl p-4 shadow-sm space-y-3">
                 <div className="flex items-center gap-2 text-slate-800">
-                  <FileText className="w-4 h-4 text-purple-600" />
+                  <FileText className="w-4 h-4 text-slate-700" />
                   <div>
-                    <h4 className="text-[13px] font-bold text-foreground">Documents Checklist</h4>
-                    <p className="text-[9px] font-bold text-muted-foreground">Tap documents you have ready</p>
+                    <h4 className="text-[13px] font-bold text-foreground">{t("documentsChecklist")}</h4>
+                    <p className="text-[9px] font-bold text-muted-foreground">{t("tapDocumentsReady")}</p>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -225,14 +228,14 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
                         onClick={() => toggleDoc(idx)}
                         className={`w-full flex items-start gap-3 p-3 rounded-xl border text-left transition-all ${
                           isChecked
-                            ? "bg-purple-50/30 border-purple-200"
+                            ? "bg-slate-50 border-slate-300"
                             : "bg-slate-50/40 border-border/50 hover:bg-slate-50"
                         }`}
                       >
                         <div
                           className={`w-4 h-4 rounded mt-0.5 border flex items-center justify-center shrink-0 transition-colors ${
                             isChecked
-                              ? "bg-purple-600 border-purple-600 text-white"
+                              ? "bg-slate-950 border-slate-950 text-white"
                               : "border-muted-foreground/30 bg-white"
                           }`}
                         >
@@ -256,7 +259,7 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
             <div className="bg-amber-50/40 border border-amber-200/60 rounded-2xl p-4 space-y-2">
               <div className="flex items-center gap-2 text-amber-800">
                 <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                <h4 className="text-[12px] font-extrabold">Important Warnings</h4>
+                <h4 className="text-[12px] font-extrabold">{t("importantWarnings")}</h4>
               </div>
               <p className="text-[11px] font-semibold text-amber-900/80 leading-relaxed">
                 {safetyNote}
@@ -269,17 +272,17 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
           <div className="shrink-0 p-4 border-t border-border/40 bg-white flex flex-col gap-3 relative z-10">
             {/* Localized Disclaimer */}
             <p className="text-[9.5px] font-bold text-center text-muted-foreground/90 leading-tight">
-              Interest rates may change. Please verify latest details on the official bank website before applying.
+              {t("verifyLatestDetailsBeforeApplying")}
             </p>
 
             <OfficialLinkButton
               item={{
                 name: `${entry.bankName} ${loanTypeLabel}`,
-                officialWebsite: entry.officialWebsite,
-                verified: !!officialLoanUrl,
+                officialWebsite: officialLoanUrl,
+                verified: entry.verified,
               }}
-              label={`Apply at Official ${entry.bankName}`}
-              unverifiedLabel="Official loan link not verified yet."
+              label={t("applyAtOfficialBank").replace("{bank}", entry.bankName)}
+              unverifiedLabel={t("officialLoanLinkNotVerified")}
               className="w-full py-3 text-[13px]"
             />
           </div>

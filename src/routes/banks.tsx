@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowUpDown, ChevronLeft } from "lucide-react";
-import { BANKS, CATEGORIES, type BankCategory } from "@/data/banks";
+import { BANKS, CATEGORIES, bankMatchesSearch, type BankCategory } from "@/data/banks";
 import { SearchBar } from "@/components/SearchBar";
 import { BankCard } from "@/components/BankCard";
 import { AppShell } from "@/components/AppShell";
@@ -12,8 +12,8 @@ type BanksSearch = { category?: BankCategory };
 export const Route = createFileRoute("/banks")({
   head: () => ({
     meta: [
-      { title: "All Banks — Bank Hub" },
-      { name: "description", content: "Browse and search all supported Indian banks." },
+      { title: "All Banks — BankHub" },
+      { name: "description", content: "Browse supported Indian banks and open only verified official banking websites through BankHub." },
     ],
   }),
   validateSearch: (search: Record<string, unknown>): BanksSearch => {
@@ -37,9 +37,8 @@ function BanksPage() {
   const [sortAsc, setSortAsc] = useState(true);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     let list = BANKS.filter((b) => {
-      const matchesQ = !q || b.name.toLowerCase().includes(q) || b.shortName.toLowerCase().includes(q);
+      const matchesQ = bankMatchesSearch(b, query);
       const matchesCat = !category || b.category === category;
       return matchesQ && matchesCat;
     });

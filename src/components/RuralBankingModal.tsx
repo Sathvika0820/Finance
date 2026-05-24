@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronDown, ExternalLink, Leaf } from "lucide-react";
 import { useState } from "react";
 import { RURAL_BANKING_DATA } from "@/data/smartServices";
+import { OFFICIAL_LINK_NOT_VERIFIED_LABEL } from "@/data/officialLinks";
 
 interface RuralBankingModalProps {
   isOpen: boolean;
@@ -30,10 +31,10 @@ export function RuralBankingModal({ isOpen, onClose, t, speakVoice }: RuralBanki
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="relative w-full sm:max-w-[420px] max-h-[90vh] bg-white rounded-t-[32px] sm:rounded-[32px] shadow-2xl flex flex-col overflow-hidden"
+          className="relative w-full sm:max-w-[420px] max-h-[90vh] bg-white/95 rounded-t-[28px] sm:rounded-[24px] shadow-2xl flex flex-col overflow-hidden border border-border/70 backdrop-blur-xl"
         >
           {/* Header */}
-          <div className="shrink-0 p-5 pb-3 border-b border-border/50 flex items-center justify-between bg-white relative z-10">
+          <div className="shrink-0 p-5 pb-3 border-b border-border/50 flex items-center justify-between bg-white/90 relative z-10">
             <div>
               <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
                 <Leaf className="w-5 h-5 text-emerald-600 fill-emerald-600/20" />
@@ -45,14 +46,14 @@ export function RuralBankingModal({ isOpen, onClose, t, speakVoice }: RuralBanki
             </div>
             <button
               onClick={onClose}
-              className="p-2 -mr-2 bg-muted/50 hover:bg-muted rounded-full transition-colors"
+              className="tap-target p-2 -mr-2 bg-muted/50 hover:bg-muted rounded-full transition-colors"
             >
               <X className="w-5 h-5 text-muted-foreground" />
             </button>
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-muted/10">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/60">
             {RURAL_BANKING_DATA.map((option) => {
               const isExpanded = expandedId === option.id;
               
@@ -66,7 +67,7 @@ export function RuralBankingModal({ isOpen, onClose, t, speakVoice }: RuralBanki
               };
 
               return (
-                <div key={option.id} className="bg-white border border-border/50 rounded-[20px] overflow-hidden shadow-sm">
+                <div key={option.id} className="bg-white/95 border border-border/50 rounded-[18px] overflow-hidden shadow-sm">
                   <button
                     onClick={handleExpand}
                     className="w-full text-left p-4 flex items-center justify-between active:bg-muted/50 transition-colors"
@@ -94,15 +95,11 @@ export function RuralBankingModal({ isOpen, onClose, t, speakVoice }: RuralBanki
                           <p className="text-[13px] font-medium text-foreground">{t(option.descriptionKey)}</p>
                           <div className="flex justify-end pt-1">
                             <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                window.open(`https://www.google.com/search?q=${encodeURIComponent(t(option.nameKey) + " official website")}`, "_blank", "noopener,noreferrer");
-                              }}
-                              className="flex items-center gap-1.5 px-4 py-2 bg-foreground text-background text-[12px] font-bold rounded-full active:scale-95 transition-transform"
+                              disabled
+                              title={OFFICIAL_LINK_NOT_VERIFIED_LABEL}
+                              className="flex items-center gap-1.5 px-4 py-2 bg-amber-50 border border-amber-200 text-amber-800 text-[12px] font-bold rounded-full cursor-not-allowed"
                             >
-                              {option.id === "csp-help" ? t("locationServicesFuture") : t("openOfficialLink")}
-                              {option.id !== "csp-help" && <ExternalLink className="w-3.5 h-3.5" />}
+                              {option.id === "csp-help" ? t("locationServicesFuture") : OFFICIAL_LINK_NOT_VERIFIED_LABEL}
                             </button>
                           </div>
                         </div>

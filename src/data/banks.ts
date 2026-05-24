@@ -165,6 +165,46 @@ export function getBankDisplayName(bank: Bank | undefined, language: string): st
   return names[langKey] || names.english || bank.name || "";
 }
 
+export function normalizeBankSearchText(value: string): string {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/gi, " ")
+    .trim()
+    .toLowerCase();
+}
+
+export function bankMatchesSearch(
+  bank: Bank,
+  query: string,
+  language: string = "english",
+  extraTerms: string[] = []
+): boolean {
+  const normalizedQuery = normalizeBankSearchText(query);
+  if (!normalizedQuery) return true;
+
+  const searchableText = normalizeBankSearchText([
+    bank.id,
+    bank.name,
+    bank.shortName,
+    getBankDisplayName(bank, language),
+    bank.names.english,
+    bank.names.hindi,
+    bank.names.telugu,
+    bank.category,
+    bank.website,
+    bank.officialWebsite,
+    bank.officialWebsiteUrl,
+    bank.logoDomain,
+    bank.description,
+    ...bank.services,
+    ...extraTerms,
+  ].filter(Boolean).join(" "));
+
+  return searchableText.includes(normalizedQuery);
+}
+
 export function getBankById(id: string): Bank | undefined {
   return BANKS.find((b) => b.id === id);
 }
@@ -241,5 +281,5 @@ export function logoUrl(domain: string): string {
     return `/logos/${fileName}`;
   }
 
-  return `https://logo.clearbit.com/${domain}`;
+  return "";
 }

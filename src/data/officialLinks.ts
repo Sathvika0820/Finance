@@ -1,91 +1,300 @@
 /**
- * Centralized, verified official links for all Banks, Post Office Services, and Insurance Services.
- * Use only official HTTPS portals. No Google searches, third-party blogs, or fake links.
- * Set to an empty string ("") if the official link is not verified or unavailable.
+ * Centralized verified official links for BankHub.
+ * Only add HTTPS links that belong to the named bank, insurer, post office,
+ * government, regulator, or official scheme authority.
  */
-export const OFFICIAL_LINKS = {
-  banks: {
-    sbi: "https://sbi.co.in",
-    pnb: "https://www.pnbindia.in",
-    bob: "https://www.bankofbaroda.in",
-    canara: "https://canarabank.com",
-    union: "https://www.unionbankofindia.co.in",
-    indianbank: "https://www.indianbank.in",
-    boi: "https://www.bankofindia.co.in",
-    cbi: "https://www.centralbankofindia.co.in",
-    iob: "https://www.iob.in",
-    uco: "https://www.ucobank.com",
-    bom: "https://bankofmaharashtra.in",
-    psb: "https://punjabandsindbank.co.in",
 
-    hdfc: "https://www.hdfcbank.com",
-    icici: "https://www.icicibank.com",
-    axis: "https://www.axisbank.com",
-    kotak: "https://www.kotak.com",
-    idfc: "https://www.idfcfirstbank.com",
-    indusind: "https://www.indusind.com",
-    federal: "https://www.federalbank.co.in",
-    sib: "https://www.southindianbank.com",
-    rbl: "https://www.rblbank.com",
-    yes: "https://www.yesbank.in",
-    bandhan: "https://www.bandhanbank.com",
-    dcb: "https://www.dcbbank.com",
+export type OfficialLinkCategory =
+  | "banks"
+  | "loanApply"
+  | "postOffice"
+  | "insurance"
+  | "governmentSchemes"
+  | "cyberSafety"
+  | "regulators"
+  | "smartServices";
 
-    ausfb: "https://www.aubank.in",
-    ujjivan: "https://www.ujjivansfb.in",
-    equitas: "https://www.equitasbank.com",
-    jana: "https://www.janabank.com",
-    suryoday: "https://www.suryodaybank.com",
-    esaf: "https://www.esafbank.com",
+export interface OfficialLinkEntry {
+  id: string;
+  name: string;
+  officialLink: string;
+  verified: boolean;
+  category: OfficialLinkCategory;
+  type: string;
+}
 
-    airtel: "https://www.airtel.in/bank",
-    ippb: "https://www.ippbonline.com",
-    fino: "https://www.finobank.com",
-    jiopb: "https://www.jiopaymentsbank.com",
-  } as Record<string, string>,
+const bankLinks = {
+  sbi: ["State Bank of India", "https://sbi.co.in"],
+  pnb: ["Punjab National Bank", "https://www.pnbindia.in"],
+  bob: ["Bank of Baroda", "https://www.bankofbaroda.in"],
+  canara: ["Canara Bank", "https://canarabank.com"],
+  union: ["Union Bank of India", "https://www.unionbankofindia.co.in"],
+  indianbank: ["Indian Bank", "https://www.indianbank.in"],
+  boi: ["Bank of India", "https://www.bankofindia.co.in"],
+  cbi: ["Central Bank of India", "https://www.centralbankofindia.co.in"],
+  iob: ["Indian Overseas Bank", "https://www.iob.in"],
+  uco: ["UCO Bank", "https://www.ucobank.com"],
+  bom: ["Bank of Maharashtra", "https://bankofmaharashtra.in"],
+  psb: ["Punjab & Sind Bank", "https://punjabandsindbank.co.in"],
+  hdfc: ["HDFC Bank", "https://www.hdfcbank.com"],
+  icici: ["ICICI Bank", "https://www.icicibank.com"],
+  axis: ["Axis Bank", "https://www.axisbank.com"],
+  kotak: ["Kotak Mahindra Bank", "https://www.kotak.com"],
+  idfc: ["IDFC FIRST Bank", "https://www.idfcfirstbank.com"],
+  indusind: ["IndusInd Bank", "https://www.indusind.com"],
+  federal: ["Federal Bank", "https://www.federalbank.co.in"],
+  sib: ["South Indian Bank", "https://www.southindianbank.com"],
+  rbl: ["RBL Bank", "https://www.rblbank.com"],
+  yes: ["YES Bank", "https://www.yesbank.in"],
+  bandhan: ["Bandhan Bank", "https://www.bandhanbank.com"],
+  dcb: ["DCB Bank", "https://www.dcbbank.com"],
+  csb: ["CSB Bank", "https://www.csb.co.in"],
+  dhanlaxmi: ["Dhanlaxmi Bank", "https://www.dhanbank.com"],
+  idbi: ["IDBI Bank", "https://www.idbibank.in"],
+  jk: ["Jammu & Kashmir Bank", "https://www.jkbank.com"],
+  karnataka: ["Karnataka Bank", "https://karnatakabank.com"],
+  kvb: ["Karur Vysya Bank", "https://www.kvb.co.in"],
+  lvb: ["Lakshmi Vilas Bank", "https://www.lvbank.com"],
+  nainital: ["Nainital Bank", "https://www.nainitalbank.co.in"],
+  tmb: ["Tamilnad Mercantile Bank", "https://www.tmb.in"],
+  ausfb: ["AU Small Finance Bank", "https://www.aubank.in"],
+  ujjivan: ["Ujjivan Small Finance Bank", "https://www.ujjivansfb.in"],
+  equitas: ["Equitas Small Finance Bank", "https://www.equitasbank.com"],
+  jana: ["Jana Small Finance Bank", "https://www.janabank.com"],
+  suryoday: ["Suryoday Small Finance Bank", "https://www.suryodaybank.com"],
+  esaf: ["ESAF Small Finance Bank", "https://www.esafbank.com"],
+  capital: ["Capital Small Finance Bank", "https://www.capitalbank.co.in"],
+  fincare: ["Fincare Small Finance Bank", "https://www.fincarebank.com"],
+  nesfb: ["North East Small Finance Bank", "https://www.nesfb.com"],
+  utkarsh: ["Utkarsh Small Finance Bank", "https://www.utkarsh.bank"],
+  airtel: ["Airtel Payments Bank", "https://www.airtel.in/bank"],
+  ippb: ["India Post Payments Bank", "https://www.ippbonline.com"],
+  fino: ["Fino Payments Bank", "https://www.finobank.com"],
+  jiopb: ["Jio Payments Bank", "https://www.jiopaymentsbank.com"],
+  nsdl: ["NSDL Payments Bank", "https://www.nsdlbank.com"],
+  paytmpb: ["Paytm Payments Bank", "https://www.paytmbank.com"],
+  apgvb: ["Andhra Pradesh Grameena Vikas Bank", "https://www.apgvbank.in"],
+  tgb: ["Telangana Grameena Bank", "https://www.tgbhyd.in"],
+  saraswat: ["Saraswat Bank", "https://www.saraswatbank.com"],
+  cosmos: ["Cosmos Bank", "https://www.cosmosbank.com"],
+  svc: ["SVC Co-operative Bank", "https://www.svcbank.com"],
+  abhyudaya: ["Abhyudaya Co-operative Bank", "https://www.abhyudayabank.co.in"],
+} as const;
 
-  postOffice: {
-    "india-post": "https://www.indiapost.gov.in",
-    "ippb": "https://www.ippbonline.com",
-    "post-office-savings-account": "https://www.indiapost.gov.in/Financial/Pages/Content/Post-Office-Saving-Schemes.aspx",
-    "recurring-deposit": "https://www.indiapost.gov.in/Financial/Pages/Content/RD.aspx",
-    "monthly-income-scheme": "https://www.indiapost.gov.in/Financial/Pages/Content/MIS.aspx",
-    "senior-citizen-savings-scheme": "https://www.indiapost.gov.in/Financial/Pages/Content/SCSS.aspx",
-    "public-provident-fund": "https://www.indiapost.gov.in/Financial/Pages/Content/PPF.aspx",
-    "sukanya-samriddhi-yojana": "https://www.indiapost.gov.in/Financial/Pages/Content/SSY.aspx",
-    "national-savings-certificate": "https://www.indiapost.gov.in/Financial/Pages/Content/NSC.aspx",
-    "kisan-vikas-patra": "https://www.indiapost.gov.in/Financial/Pages/Content/KVP.aspx",
-    "speed-post-tracking": "https://www.indiapost.gov.in/_layouts/15/dop.portal.tracking/trackconsignment.aspx",
-    "postal-life-insurance": "https://pli.indiapost.gov.in",
-    "rural-postal-life-insurance": "https://pli.indiapost.gov.in",
-  } as Record<string, string>,
+const postOfficeLinks = {
+  "india-post": ["India Post", "https://www.indiapost.gov.in"],
+  ippb: ["India Post Payments Bank", "https://www.ippbonline.com"],
+  "post-office-savings-account": ["Post Office Savings Schemes", "https://www.indiapost.gov.in/Financial/Pages/Content/Post-Office-Saving-Schemes.aspx"],
+  "recurring-deposit": ["Post Office Recurring Deposit", "https://www.indiapost.gov.in/Financial/Pages/Content/RD.aspx"],
+  "monthly-income-scheme": ["Post Office Monthly Income Scheme", "https://www.indiapost.gov.in/Financial/Pages/Content/MIS.aspx"],
+  "senior-citizen-savings-scheme": ["Senior Citizen Savings Scheme", "https://www.indiapost.gov.in/Financial/Pages/Content/SCSS.aspx"],
+  "public-provident-fund": ["Public Provident Fund", "https://www.indiapost.gov.in/Financial/Pages/Content/PPF.aspx"],
+  "sukanya-samriddhi-yojana": ["Sukanya Samriddhi Yojana", "https://www.indiapost.gov.in/Financial/Pages/Content/SSY.aspx"],
+  "national-savings-certificate": ["National Savings Certificate", "https://www.indiapost.gov.in/Financial/Pages/Content/NSC.aspx"],
+  "kisan-vikas-patra": ["Kisan Vikas Patra", "https://www.indiapost.gov.in/Financial/Pages/Content/KVP.aspx"],
+  "speed-post-tracking": ["Speed Post Tracking", "https://www.indiapost.gov.in/_layouts/15/dop.portal.tracking/trackconsignment.aspx"],
+  "postal-life-insurance": ["Postal Life Insurance", "https://pli.indiapost.gov.in"],
+  "rural-postal-life-insurance": ["Rural Postal Life Insurance", "https://pli.indiapost.gov.in"],
+} as const;
 
-  insurance: {
-    "lic": "https://licindia.in",
-    "sbi-life": "https://www.sbilife.co.in",
-    "hdfc-life": "https://www.hdfclife.com",
-    "icici-prudential-life": "https://www.iciciprulife.com",
-    "max-life": "https://www.maxlifeinsurance.com",
-    "bajaj-allianz-life": "https://www.bajajallianzlife.com",
-    "tata-aia-life": "https://www.tataaia.com",
-    "star-health": "https://www.starhealth.in",
-    "niva-bupa-health": "https://www.nivabupa.com",
-    "care-health": "https://www.careinsurance.com",
-    "new-india-assurance": "https://www.newindia.co.in",
-    "oriental-insurance": "https://orientalinsurance.org.in",
-    "united-india-insurance": "https://uiic.co.in",
-    "national-insurance": "https://nationalinsurance.nic.co.in",
-  } as Record<string, string>,
-};
+const insuranceLinks = {
+  lic: ["Life Insurance Corporation of India", "https://licindia.in"],
+  "sbi-life": ["SBI Life Insurance", "https://www.sbilife.co.in"],
+  "hdfc-life": ["HDFC Life Insurance", "https://www.hdfclife.com"],
+  "icici-prudential-life": ["ICICI Prudential Life Insurance", "https://www.iciciprulife.com"],
+  "max-life": ["Max Life Insurance", "https://www.maxlifeinsurance.com"],
+  "bajaj-allianz-life": ["Bajaj Allianz Life Insurance", "https://www.bajajallianzlife.com"],
+  "tata-aia-life": ["Tata AIA Life Insurance", "https://www.tataaia.com"],
+  "star-health": ["Star Health Insurance", "https://www.starhealth.in"],
+  "niva-bupa-health": ["Niva Bupa Health Insurance", "https://www.nivabupa.com"],
+  "care-health": ["Care Health Insurance", "https://www.careinsurance.com"],
+  "new-india-assurance": ["New India Assurance", "https://www.newindia.co.in"],
+  "oriental-insurance": ["Oriental Insurance", "https://orientalinsurance.org.in"],
+  "united-india-insurance": ["United India Insurance", "https://uiic.co.in"],
+  "national-insurance": ["National Insurance Company", "https://nationalinsurance.nic.co.in"],
+  policyholder: ["IRDAI Policyholder Portal", "https://policyholder.gov.in"],
+} as const;
 
-/**
- * Retrieves the centralized, verified official link for a specific category and key.
- * Returns the URL if verified, or undefined if it is unverified or empty.
- */
+const governmentSchemeLinks = {
+  vidyalakshmi: ["Vidya Lakshmi Education Loan Portal", "https://www.vidyalakshmi.co.in"],
+  "vidya-lakshmi": ["Vidya Lakshmi Education Loan Portal", "https://www.vidyalakshmi.co.in/Students"],
+  "education-loan-schemes": ["Vidya Lakshmi Education Loan Portal", "https://www.vidyalakshmi.co.in/Students"],
+  scholarships: ["National Scholarship Portal", "https://scholarships.gov.in"],
+  "national-scholarship-portal": ["National Scholarship Portal", "https://scholarships.gov.in"],
+  "skill-india": ["Skill India Digital", "https://www.skillindiadigital.gov.in"],
+  "skill-india-digital": ["Skill India Digital", "https://www.skillindiadigital.gov.in"],
+  epfo: ["Employees' Provident Fund Organisation", "https://www.epfindia.gov.in"],
+  pfrda: ["PFRDA", "https://www.pfrda.org.in"],
+  "national-pension-system": ["National Pension System", "https://www.pfrda.org.in"],
+  "pension-portals": ["PFRDA Pension Portals", "https://www.pfrda.org.in"],
+  "pension-schemes": ["PFRDA Pension Schemes", "https://www.pfrda.org.in"],
+  apy: ["Atal Pension Yojana", "https://www.pfrda.org.in/web/pfrda/schemes/atal-pension-yojana-apy"],
+  "atal-pension-yojana-employee": ["Atal Pension Yojana", "https://www.pfrda.org.in/web/pfrda/schemes/atal-pension-yojana-apy"],
+  "atal-pension-yojana-senior": ["Atal Pension Yojana", "https://www.pfrda.org.in/web/pfrda/schemes/atal-pension-yojana-apy"],
+  "jan-suraksha": ["Jan Suraksha Portal", "https://jansuraksha.gov.in"],
+  "pm-jeevan-jyoti-bima": ["Jan Suraksha Portal", "https://jansuraksha.gov.in"],
+  "pm-suraksha-bima": ["Jan Suraksha Portal", "https://jansuraksha.gov.in"],
+  "insurance-schemes": ["Jan Suraksha Portal", "https://jansuraksha.gov.in"],
+  pmkisan: ["PM-KISAN", "https://pmkisan.gov.in"],
+  "pm-kisan": ["PM-KISAN", "https://pmkisan.gov.in"],
+  nabard: ["NABARD", "https://www.nabard.org"],
+  "kisan-credit-card": ["NABARD", "https://www.nabard.org"],
+  pmfby: ["Pradhan Mantri Fasal Bima Yojana", "https://pmfby.gov.in"],
+  "pm-fasal-bima": ["Pradhan Mantri Fasal Bima Yojana", "https://pmfby.gov.in"],
+  "agri-infra": ["Agriculture Infrastructure Fund", "https://agriinfra.dac.gov.in"],
+  "agriculture-infrastructure-fund": ["Agriculture Infrastructure Fund", "https://agriinfra.dac.gov.in"],
+  "soil-health": ["Soil Health Card", "https://soilhealth.dac.gov.in"],
+  "soil-health-card": ["Soil Health Card", "https://soilhealth.dac.gov.in"],
+  mudra: ["MUDRA", "https://www.mudra.org.in"],
+  "pm-mudra": ["MUDRA", "https://www.mudra.org.in"],
+  "stand-up-mitra": ["Stand-Up Mitra", "https://www.standupmitra.in"],
+  "stand-up-india-self-employed": ["Stand-Up Mitra", "https://www.standupmitra.in"],
+  "stand-up-india-women": ["Stand-Up Mitra", "https://www.standupmitra.in"],
+  pmegp: ["PMEGP", "https://www.kviconline.gov.in/pmegp/pmegpweb/"],
+  udyam: ["Udyam Registration", "https://udyamregistration.gov.in"],
+  "udyam-msme-registration": ["Udyam Registration", "https://udyamregistration.gov.in"],
+  wep: ["Women Entrepreneurship Platform", "https://wep.gov.in"],
+  "women-entrepreneurship-platform": ["Women Entrepreneurship Platform", "https://wep.gov.in"],
+  "sukanya-samriddhi": ["Sukanya Samriddhi Yojana", "https://www.indiapost.gov.in/Financial/Pages/Content/SSY.aspx"],
+  "senior-citizen-savings-scheme": ["Senior Citizen Savings Scheme", "https://www.indiapost.gov.in/Financial/Pages/Content/SCSS.aspx"],
+  "health-insurance-support": ["IRDAI Policyholder Portal", "https://policyholder.gov.in"],
+  pmjdy: ["Pradhan Mantri Jan Dhan Yojana", "https://pmjdy.gov.in"],
+  "jan-dhan-yojana": ["Pradhan Mantri Jan Dhan Yojana", "https://pmjdy.gov.in"],
+  uidai: ["UIDAI", "https://uidai.gov.in"],
+  "aadhaar-services": ["UIDAI", "https://uidai.gov.in"],
+  digilocker: ["DigiLocker", "https://www.digilocker.gov.in"],
+  umang: ["UMANG", "https://web.umang.gov.in"],
+  dbtbharat: ["DBT Bharat", "https://dbtbharat.gov.in"],
+  "dbt-schemes": ["DBT Bharat", "https://dbtbharat.gov.in"],
+} as const;
+
+const cyberSafetyLinks = {
+  "cyber-complaint": ["National Cyber Crime Reporting Portal", "https://cybercrime.gov.in/"],
+  "cert-in": ["CERT-In", "https://www.cert-in.org.in/"],
+  npci: ["NPCI", "https://www.npci.org.in/"],
+} as const;
+
+const regulatorLinks = {
+  rbi: ["Reserve Bank of India", "https://rbi.org.in/"],
+  "rbi-cms": ["RBI Complaint Management System", "https://cms.rbi.org.in/cms/IndexPage.aspx"],
+  "rbi-sachet": ["RBI Sachet Portal", "https://sachet.rbi.org.in/"],
+} as const;
+
+const loanApplyLinks = {
+  "educationLoan:sbi": ["SBI Education Loan", "https://sbi.co.in/web/personal-banking/loans/education-loans"],
+  "educationLoan:canara": ["Canara Bank Education Loan", "https://canarabank.com/education-loan.aspx"],
+  "educationLoan:union": ["Union Bank Education Loan", "https://www.unionbankofindia.co.in/english/personal-education-loan.aspx"],
+  "educationLoan:bob": ["Bank of Baroda Education Loan", "https://www.bankofbaroda.in/personal-banking/loans/education-loan"],
+  "homeLoan:sbi": ["SBI Home Loan", "https://homeloans.sbi/"],
+  "homeLoan:hdfc": ["HDFC Bank Home Loan", "https://www.hdfcbank.com/personal/borrow/popular-loans/home-loan"],
+  "homeLoan:icici": ["ICICI Bank Home Loan", "https://www.icicibank.com/personal-banking/loans/home-loan"],
+  "homeLoan:axis": ["Axis Bank Home Loan", "https://www.axisbank.com/retail/loans/home-loan"],
+  "fixedDeposit:sbi": ["SBI FD Rates", "https://sbi.co.in/web/interest-rates/deposit-rates/retail-domestic-term-deposits"],
+  "fixedDeposit:hdfc": ["HDFC Bank FD Rates", "https://www.hdfcbank.com/personal/save/deposits/fixed-deposit-interest-rate"],
+  "fixedDeposit:icici": ["ICICI Bank FD Rates", "https://www.icicibank.com/personal-banking/deposits/fixed-deposit/fd-interest-rates"],
+  "fixedDeposit:axis": ["Axis Bank FD Rates", "https://www.axisbank.com/interest-rate-on-deposits"],
+  "fixedDeposit:pnb": ["PNB FD Rates", "https://www.pnbindia.in/Interest-Rates-Deposit.html"],
+  "fixedDeposit:bob": ["Bank of Baroda FD Rates", "https://www.bankofbaroda.in/interest-rate-and-service-charges/deposits-interest-rates"],
+  "savingsAccount:sbi": ["SBI Savings Account", "https://sbi.co.in/web/personal-banking/accounts/saving-account"],
+  "savingsAccount:hdfc": ["HDFC Bank Savings Account", "https://www.hdfcbank.com/personal/save/accounts/savings-accounts"],
+  "savingsAccount:icici": ["ICICI Bank Savings Account", "https://www.icicibank.com/personal-banking/accounts/savings-account"],
+  "savingsAccount:bob": ["Bank of Baroda Savings Account", "https://www.bankofbaroda.in/personal-banking/accounts/saving-accounts"],
+  "savingsAccount:pnb": ["PNB Savings Account", "https://www.pnbindia.in/savings-account.html"],
+  "goldLoan:sbi": ["SBI Gold Loan", "https://sbi.co.in/web/personal-banking/loans/gold-loan"],
+  "goldLoan:hdfc": ["HDFC Bank Gold Loan", "https://www.hdfcbank.com/personal/borrow/popular-loans/gold-loan"],
+  "goldLoan:icici": ["ICICI Bank Gold Loan", "https://www.icicibank.com/personal-banking/loans/gold-loan"],
+  "goldLoan:axis": ["Axis Bank Gold Loan", "https://www.axisbank.com/retail/loans/gold-loan"],
+} as const;
+
+const smartServiceLinks = {
+  ...loanApplyLinks,
+  "complaintSupport:rbiComplaintPortal": regulatorLinks["rbi-cms"],
+  "complaintSupport:rbiSachet": regulatorLinks["rbi-sachet"],
+  "complaintSupport:cyberCrimePortal": cyberSafetyLinks["cyber-complaint"],
+} as const;
+
+function createEntries<T extends Record<string, readonly [string, string]>>(
+  source: T,
+  category: OfficialLinkCategory,
+  type: string,
+): Record<keyof T & string, OfficialLinkEntry> {
+  return Object.fromEntries(
+    Object.entries(source).map(([id, [name, officialLink]]) => [
+      id,
+      {
+        id,
+        name,
+        officialLink,
+        verified: officialLink.startsWith("https://"),
+        category,
+        type,
+      },
+    ]),
+  ) as Record<keyof T & string, OfficialLinkEntry>;
+}
+
+export const OFFICIAL_LINK_REGISTRY = {
+  banks: createEntries(bankLinks, "banks", "bank"),
+  loanApply: createEntries(loanApplyLinks, "loanApply", "loan"),
+  postOffice: createEntries(postOfficeLinks, "postOffice", "post_office"),
+  insurance: createEntries(insuranceLinks, "insurance", "insurance"),
+  governmentSchemes: createEntries(governmentSchemeLinks, "governmentSchemes", "scheme"),
+  cyberSafety: createEntries(cyberSafetyLinks, "cyberSafety", "cyber_safety"),
+  regulators: createEntries(regulatorLinks, "regulators", "regulator"),
+  smartServices: createEntries(smartServiceLinks, "smartServices", "smart_service"),
+} satisfies Record<OfficialLinkCategory, Record<string, OfficialLinkEntry>>;
+
+export const OFFICIAL_LINKS = Object.fromEntries(
+  Object.entries(OFFICIAL_LINK_REGISTRY).map(([category, entries]) => [
+    category,
+    Object.fromEntries(
+      Object.entries(entries).map(([id, entry]) => [
+        id,
+        entry.verified ? entry.officialLink : "",
+      ]),
+    ),
+  ]),
+) as Record<OfficialLinkCategory, Record<string, string>>;
+
+export const OFFICIAL_LINK_NOT_VERIFIED_LABEL = "Official link not verified yet.";
+
+export function getOfficialLinkEntry(
+  category: OfficialLinkCategory,
+  id: string,
+): OfficialLinkEntry | undefined {
+  const entry = OFFICIAL_LINK_REGISTRY[category]?.[id];
+  return entry?.verified && entry.officialLink.startsWith("https://") ? entry : undefined;
+}
+
 export function getOfficialLink(
-  category: keyof typeof OFFICIAL_LINKS,
-  id: string
+  category: OfficialLinkCategory,
+  id: string,
 ): string | undefined {
-  const url = OFFICIAL_LINKS[category]?.[id];
-  return url && url.trim() !== "" ? url : undefined;
+  return getOfficialLinkEntry(category, id)?.officialLink;
+}
+
+export function getSmartServiceOfficialLink(serviceType: string, key: string): OfficialLinkEntry | undefined {
+  return getOfficialLinkEntry("smartServices", `${serviceType}:${key}`);
+}
+
+export function getComparableOfficialHost(url: string): string {
+  try {
+    return new URL(url).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
+export function isVerifiedOfficialUrl(url: string | null | undefined): boolean {
+  if (!url?.startsWith("https://")) return false;
+  const inputHost = getComparableOfficialHost(url);
+  if (!inputHost) return false;
+
+  return Object.values(OFFICIAL_LINK_REGISTRY).some((entries) =>
+    Object.values(entries).some((entry) => {
+      if (!entry.verified) return false;
+      const officialHost = getComparableOfficialHost(entry.officialLink);
+      return inputHost === officialHost || inputHost.endsWith(`.${officialHost}`);
+    }),
+  );
 }

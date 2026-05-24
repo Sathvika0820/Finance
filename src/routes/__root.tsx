@@ -33,13 +33,15 @@ function NotFoundComponent() {
 }
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  console.error(error);
+  if (import.meta.env.DEV) {
+    console.error(error);
+  }
   const router = useRouter();
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+        <h1 className="text-xl font-semibold text-foreground">
           This page didn't load
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -51,13 +53,13 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
               router.invalidate();
               reset();
             }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="inline-flex items-center justify-center rounded-md fintech-button px-4 py-2 text-sm font-medium transition-colors"
           >
             Try again
           </button>
           <a
             href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+            className="inline-flex items-center justify-center rounded-md fintech-button-secondary px-4 py-2 text-sm font-medium transition-colors"
           >
             Go home
           </a>
@@ -72,14 +74,37 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Bank Hub — Indian Banking Access" },
-      { name: "description", content: "Search and quickly open official Indian banking websites and apps from one centralized hub." },
-      { property: "og:title", content: "Bank Hub" },
-      { property: "og:description", content: "Centralized access to Indian banks." },
+      { name: "theme-color", content: "#0f172a" },
+      { name: "application-name", content: "BankHub" },
+      { name: "apple-mobile-web-app-title", content: "BankHub" },
+      { title: "BankHub - All your banks, one smart gateway" },
+      {
+        name: "description",
+        content:
+          "BankHub is a smart Indian banking gateway with AI banking assistance, banking comparison, fraud safety, official bank links, and financial inclusion support.",
+      },
+      { property: "og:title", content: "BankHub - All your banks, one smart gateway" },
+      {
+        property: "og:description",
+        content:
+          "A smart Indian banking gateway with AI assistance, verified official links, banking comparison, fraud safety, and financial inclusion support.",
+      },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { property: "og:site_name", content: "BankHub" },
+      { property: "og:image", content: "/icons/bankhub-og.svg" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "BankHub - All your banks, one smart gateway" },
+      {
+        name: "twitter:description",
+        content:
+          "AI banking assistance, verified official links, loan comparison, fraud safety, and financial inclusion support for Indian users.",
+      },
+      { name: "twitter:image", content: "/icons/bankhub-og.svg" },
     ],
     links: [
+      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      { rel: "manifest", href: "/site.webmanifest" },
+      { rel: "apple-touch-icon", href: "/icons/bankhub-icon.svg" },
       {
         rel: "stylesheet",
         href: appCss,

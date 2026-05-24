@@ -9,9 +9,9 @@ interface SeniorCitizenModalProps {
 }
 
 const SENIOR_FEATURES = [
-  { key: "largerText", icon: Eye, color: "text-blue-500", bg: "bg-blue-50" },
-  { key: "voiceHelp", icon: Volume2, color: "text-green-500", bg: "bg-green-50" },
-  { key: "safeBankingTips", icon: Shield, color: "text-amber-500", bg: "bg-amber-50" },
+  { key: "largerText", icon: Eye, color: "text-slate-700", bg: "bg-slate-100" },
+  { key: "voiceHelp", icon: Volume2, color: "text-emerald-700", bg: "bg-emerald-50" },
+  { key: "safeBankingTips", icon: Shield, color: "text-amber-700", bg: "bg-amber-50" },
 ];
 
 export function SeniorCitizenModal({ isOpen, onClose, t, speakVoice }: SeniorCitizenModalProps) {
@@ -32,12 +32,12 @@ export function SeniorCitizenModal({ isOpen, onClose, t, speakVoice }: SeniorCit
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="relative w-full sm:max-w-[420px] max-h-[90vh] bg-white rounded-t-[32px] sm:rounded-[32px] shadow-2xl flex flex-col overflow-hidden"
+          className="relative w-full sm:max-w-[420px] max-h-[90vh] bg-white/95 rounded-t-[28px] sm:rounded-[24px] shadow-2xl flex flex-col overflow-hidden border border-border/70 backdrop-blur-xl"
         >
-          <div className="shrink-0 p-5 pb-3 border-b border-border/50 flex items-center justify-between bg-white relative z-10">
+          <div className="shrink-0 p-5 pb-3 border-b border-border/50 flex items-center justify-between bg-white/90 relative z-10">
             <div>
               <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-                <Eye className="w-5 h-5 text-blue-500" />
+                <Eye className="w-5 h-5 text-slate-700" />
                 {t("seniorCitizenMode")}
               </h2>
               <p className="text-sm font-medium text-muted-foreground mt-0.5">
@@ -46,19 +46,19 @@ export function SeniorCitizenModal({ isOpen, onClose, t, speakVoice }: SeniorCit
             </div>
             <button
               onClick={onClose}
-              className="p-2 -mr-2 bg-muted/50 hover:bg-muted rounded-full transition-colors"
+              className="tap-target p-2 -mr-2 bg-muted/50 hover:bg-muted rounded-full transition-colors"
             >
               <X className="w-5 h-5 text-muted-foreground" />
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-muted/10">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/60">
             {SENIOR_FEATURES.map((feature) => {
               const Icon = feature.icon;
               return (
                 <div
                   key={feature.key}
-                  className="bg-white border border-border/50 rounded-[20px] p-4 flex items-start gap-3 shadow-sm"
+                  className="bg-white/95 border border-border/50 rounded-[18px] p-4 flex items-start gap-3 shadow-sm"
                 >
                   <div
                     className={`w-10 h-10 rounded-[12px] ${feature.bg} flex items-center justify-center shrink-0`}

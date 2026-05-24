@@ -11,7 +11,7 @@ export function BottomNav() {
   const location = useLocation();
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 px-3 pb-3 pt-2 pointer-events-none">
-      <div className="mx-auto max-w-md glass shadow-glow rounded-3xl flex items-center justify-around py-2 pointer-events-auto">
+      <div className="mx-auto max-w-md glass shadow-glow rounded-[22px] flex items-center justify-around py-2 pointer-events-auto border border-white/50">
         {items.map(({ to, label, icon: Icon }) => {
           const active = location.pathname === to || location.pathname.startsWith(to + "/");
           return (
@@ -22,7 +22,7 @@ export function BottomNav() {
             >
               <div
                 className={`p-2 rounded-xl transition-all ${
-                  active ? "bg-foreground text-background" : "text-muted-foreground"
+                  active ? "fintech-button" : "text-muted-foreground"
                 }`}
               >
                 <Icon className="w-5 h-5" strokeWidth={2.2} />

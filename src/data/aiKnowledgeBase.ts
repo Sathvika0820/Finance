@@ -1,5 +1,6 @@
 import { BANKS, Bank } from "./banks";
 import { SERVICES_DATA, FinanceService } from "./services";
+import { getOfficialLink } from "./officialLinks";
 
 // Define structured content for the AI Assistant's official-data-only retrieval logic
 export interface VerifiedLoanType {
@@ -76,7 +77,7 @@ export const VERIFIED_LOANS: VerifiedLoanType[] = [
       english: "Age between 21 to 70 years. Indian citizenship or NRI status. Stable employment or business history with a minimum credit score of 700+ preferred.",
       hindi: "उम्र 21 से 70 वर्ष के बीच। भारतीय नागरिकता या एनआरआई दर्जा। स्थिर रोजगार या व्यवसाय का इतिहास, अधिमानतः 700+ क्रेडिट स्कोर।"
     },
-    officialInfoPage: "https://www.rbi.org.in"
+    officialInfoPage: getOfficialLink("regulators", "rbi") || ""
   },
   {
     id: "education_loan",
@@ -120,7 +121,7 @@ export const VERIFIED_LOANS: VerifiedLoanType[] = [
       english: "Indian National. Secured admission in a recognized professional or technical course in India or abroad through an entrance exam or merit-based selection.",
       hindi: "भारतीय नागरिक होना चाहिए। प्रवेश परीक्षा या योग्यता के आधार पर भारत या विदेश में मान्यता प्राप्त व्यावसायिक या तकनीकी पाठ्यक्रम में प्रवेश प्राप्त किया हो।"
     },
-    officialInfoPage: "https://www.vidyalakshmi.co.in"
+    officialInfoPage: getOfficialLink("governmentSchemes", "vidyalakshmi") || ""
   },
   {
     id: "personal_loan",
@@ -162,7 +163,7 @@ export const VERIFIED_LOANS: VerifiedLoanType[] = [
       english: "Age between 21 to 60 years. Minimum monthly income of ₹15,000 (higher limits apply for metropolitan cities). Minimum credit score of 720+ preferred.",
       hindi: "उम्र 21 से 60 वर्ष के बीच। न्यूनतम मासिक आय ₹15,000 (महानगरों के लिए उच्च सीमाएं लागू)। 720+ क्रेडिट स्कोर होना आवश्यक है।"
     },
-    officialInfoPage: "https://www.rbi.org.in"
+    officialInfoPage: getOfficialLink("regulators", "rbi") || ""
   },
   {
     id: "gold_loan",
@@ -202,7 +203,7 @@ export const VERIFIED_LOANS: VerifiedLoanType[] = [
       english: "Age 18+ years. Must own gold ornaments/coins with a purity of 18-24 carats. The Loan-to-Value (LTV) ratio is capped strictly at 75% of the appraised value by RBI regulations.",
       hindi: "उम्र 18+ वर्ष। गिरवी रखने के लिए 18-24 कैरेट शुद्धता के सोने के आभूषण/सिक्के होने चाहिए। आरबीआई के नियमों के अनुसार लोन राशि सोने के मूल्य के अधिकतम 75% तक सीमित है।"
     },
-    officialInfoPage: "https://www.rbi.org.in"
+    officialInfoPage: getOfficialLink("regulators", "rbi") || ""
   },
   {
     id: "agri_loan",
@@ -242,7 +243,7 @@ export const VERIFIED_LOANS: VerifiedLoanType[] = [
       english: "Farmers (owner-cultivators, tenant farmers, sharecroppers, or self-help groups). Land holding documents are mandatory.",
       hindi: "किसान (भूमि मालिक, बटाईदार या स्वयं सहायता समूह)। भूमि स्वामित्व के दस्तावेज अनिवार्य हैं।"
     },
-    officialInfoPage: "https://www.nabard.org"
+    officialInfoPage: getOfficialLink("governmentSchemes", "nabard") || ""
   }
 ];
 
@@ -284,7 +285,7 @@ export const VERIFIED_SCHEMES: VerifiedScheme[] = [
         "सरकारी सब्सिडी सीधे खाते में प्राप्त करने के लिए प्रत्यक्ष लाभ हस्तांतरण (डीबीटी) की सुविधा।"
       ]
     },
-    officialUrl: "https://pmjdy.gov.in"
+    officialUrl: getOfficialLink("governmentSchemes", "pmjdy") || ""
   },
   {
     id: "pmsby",
@@ -322,7 +323,7 @@ export const VERIFIED_SCHEMES: VerifiedScheme[] = [
         "संबद्ध बचत खाते से ₹20 का न्यूनतम वार्षिक प्रीमियम स्वतः कट जाता है।"
       ]
     },
-    officialUrl: "https://www.jansuraksha.gov.in"
+    officialUrl: getOfficialLink("governmentSchemes", "jan-suraksha") || ""
   },
   {
     id: "apy",
@@ -360,7 +361,7 @@ export const VERIFIED_SCHEMES: VerifiedScheme[] = [
         "अंशदाता और जीवनसाथी दोनों की मृत्यु के मामले में नामांकित व्यक्ति को पूरी संचित राशि वापस मिल जाती है।"
       ]
     },
-    officialUrl: "https://www.npscra.nsdl.co.in"
+    officialUrl: getOfficialLink("governmentSchemes", "pfrda") || ""
   }
 ];
 
@@ -373,7 +374,7 @@ export const VERIFIED_CYBER_SAFETY: VerifiedCyberSafety = {
     telugu: "సైబర్ మోసాలు మరియు ఆన్‌లైన్ బ్యాంకింగ్ మోసాల నివారణ మార్గదర్శకం"
   },
   helpline: "1930",
-  complaintPortal: "https://cybercrime.gov.in",
+  complaintPortal: getOfficialLink("cyberSafety", "cyber-complaint") || "",
   tips: {
     english: [
       "Never share OTP, PIN, CVV, passwords, net banking, or UPI PIN with bank employees, customer care representatives, or anyone.",

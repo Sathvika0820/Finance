@@ -5,6 +5,7 @@ import { SMART_GUIDANCE_OPTIONS } from "@/data/smartServices";
 import { BANKS, Bank, getBankDisplayName } from "@/data/banks";
 import { BankLogo } from "@/components/BankLogo";
 import { openServicePage } from "@/lib/services";
+import { OFFICIAL_LINK_NOT_VERIFIED_LABEL } from "@/data/officialLinks";
 
 interface SmartGuidanceModalProps {
   isOpen: boolean;
@@ -35,10 +36,10 @@ export function SmartGuidanceModal({ isOpen, onClose, t, lang, openBankSafely, s
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="relative w-full sm:max-w-[420px] max-h-[90vh] bg-white rounded-t-[32px] sm:rounded-[32px] shadow-2xl flex flex-col overflow-hidden"
+          className="relative w-full sm:max-w-[420px] max-h-[90vh] bg-white/95 rounded-t-[28px] sm:rounded-[24px] shadow-2xl flex flex-col overflow-hidden border border-border/70 backdrop-blur-xl"
         >
           {/* Header */}
-          <div className="shrink-0 p-5 pb-3 border-b border-border/50 flex items-center justify-between bg-white relative z-10">
+          <div className="shrink-0 p-5 pb-3 border-b border-border/50 flex items-center justify-between bg-white/90 relative z-10">
             <div>
               <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
                 <Lightbulb className="w-5 h-5 text-amber-500 fill-amber-500/20" />
@@ -50,14 +51,14 @@ export function SmartGuidanceModal({ isOpen, onClose, t, lang, openBankSafely, s
             </div>
             <button
               onClick={onClose}
-              className="p-2 -mr-2 bg-muted/50 hover:bg-muted rounded-full transition-colors"
+              className="tap-target p-2 -mr-2 bg-muted/50 hover:bg-muted rounded-full transition-colors"
             >
               <X className="w-5 h-5 text-muted-foreground" />
             </button>
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-muted/10">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/60">
             {SMART_GUIDANCE_OPTIONS.map((option) => {
               const isExpanded = expandedId === option.id;
               
@@ -71,7 +72,7 @@ export function SmartGuidanceModal({ isOpen, onClose, t, lang, openBankSafely, s
               };
 
               return (
-                <div key={option.id} className="bg-white border border-border/50 rounded-[20px] overflow-hidden shadow-sm">
+                <div key={option.id} className="bg-white/95 border border-border/50 rounded-[18px] overflow-hidden shadow-sm">
                   <button
                     onClick={handleExpand}
                     className="w-full text-left p-4 flex items-center justify-between active:bg-muted/50 transition-colors"
@@ -85,7 +86,7 @@ export function SmartGuidanceModal({ isOpen, onClose, t, lang, openBankSafely, s
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">
+                      <span className="text-[11px] font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-full">
                         {t("viewOptions")}
                       </span>
                       <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isExpanded ? "rotate-180" : ""}`} />
@@ -165,15 +166,11 @@ export function SmartGuidanceModal({ isOpen, onClose, t, lang, openBankSafely, s
                                  <div key={idx} className="flex items-center justify-between bg-white border border-border/60 p-3 rounded-2xl">
                                     <p className="font-bold text-[13px] text-foreground">{service}</p>
                                     <button
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        window.open(`https://www.google.com/search?q=${encodeURIComponent(service + " official website")}`, "_blank", "noopener,noreferrer");
-                                      }}
-                                      className="flex items-center gap-1.5 px-3 py-1.5 bg-foreground text-background text-[11px] font-bold rounded-full active:scale-95 transition-transform"
+                                      disabled
+                                      title={OFFICIAL_LINK_NOT_VERIFIED_LABEL}
+                                      className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold rounded-full cursor-not-allowed"
                                     >
-                                      {t("officialLink")}
-                                      <ExternalLink className="w-3 h-3" />
+                                      {OFFICIAL_LINK_NOT_VERIFIED_LABEL}
                                     </button>
                                  </div>
                                ))}

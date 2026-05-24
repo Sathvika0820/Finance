@@ -15,16 +15,15 @@ const sizes = {
 
 export function BankLogo({ bank, size = "md" }: Props) {
   const [errored, setErrored] = useState(false);
+  const logoSrc = bank ? logoUrl(bank.logoDomain) : "";
   const initials = (bank?.shortName || "BH")
     .replace(/[^a-zA-Z]/g, "")
     .slice(0, 3)
     .toUpperCase();
-  const accent = bank?.accent || "from-slate-700 to-slate-900";
-
   if (!bank) {
     return (
       <div
-        className={`${sizes[size]} rounded-2xl bg-gradient-to-br ${accent} text-white font-bold flex items-center justify-center shadow-soft shrink-0`}
+        className={`${sizes[size]} rounded-2xl bg-slate-900 text-white font-bold flex items-center justify-center shadow-soft shrink-0`}
         aria-hidden
       >
         {initials}
@@ -32,10 +31,10 @@ export function BankLogo({ bank, size = "md" }: Props) {
     );
   }
 
-  if (errored) {
+  if (errored || !logoSrc) {
     return (
       <div
-        className={`${sizes[size]} rounded-2xl bg-gradient-to-br ${accent} text-white font-bold flex items-center justify-center shadow-soft shrink-0`}
+        className={`${sizes[size]} rounded-2xl bg-slate-900 text-white font-bold flex items-center justify-center shadow-soft shrink-0`}
         aria-hidden
       >
         {initials}
@@ -48,7 +47,7 @@ export function BankLogo({ bank, size = "md" }: Props) {
       className={`${sizes[size]} rounded-2xl bg-white shadow-soft shrink-0 overflow-hidden flex items-center justify-center border border-border/60`}
     >
       <img
-        src={logoUrl(bank.logoDomain)}
+        src={logoSrc}
         alt={`${bank.name} logo`}
         loading="lazy"
         onError={() => setErrored(true)}

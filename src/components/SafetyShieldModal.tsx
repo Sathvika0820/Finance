@@ -13,9 +13,10 @@ import {
   CYBER_FRAUD_WARNING,
   CYBER_SCAM_CATEGORIES,
 } from "@/data/cyberSafetyData";
+import { getOfficialLinkEntry } from "@/data/officialLinks";
+import { openVerifiedExternalLink } from "@/lib/security";
 
 /* ─── Official Links (single source of truth) ─── */
-const CYBER_COMPLAINT_URL = CYBER_COMPLAINT_PORTAL.officialWebsite;
 const HELPLINE_NUMBER = CYBER_FRAUD_HELPLINE;
 
 /* ─── Types ─── */
@@ -89,8 +90,8 @@ const SCAM_CATEGORIES: ScamCategory[] = [
     title: "UPI Fraud",
     description: "Fake UPI collection requests or payment reversal scams.",
     icon: QrCode,
-    color: "text-purple-500",
-    bg: "bg-purple-50",
+    color: "text-slate-700",
+    bg: "bg-slate-100",
     steps: [
       "Entering UPI PIN is for sending money — never for receiving it.",
       "Do not enter your UPI PIN for any 'refund' or 'reversal' requests.",
@@ -149,8 +150,8 @@ const SCAM_CATEGORIES: ScamCategory[] = [
     title: "Phishing Links",
     description: "Links that imitate official portals to harvest banking credentials.",
     icon: Link2,
-    color: "text-indigo-500",
-    bg: "bg-indigo-50",
+    color: "text-slate-700",
+    bg: "bg-slate-100",
     steps: [
       "Hover over links to see the actual destination URL before clicking.",
       "Look for misspellings in domain names (e.g., sbi-onllne.com vs sbi.co.in).",
@@ -264,6 +265,7 @@ function analyzeInput(text: string): CheckerInputType | null {
 export function SafetyShieldModal({
   isOpen,
   onClose,
+  t,
 }: SafetyShieldModalProps) {
   const [selectedScam, setSelectedScam] = useState<ScamCategory | null>(null);
   const [checkerText, setCheckerText] = useState("");
@@ -286,7 +288,7 @@ export function SafetyShieldModal({
   const openCyberPortal = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    window.open(CYBER_COMPLAINT_URL, "_blank", "noopener,noreferrer");
+    openVerifiedExternalLink(getOfficialLinkEntry("cyberSafety", "cyber-complaint"), e);
   };
 
   return (
@@ -307,26 +309,26 @@ export function SafetyShieldModal({
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 28, stiffness: 320 }}
-          className="relative w-full sm:max-w-[500px] max-h-[92vh] bg-white rounded-t-[32px] sm:rounded-[28px] shadow-2xl flex flex-col overflow-hidden"
+          className="relative w-full sm:max-w-[500px] max-h-[92vh] bg-white/95 rounded-t-[28px] sm:rounded-[24px] shadow-2xl flex flex-col overflow-hidden border border-border/70 backdrop-blur-xl"
           role="dialog"
           aria-modal="true"
-          aria-label="Banking Safety Shield"
+          aria-label={t("bankingSafetyShield")}
         >
           {/* ── Header ── */}
-          <div className="shrink-0 px-5 pt-5 pb-4 border-b border-border/50 flex items-center justify-between bg-white">
+          <div className="shrink-0 px-5 pt-5 pb-4 border-b border-border/50 flex items-center justify-between bg-white/90">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-[12px] bg-green-50 flex items-center justify-center">
-                <ShieldCheck className="w-5 h-5 text-green-600 fill-green-100" />
+              <div className="w-10 h-10 rounded-[12px] bg-emerald-50 flex items-center justify-center">
+                <ShieldCheck className="w-5 h-5 text-emerald-700 fill-emerald-100" />
               </div>
               <div>
-                <h2 className="text-[18px] font-bold text-foreground leading-tight">Banking Safety Shield</h2>
-                <p className="text-[12px] font-medium text-muted-foreground mt-0.5">Stay protected from online banking scams</p>
+                <h2 className="text-[18px] font-bold text-foreground leading-tight">{t("bankingSafetyShield")}</h2>
+                <p className="text-[12px] font-medium text-muted-foreground mt-0.5">{t("safetyShieldSubtitle")}</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              aria-label="Close"
-              className="p-2 bg-muted/50 hover:bg-muted rounded-full transition-colors"
+              aria-label={t("close")}
+              className="tap-target p-2 bg-muted/50 hover:bg-muted rounded-full transition-colors"
             >
               <X className="w-5 h-5 text-muted-foreground" />
             </button>
@@ -336,17 +338,17 @@ export function SafetyShieldModal({
           <div className="flex-1 overflow-y-auto">
 
             {/* Emergency Banner */}
-            <div className="mx-4 mt-4 rounded-[16px] bg-gradient-to-r from-red-600 to-rose-500 p-4 text-white shadow-lg">
-              <p className="text-[11px] font-bold uppercase tracking-wider opacity-80 mb-1">🚨 Emergency Cyber Fraud Helpline</p>
+            <div className="mx-4 mt-4 rounded-[16px] bg-red-700 p-4 text-white shadow-lg shadow-red-900/15">
+              <p className="text-[11px] font-bold uppercase tracking-wider opacity-80 mb-1">🚨 {t("emergencyCyberFraudHelpline")}</p>
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[32px] font-black leading-none tracking-tight">{HELPLINE_NUMBER}</p>
-                  <p className="text-[12px] font-medium opacity-90 mt-1">Call immediately if money is lost</p>
+                  <p className="text-[32px] font-black leading-none">{HELPLINE_NUMBER}</p>
+                  <p className="text-[12px] font-medium opacity-90 mt-1">{t("callImmediatelyIfMoneyLost")}</p>
                 </div>
                 <OfficialLinkButton
                   item={CYBER_COMPLAINT_PORTAL}
-                  label="File Cyber Complaint"
-                  className="flex-col gap-1 bg-white/20 hover:bg-white/30 rounded-[12px] px-4 py-3 text-white text-center shadow-none"
+                  label={t("fileCyberComplaint")}
+                  className="flex-col gap-1 bg-white/15 hover:bg-white/25 rounded-[12px] px-4 py-3 text-white text-center shadow-none border-white/20"
                 />
               </div>
             </div>
@@ -355,15 +357,15 @@ export function SafetyShieldModal({
             <div className="mx-4 mt-3 rounded-[12px] bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
               <p className="text-[12px] font-semibold text-amber-800 leading-snug">
-                {CYBER_FRAUD_WARNING}
+                {t("cyberFraudWarning")}
               </p>
             </div>
 
             {/* ── Scam Categories ── */}
             <div className="px-4 mt-5">
               <h3 className="text-[13px] font-bold text-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-                <Info className="w-4 h-4 text-blue-500" />
-                Select your scam type for guidance
+                <Info className="w-4 h-4 text-slate-600" />
+                {t("selectScamTypeForGuidance")}
               </h3>
 
               <div className="space-y-2">
@@ -373,7 +375,7 @@ export function SafetyShieldModal({
                   return (
                     <div
                       key={scam.id}
-                      className="bg-white border border-border/60 rounded-[16px] overflow-hidden shadow-sm"
+                      className="bg-white/95 border border-border/60 rounded-[16px] overflow-hidden shadow-sm"
                     >
                       <button
                         onClick={() => {
@@ -409,13 +411,13 @@ export function SafetyShieldModal({
                               {/* Scam type selected label */}
                               <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${scam.bg} ${scam.color}`}>
                                 <Icon className="w-3 h-3" />
-                                <span className="text-[11px] font-bold">{scam.title} selected</span>
+                                <span className="text-[11px] font-bold">{scam.title} {t("selected")}</span>
                               </div>
 
                               {/* Immediate safety steps */}
                               <div>
                                 <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
-                                  Immediate Safety Steps
+                                  {t("immediateSafetySteps")}
                                 </p>
                                 <ul className="space-y-2">
                                   {scam.steps.map((step, i) => (
@@ -432,7 +434,7 @@ export function SafetyShieldModal({
                               {/* Helpline */}
                               <div className="bg-red-50 border border-red-200 rounded-[12px] px-4 py-3 flex items-center justify-between">
                                 <div>
-                                  <p className="text-[10px] font-bold text-red-600 uppercase tracking-wider">Cyber Fraud Helpline</p>
+                                  <p className="text-[10px] font-bold text-red-600 uppercase tracking-wider">{t("cyberFraudHelpline")}</p>
                                   <p className="text-[22px] font-black text-red-700 leading-tight">{HELPLINE_NUMBER}</p>
                                 </div>
                                 <a
@@ -440,21 +442,21 @@ export function SafetyShieldModal({
                                   className="flex items-center gap-1.5 px-3 py-2 bg-red-600 text-white rounded-[10px] text-[11px] font-bold active:scale-95 transition-transform"
                                 >
                                   <Phone className="w-3.5 h-3.5" />
-                                  Call Now
+                                  {t("callNow")}
                                 </a>
                               </div>
 
                               {/* File complaint button */}
                               <OfficialLinkButton
                                 item={CYBER_COMPLAINT_PORTAL}
-                                label="File Cyber Complaint"
+                                label={t("fileCyberComplaint")}
                                 className="w-full py-3 rounded-[12px] text-[13px]"
                               />
 
                               {/* Warning */}
                               <div className="bg-amber-50 border border-amber-200 rounded-[10px] px-3 py-2.5">
                                 <p className="text-[11px] font-semibold text-amber-800 leading-snug">
-                                  {CYBER_FRAUD_WARNING}
+                                  {t("cyberFraudWarning")}
                                 </p>
                               </div>
                             </div>
@@ -471,11 +473,11 @@ export function SafetyShieldModal({
             <div className="mx-4 mt-5 mb-2 bg-white border border-border/60 rounded-[20px] overflow-hidden shadow-sm">
               <div className="p-4 border-b border-border/50">
                 <h3 className="font-bold text-[14px] text-foreground flex items-center gap-2">
-                  <Search className="w-4 h-4 text-blue-500" />
-                  Suspicious Message / URL Checker
+                  <Search className="w-4 h-4 text-slate-600" />
+                  {t("suspiciousCheckerTitle")}
                 </h3>
                 <p className="text-[12px] text-muted-foreground mt-0.5">
-                  Paste suspicious text, URL, SMS, or a phone number for safety guidance.
+                  {t("suspiciousCheckerDesc")}
                 </p>
               </div>
 
@@ -487,23 +489,23 @@ export function SafetyShieldModal({
                     setCheckerText(e.target.value);
                     setCheckerResult(null);
                   }}
-                  placeholder="Paste suspicious URL, SMS, message, or phone number. Do not paste OTP, PIN, CVV, passwords, or account details."
+                  placeholder={t("suspiciousCheckerPlaceholder")}
                   rows={3}
-                  className="w-full px-4 py-3 text-[13px] font-medium bg-muted/10 border border-border/80 rounded-[12px] resize-none outline-none focus:border-blue-400 transition-colors placeholder:text-muted-foreground/60 placeholder:font-normal"
-                  aria-label="Enter suspicious message or URL"
+                  className="w-full px-4 py-3 text-[13px] font-medium fintech-input rounded-[12px] resize-none outline-none transition-all placeholder:text-muted-foreground/60 placeholder:font-normal"
+                  aria-label={t("enterSuspiciousMessage")}
                 />
 
                 <button
                   onClick={handleCheck}
                   disabled={!checkerText.trim()}
-                  className="w-full py-2.5 bg-foreground text-background rounded-[12px] font-bold text-[13px] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all"
+                  className="w-full py-2.5 fintech-button rounded-[12px] font-bold text-[13px] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all"
                 >
-                  Check for Safety Guidance
+                  {t("checkSafetyGuidance")}
                 </button>
 
                 {/* Disclaimer — always visible once checker is shown */}
                 <p className="text-[11px] text-muted-foreground text-center font-medium">
-                  This is basic safety guidance, not guaranteed scam detection. Do not enter sensitive banking data.
+                  {t("scamCheckerDisclaimer")}
                 </p>
 
                 {/* Result */}
@@ -530,12 +532,12 @@ export function SafetyShieldModal({
                             ))}
                           </ul>
                           <div className="rounded-[12px] bg-white/70 border border-current/10 p-3 mb-3">
-                            <p className="text-[10px] font-bold uppercase tracking-wider opacity-75">Cyber fraud helpline</p>
+                            <p className="text-[10px] font-bold uppercase tracking-wider opacity-75">{t("cyberFraudHelpline")}</p>
                             <p className="text-[24px] font-black leading-tight">{HELPLINE_NUMBER}</p>
                           </div>
                           <OfficialLinkButton
                             item={CYBER_COMPLAINT_PORTAL}
-                            label="File Cyber Complaint"
+                            label={t("fileCyberComplaint")}
                             className="w-full py-2.5 bg-foreground text-background rounded-[10px] text-[12px] shadow-none"
                           />
                         </>
@@ -557,28 +559,26 @@ export function SafetyShieldModal({
             {/* ── Official Sources ── */}
             <div className="mx-4 mt-4 mb-4">
               <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">
-                Official Safety Portals
+                {t("officialSafetyPortals")}
               </p>
               <div className="space-y-2">
                 {[
-                  { name: "National Cyber Crime Portal", url: "https://cybercrime.gov.in/", badge: "File Complaint" },
-                  { name: "Reserve Bank of India (RBI)", url: "https://rbi.org.in/", badge: "RBI" },
-                  { name: "RBI Sachet Portal", url: "https://sachet.rbi.org.in/", badge: "Sachet" },
-                  { name: "CERT-In", url: "https://www.cert-in.org.in/", badge: "CERT‑In" },
-                  { name: "NPCI / UPI Safety", url: "https://www.npci.org.in/", badge: "NPCI" },
-                ].filter((link) => link.url === CYBER_COMPLAINT_URL).map((link) => (
+                  { entry: getOfficialLinkEntry("cyberSafety", "cyber-complaint"), badge: "File Complaint" },
+                  { entry: getOfficialLinkEntry("regulators", "rbi"), badge: "RBI" },
+                  { entry: getOfficialLinkEntry("regulators", "rbi-sachet"), badge: "Sachet" },
+                  { entry: getOfficialLinkEntry("cyberSafety", "cert-in"), badge: "CERT-In" },
+                  { entry: getOfficialLinkEntry("cyberSafety", "npci"), badge: "NPCI" },
+                ].filter((link) => Boolean(link.entry)).map((link) => (
                   <div
-                    key={link.url}
+                    key={link.entry!.id}
                     className="flex items-center justify-between bg-white border border-border/60 px-4 py-3 rounded-[14px]"
                   >
-                    <p className="font-bold text-[12px] text-foreground">{link.name}</p>
+                    <p className="font-bold text-[12px] text-foreground">{link.entry!.name}</p>
                     <button
                       onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        window.open(link.url, "_blank", "noopener,noreferrer");
+                        openVerifiedExternalLink(link.entry, e);
                       }}
-                      aria-label={`Open ${link.name}`}
+                      aria-label={`Open ${link.entry!.name}`}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-muted/60 border border-border/50 text-foreground text-[10px] font-bold rounded-lg active:scale-95 transition-transform"
                     >
                       {link.badge}
@@ -591,13 +591,13 @@ export function SafetyShieldModal({
 
             {/* Safety rules footer */}
             <div className="mx-4 mb-5 rounded-[14px] bg-slate-50 border border-slate-200 p-4">
-              <p className="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-2">BankHub Safety Rules</p>
+              <p className="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-2">{t("bankHubSafetyRules")}</p>
               <ul className="space-y-1.5">
                 {[
-                  "BankHub never asks for OTP, PIN, CVV or banking passwords.",
-                  "BankHub redirects only to verified official bank/government websites.",
-                  "No personal banking credentials are stored by BankHub.",
-                  "For real help, always contact your bank directly.",
+                  t("aiTrustBanner"),
+                  t("bankHubOfficialRedirectTrust"),
+                  t("cyberFraudWarning"),
+                  t("checkOfficialDetails"),
                 ].map((rule, i) => (
                   <li key={i} className="flex items-start gap-2 text-[11px] text-slate-700 font-medium leading-snug">
                     <ShieldCheck className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" />

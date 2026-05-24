@@ -62,32 +62,32 @@
 }
 
 :root {
-  --radius: 1rem;
-  --background: oklch(0.985 0 0);
-  --foreground: oklch(0.13 0 0);
+  --radius: 0.875rem;
+  --background: oklch(0.982 0.005 236);
+  --foreground: oklch(0.17 0.025 255);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.13 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.13 0 0);
-  --primary: oklch(0.18 0 0);
+  --primary: oklch(0.2 0.035 255);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.96 0 0);
-  --secondary-foreground: oklch(0.18 0 0);
-  --muted: oklch(0.95 0 0);
-  --muted-foreground: oklch(0.5 0 0);
-  --accent: oklch(0.93 0 0);
-  --accent-foreground: oklch(0.18 0 0);
+  --secondary: oklch(0.958 0.006 236);
+  --secondary-foreground: oklch(0.2 0.035 255);
+  --muted: oklch(0.952 0.006 236);
+  --muted-foreground: oklch(0.48 0.018 255);
+  --accent: oklch(0.92 0.015 236);
+  --accent-foreground: oklch(0.2 0.035 255);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.91 0 0);
-  --input: oklch(0.91 0 0);
-  --ring: oklch(0.6 0 0);
+  --border: oklch(0.9 0.009 236);
+  --input: oklch(0.9 0.009 236);
+  --ring: oklch(0.46 0.035 255);
   --glass-bg: oklch(1 0 0 / 0.6);
   --glass-border: oklch(1 0 0 / 0.4);
-  --shadow-soft: 0 8px 32px -12px oklch(0 0 0 / 0.12);
-  --shadow-glow: 0 20px 60px -20px oklch(0 0 0 / 0.25);
-  --gradient-surface: linear-gradient(135deg, oklch(0.99 0 0), oklch(0.94 0 0));
-  --gradient-dark: linear-gradient(135deg, oklch(0.18 0 0), oklch(0.08 0 0));
+  --shadow-soft: 0 12px 34px -22px oklch(0.18 0.035 255 / 0.28);
+  --shadow-glow: 0 24px 70px -32px oklch(0.18 0.035 255 / 0.34);
+  --gradient-surface: linear-gradient(145deg, oklch(1 0 0), oklch(0.965 0.008 236));
+  --gradient-dark: linear-gradient(145deg, oklch(0.24 0.035 255), oklch(0.12 0.025 255));
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -151,9 +151,9 @@
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
-    letter-spacing: -0.01em;
+    letter-spacing: 0;
   }
-  h1, h2, h3 { letter-spacing: -0.02em; }
+  h1, h2, h3 { letter-spacing: 0; }
   button, a {
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
@@ -173,6 +173,52 @@
   .gradient-dark { background: var(--gradient-dark); }
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { scrollbar-width: none; }
+  .fintech-shell {
+    background:
+      linear-gradient(180deg, oklch(0.99 0.006 236) 0%, oklch(0.965 0.009 236) 48%, oklch(0.985 0.004 236) 100%);
+  }
+  .fintech-card {
+    background: oklch(1 0 0 / 0.86);
+    border: 1px solid oklch(0.9 0.009 236 / 0.82);
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+  .fintech-card-interactive {
+    background: oklch(1 0 0 / 0.9);
+    border: 1px solid oklch(0.9 0.009 236 / 0.82);
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background-color 160ms ease;
+  }
+  .fintech-card-interactive:hover {
+    transform: translateY(-1px);
+    border-color: oklch(0.78 0.025 255 / 0.9);
+    box-shadow: 0 16px 42px -28px oklch(0.18 0.035 255 / 0.38);
+  }
+  .fintech-button {
+    background: var(--gradient-dark);
+    color: var(--color-primary-foreground);
+    box-shadow: 0 14px 34px -22px oklch(0.12 0.025 255 / 0.68);
+  }
+  .fintech-button-secondary {
+    background: oklch(0.97 0.006 236);
+    color: var(--color-foreground);
+    border: 1px solid oklch(0.9 0.009 236);
+  }
+  .fintech-input {
+    background: oklch(1 0 0 / 0.88);
+    border: 1px solid oklch(0.88 0.01 236);
+  }
+  .fintech-input:focus {
+    border-color: oklch(0.55 0.035 255);
+    box-shadow: 0 0 0 3px oklch(0.55 0.035 255 / 0.12);
+  }
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
 
 @keyframes fade-in {
@@ -184,17 +230,18 @@
 /* ── Splash Screen ── */
 
 .splash-bg {
-  background: #050505;
+  background: #071016;
   background-image:
-    radial-gradient(ellipse 60% 50% at 50% 55%, rgba(147,51,234,0.12) 0%, transparent 70%),
-    radial-gradient(ellipse 40% 30% at 50% 45%, rgba(126,34,206,0.08) 0%, transparent 60%);
+    linear-gradient(145deg, rgba(15,23,42,0.96), rgba(6,78,59,0.28) 52%, rgba(2,6,23,0.98)),
+    linear-gradient(180deg, rgba(255,255,255,0.04), transparent);
 }
 
 .splash-orb {
   position: absolute;
-  border-radius: 50%;
+  border-radius: 24px;
   pointer-events: none;
-  filter: blur(80px);
+  filter: none;
+  opacity: 0;
 }
 .splash-orb-1 {
   width: 300px; height: 300px;

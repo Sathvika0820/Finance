@@ -4,18 +4,25 @@ import {
   Bot, Send, Mic, MicOff, Volume2, VolumeX, Globe, 
   ArrowRight, ShieldCheck, X, Sparkles, HelpCircle, 
   FileText, Landmark, ShieldAlert, CheckCircle2,
-  StopCircle, Play, Info, AlertTriangle
+  StopCircle, Play, Info, AlertTriangle, Minimize2, MessageCircle
 } from "lucide-react";
 import { 
   VERIFIED_LOANS, 
   VERIFIED_SCHEMES, 
   VERIFIED_CYBER_SAFETY, 
-  getVerifiedBanksForLoan, 
   getSupportedBanksList 
 } from "@/data/aiKnowledgeBase";
 import { BANKS, getBankDisplayName } from "@/data/banks";
 import { SERVICES_DATA } from "@/data/services";
-import { VERIFIED_LOAN_COMPARISONS, LoanComparisonEntry } from "@/data/loanData";
+import { getSortedLoanComparison } from "@/data/loanData";
+import { isVerifiedOfficialUrl } from "@/data/officialLinks";
+import {
+  LANGUAGE_OPTIONS,
+  SPEECH_LOCALE_BY_LANGUAGE,
+  useTranslation,
+  type AppLanguage,
+} from "@/lib/i18n";
+import { containsSensitiveBankingData, SENSITIVE_DATA_WARNING } from "@/lib/security";
 
 // Speech Recognition & Synthesis types
 type SpeechRecognitionEvent = {
@@ -54,9 +61,13 @@ interface Message {
 }
 
 // 7 Languages definition
-type Language = "english" | "hindi" | "telugu" | "tamil" | "kannada" | "odia" | "urdu";
+type Language = AppLanguage;
 
-const LANGUAGE_LABELS: Record<Language, string> = {
+const LANGUAGE_LABELS: Record<Language, string> = Object.fromEntries(
+  LANGUAGE_OPTIONS.map((language) => [language.id, `${language.nativeLabel} (${language.label})`])
+) as Record<Language, string>;
+
+const LEGACY_LANGUAGE_LABELS: Partial<Record<Language, string>> = {
   english: "English",
   hindi: "हिन्दी (Hindi)",
   telugu: "తెలుగు (Telugu)",
@@ -66,15 +77,7 @@ const LANGUAGE_LABELS: Record<Language, string> = {
   urdu: "اردو (Urdu)",
 };
 
-const LANG_CODES: Record<Language, string> = {
-  english: "en-IN",
-  hindi: "hi-IN",
-  telugu: "te-IN",
-  tamil: "ta-IN",
-  kannada: "kn-IN",
-  odia: "or-IN",
-  urdu: "ur-IN",
-};
+const LANG_CODES: Record<Language, string> = SPEECH_LOCALE_BY_LANGUAGE;
 
 // Multilingual translations for status & error banners
 const LOCALIZED_TEXTS = {
@@ -189,19 +192,57 @@ const LOCALIZED_TEXTS = {
     placeholder: "اسکیموں، قرضوں یا دستاویزات کے بارے میں پوچھیں...",
     placeholderUnsupported: "مجھ سے کچھ بھی پوچھیں... (وائس ان پٹ دستیاب نہیں)",
     stopSpeaking: "آواز بند کریں",
+  },
+  marathi: {
+    welcome: "नमस्कार! मी तुमचा BankHub AI सहाय्यक आहे. बँक सेवा, कर्ज, योजना किंवा सुरक्षिततेबद्दल विचारा.",
+    safetyWarning: "सुरक्षेसाठी OTP, PIN, CVV, कार्ड नंबर किंवा बँकिंग पासवर्ड शेअर करू नका.",
+    fallback: "मी हे अधिकृत स्रोतांमधून पडताळू शकलो नाही. कृपया अधिकृत वेबसाइट तपासा.",
+    micUnsupported: "या ब्राउझरमध्ये व्हॉइस इनपुट समर्थित नाही. कृपया मजकूर वापरा.",
+    micListening: "ऐकत आहे... आता बोला.", micProcessing: "व्हॉइस प्रश्न प्रक्रिया होत आहे...",
+    micErrorNoSpeech: "आवाज आढळला नाही. कृपया पुन्हा प्रयत्न करा.", micErrorDenied: "मायक्रोफोन परवानगी नाकारली.",
+    micErrorDefault: "व्हॉइस ओळख त्रुटी.", ttsUnsupported: "या डिव्हाइसवर आवाज आउटपुट समर्थित नाही.",
+    trustBanner: "BankHub बँकिंग पासवर्ड, OTP, PIN किंवा CVV साठवत नाही.",
+    placeholder: "योजना, कर्ज, कागदपत्रांबद्दल विचारा...", placeholderUnsupported: "काहीही विचारा... (व्हॉइस इनपुट नाही)", stopSpeaking: "बोलणे थांबवा",
+  },
+  bengali: {
+    welcome: "নমস্কার! আমি আপনার BankHub AI সহায়ক। ব্যাঙ্ক পরিষেবা, ঋণ, প্রকল্প বা নিরাপত্তা নিয়ে জিজ্ঞাসা করুন।",
+    safetyWarning: "নিরাপত্তার জন্য OTP, PIN, CVV, কার্ড নম্বর বা ব্যাঙ্কিং পাসওয়ার্ড শেয়ার করবেন না।",
+    fallback: "আমি এটি অফিসিয়াল উৎস থেকে যাচাই করতে পারিনি। অনুগ্রহ করে অফিসিয়াল ওয়েবসাইট দেখুন।",
+    micUnsupported: "এই ব্রাউজারে ভয়েস ইনপুট সমর্থিত নয়।", micListening: "শুনছি... এখন বলুন.", micProcessing: "ভয়েস প্রশ্ন প্রক্রিয়া হচ্ছে...",
+    micErrorNoSpeech: "কোনো কথা শনাক্ত হয়নি।", micErrorDenied: "মাইক্রোফোন অনুমতি অস্বীকার করা হয়েছে।", micErrorDefault: "ভয়েস শনাক্তকরণ ত্রুটি।",
+    ttsUnsupported: "এই ডিভাইসে ভয়েস আউটপুট সমর্থিত নয়।", trustBanner: "BankHub ব্যাঙ্কিং পাসওয়ার্ড, OTP, PIN বা CVV সংরক্ষণ করে না।",
+    placeholder: "প্রকল্প, ঋণ, নথি সম্পর্কে জিজ্ঞাসা করুন...", placeholderUnsupported: "কিছু জিজ্ঞাসা করুন... (ভয়েস ইনপুট নেই)", stopSpeaking: "বলা বন্ধ করুন",
+  },
+  gujarati: {
+    welcome: "નમસ્તે! હું તમારો BankHub AI સહાયક છું. બેંક સેવા, લોન, યોજના અથવા સલામતી વિશે પૂછો.",
+    safetyWarning: "સલામતી માટે OTP, PIN, CVV, કાર્ડ નંબર અથવા બેંકિંગ પાસવર્ડ શેર ન કરો.",
+    fallback: "હું આને સત્તાવાર સ્ત્રોતોથી ચકાસી શક્યો નથી. કૃપા કરીને સત્તાવાર વેબસાઇટ જુઓ.",
+    micUnsupported: "આ બ્રાઉઝરમાં વોઇસ ઇનપુટ સપોર્ટેડ નથી.", micListening: "સાંભળી રહ્યું છે... હવે બોલો.", micProcessing: "વોઇસ પ્રશ્ન પ્રક્રિયામાં છે...",
+    micErrorNoSpeech: "કોઈ અવાજ મળ્યો નથી.", micErrorDenied: "માઇક્રોફોન પરવાનગી નકારી.", micErrorDefault: "વોઇસ ઓળખ ભૂલ.",
+    ttsUnsupported: "આ ડિવાઇસ પર વોઇસ આઉટપુટ સપોર્ટેડ નથી.", trustBanner: "BankHub બેંકિંગ પાસવર્ડ, OTP, PIN અથવા CVV સંગ્રહતું નથી.",
+    placeholder: "યોજનાઓ, લોન, દસ્તાવેજો વિશે પૂછો...", placeholderUnsupported: "કંઈપણ પૂછો... (વોઇસ ઇનપુટ નથી)", stopSpeaking: "બોલવું બંધ કરો",
+  },
+  punjabi: {
+    welcome: "ਸਤ ਸ੍ਰੀ ਅਕਾਲ! ਮੈਂ ਤੁਹਾਡਾ BankHub AI ਸਹਾਇਕ ਹਾਂ। ਬੈਂਕ ਸੇਵਾਵਾਂ, ਕਰਜ਼ੇ, ਸਕੀਮਾਂ ਜਾਂ ਸੁਰੱਖਿਆ ਬਾਰੇ ਪੁੱਛੋ।",
+    safetyWarning: "ਸੁਰੱਖਿਆ ਲਈ OTP, PIN, CVV, ਕਾਰਡ ਨੰਬਰ ਜਾਂ ਬੈਂਕਿੰਗ ਪਾਸਵਰਡ ਸਾਂਝੇ ਨਾ ਕਰੋ।",
+    fallback: "ਮੈਂ ਇਸਨੂੰ ਅਧਿਕਾਰਕ ਸਰੋਤਾਂ ਤੋਂ ਪੱਕਾ ਨਹੀਂ ਕਰ ਸਕਿਆ। ਕਿਰਪਾ ਕਰਕੇ ਅਧਿਕਾਰਕ ਵੈਬਸਾਈਟ ਵੇਖੋ।",
+    micUnsupported: "ਇਸ ਬ੍ਰਾਊਜ਼ਰ ਵਿੱਚ ਵੌਇਸ ਇਨਪੁਟ ਸਮਰਥਿਤ ਨਹੀਂ ਹੈ।", micListening: "ਸੁਣ ਰਿਹਾ ਹਾਂ... ਹੁਣ ਬੋਲੋ।", micProcessing: "ਵੌਇਸ ਸਵਾਲ ਪ੍ਰਕਿਰਿਆ ਵਿੱਚ ਹੈ...",
+    micErrorNoSpeech: "ਕੋਈ ਆਵਾਜ਼ ਨਹੀਂ ਮਿਲੀ।", micErrorDenied: "ਮਾਈਕ੍ਰੋਫੋਨ ਇਜਾਜ਼ਤ ਰੱਦ ਕੀਤੀ ਗਈ।", micErrorDefault: "ਵੌਇਸ ਪਛਾਣ ਗਲਤੀ।",
+    ttsUnsupported: "ਇਸ ਡਿਵਾਈਸ 'ਤੇ ਵੌਇਸ ਆਉਟਪੁੱਟ ਸਮਰਥਿਤ ਨਹੀਂ ਹੈ।", trustBanner: "BankHub ਬੈਂਕਿੰਗ ਪਾਸਵਰਡ, OTP, PIN ਜਾਂ CVV ਸਟੋਰ ਨਹੀਂ ਕਰਦਾ।",
+    placeholder: "ਸਕੀਮਾਂ, ਕਰਜ਼ਿਆਂ, ਦਸਤਾਵੇਜ਼ਾਂ ਬਾਰੇ ਪੁੱਛੋ...", placeholderUnsupported: "ਕੁਝ ਵੀ ਪੁੱਛੋ... (ਵੌਇਸ ਇਨਪੁਟ ਨਹੀਂ)", stopSpeaking: "ਬੋਲਣਾ ਬੰਦ ਕਰੋ",
   }
 };
 
-const SUGGESTIONS_DB: Record<Language, { text: string; topic: string }[]> = {
+const SUGGESTIONS_DB: Partial<Record<Language, { text: string; topic: string }[]>> & {
+  english: { text: string; topic: string }[];
+} = {
   english: [
-    { text: "Which banks provide home loans?", topic: "home_loan" },
-    { text: "Show education loan options", topic: "education_loan" },
-    { text: "What documents are needed for personal loan?", topic: "personal_docs" },
-    { text: "How to report online banking fraud?", topic: "scam_report" },
+    { text: "Compare home loans", topic: "home_loan" },
+    { text: "Compare education loans", topic: "education_loan" },
+    { text: "Which banks are available?", topic: "available_banks" },
     { text: "Show student schemes", topic: "student_schemes" },
-    { text: "Show post office savings schemes", topic: "post_office_savings" },
-    { text: "Which insurance options are available?", topic: "insurance_options" },
-    { text: "Which banks are available in BankHub?", topic: "available_banks" }
+    { text: "Report online fraud", topic: "scam_report" },
+    { text: "Post office schemes", topic: "post_office_savings" }
   ],
   hindi: [
     { text: "कौन से बैंक होम लोन देते हैं?", topic: "home_loan" },
@@ -265,7 +306,25 @@ const SUGGESTIONS_DB: Record<Language, { text: string; topic: string }[]> = {
   ]
 };
 
-const LOCALIZED_COMPARISON_TEXTS: Record<Language, {
+const QUICK_ACTION_TOPICS = [
+  "home_loan",
+  "education_loan",
+  "available_banks",
+  "student_schemes",
+  "scam_report",
+  "post_office_savings",
+];
+
+const QUICK_ACTION_LABELS: Record<string, string> = {
+  home_loan: "Compare home loans",
+  education_loan: "Compare education loans",
+  available_banks: "Which banks are available?",
+  student_schemes: "Show student schemes",
+  scam_report: "Report online fraud",
+  post_office_savings: "Post office schemes",
+};
+
+const LOCALIZED_COMPARISON_TEXTS: Partial<Record<Language, {
   comparisonHeader: string;
   interestRate: string;
   processingFee: string;
@@ -274,7 +333,18 @@ const LOCALIZED_COMPARISON_TEXTS: Record<Language, {
   checkOfficial: string;
   topApply: string;
   loanDetails: string;
-}> = {
+}>> & {
+  english: {
+    comparisonHeader: string;
+    interestRate: string;
+    processingFee: string;
+    repaymentPeriod: string;
+    notVerified: string;
+    checkOfficial: string;
+    topApply: string;
+    loanDetails: string;
+  };
+} = {
   english: {
     comparisonHeader: "🏦 **Verified Loan Comparison** *(Sorted by lowest interest rate first)*:",
     interestRate: "Interest Rate",
@@ -359,8 +429,10 @@ const INTENT_TO_LOAN_TYPE: Record<string, string> = {
   businessLoan: "business_loan"
 };
 
+const BANK_BY_ID = new Map(BANKS.map((bank) => [bank.id, bank]));
+
 const getBankDisplayNameById = (bankId: string, lang: Language): string => {
-  const bank = BANKS.find(b => b.id === bankId);
+  const bank = BANK_BY_ID.get(bankId);
   return bank ? getBankDisplayName(bank, lang) : bankId;
 };
 
@@ -371,26 +443,18 @@ const generateLoanComparisonText = (
   const loanType = INTENT_TO_LOAN_TYPE[detectedIntent];
   if (!loanType) return { text: "" };
 
-  const entries = VERIFIED_LOAN_COMPARISONS.filter(c => c.loanType === loanType);
+  const entries = getSortedLoanComparison(loanType);
   if (entries.length === 0) return { text: "" };
-
-  const sorted = [...entries].sort((a, b) => {
-    const rateA = a.interestRate;
-    const rateB = b.interestRate;
-    if (rateA === 0 && rateB !== 0) return 1;
-    if (rateB === 0 && rateA !== 0) return -1;
-    return rateA - rateB;
-  });
 
   const texts = LOCALIZED_COMPARISON_TEXTS[lang] || LOCALIZED_COMPARISON_TEXTS.english;
   let markdown = `\n\n${texts.comparisonHeader}\n\n`;
 
-  sorted.forEach((item, index) => {
+  entries.forEach((item, index) => {
     const emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"];
     const emojiNum = emojis[index] || "•";
     const bankName = getBankDisplayNameById(item.bankId, lang);
     
-    const rateDisplay = item.interestRate === 0
+    const rateDisplay = item.numericRate === null
       ? `*${texts.checkOfficial}*`
       : (item.interestRateDisplay[lang] || item.interestRateDisplay["english"] || `${item.interestRate}% p.a.`);
       
@@ -406,7 +470,7 @@ const generateLoanComparisonText = (
       markdown += `   • ⏱️ **${texts.repaymentPeriod}**: ${tenureDisplay}\n`;
     }
     
-    if (item.officialWebsite) {
+    if (item.verified && item.officialReferenceLink) {
       const linkText = lang === "english" ? "Open Portal" :
                        lang === "hindi" ? "पोर्टल खोलें" :
                        lang === "telugu" ? "పోర్టల్ తెరవండి" :
@@ -414,19 +478,19 @@ const generateLoanComparisonText = (
                        lang === "kannada" ? "ಪೋರ್ಟಲ್ ತೆರೆಯಿರಿ" :
                        lang === "odia" ? "ପୋର୍ଟାଲ୍ ଖୋଲନ୍ତୁ" :
                        "پورٹل کھولیں";
-      markdown += `   • 🔗 **Link**: [${linkText}](${item.officialWebsite})\n`;
+      markdown += `   • 🔗 **Link**: [${linkText}](${item.officialReferenceLink})\n`;
     } else {
       markdown += `   • ${texts.notVerified}\n`;
     }
     markdown += `\n`;
   });
 
-  const topVerifiedBank = sorted.find(item => item.officialWebsite !== "");
+  const topVerifiedBank = entries.find(item => item.verified && item.officialApplyLink);
   let topBankUrl: string | undefined = undefined;
   let topBankLabel: string | undefined = undefined;
 
   if (topVerifiedBank) {
-    topBankUrl = topVerifiedBank.officialWebsite;
+    topBankUrl = topVerifiedBank.officialApplyLink || undefined;
     const name = getBankDisplayNameById(topVerifiedBank.bankId, lang);
     topBankLabel = texts.topApply.replace("{bank}", name);
   }
@@ -435,6 +499,7 @@ const generateLoanComparisonText = (
 };
 
 export function AiAssistant() {
+  const { t, lang: appLang, setLang: setAppLang, dir } = useTranslation();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -444,7 +509,8 @@ export function AiAssistant() {
     }
   ]);
   const [inputText, setInputText] = useState("");
-  const [activeLang, setActiveLang] = useState<Language>("english");
+  const [activeLang, setActiveLang] = useState<Language>(appLang);
+  const [isOpen, setIsOpen] = useState(false);
   const [micState, setMicState] = useState<"idle" | "listening" | "processing" | "error">("idle");
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const [showWarning, setShowWarning] = useState(false);
@@ -456,6 +522,25 @@ export function AiAssistant() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const handleSendMessageRef = useRef<(text?: string) => void>(() => {});
   const recognitionRef = useRef<any>(null);
+  const replyTimeoutRef = useRef<number | null>(null);
+  const transcriptTimeoutRef = useRef<number | null>(null);
+
+  const clearAssistantTimers = useCallback(() => {
+    if (replyTimeoutRef.current !== null) {
+      window.clearTimeout(replyTimeoutRef.current);
+      replyTimeoutRef.current = null;
+    }
+    if (transcriptTimeoutRef.current !== null) {
+      window.clearTimeout(transcriptTimeoutRef.current);
+      transcriptTimeoutRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => clearAssistantTimers, [clearAssistantTimers]);
+
+  useEffect(() => {
+    setActiveLang(appLang);
+  }, [appLang]);
 
   // Helper to resolve localized dictionary entries
   const getLocalizedValue = (value: Record<string, any> | undefined, lang: Language): string => {
@@ -463,10 +548,10 @@ export function AiAssistant() {
     return value[lang] || value["english"] || "";
   };
 
-  const exactSensitiveWarning = LOCALIZED_TEXTS.english.safetyWarning;
+  const exactSensitiveWarning = SENSITIVE_DATA_WARNING;
   const exactFallback = LOCALIZED_TEXTS.english.fallback;
 
-  const isHttpsOfficialUrl = (url?: string) => Boolean(url && /^https:\/\//i.test(url));
+  const isHttpsOfficialUrl = (url?: string) => isVerifiedOfficialUrl(url);
 
   const formatList = (items: string[]) => items.map(item => `- ${item}`).join("\n");
 
@@ -476,12 +561,7 @@ export function AiAssistant() {
   const localizedServiceDescription = (service: { description: Record<string, string> }) =>
     service.description[activeLang as keyof typeof service.description] || service.description.english;
 
-  const containsSensitiveData = (message: string) => {
-    const lower = message.toLowerCase();
-    const sensitiveKeyword = /\b(otp|one\s*time\s*password|pin|atm\s*pin|upi\s*pin|cvv|cvv2|card\s*(number|no)?|banking\s*password|net\s*banking\s*password|password|passcode)\b/i;
-    const aadhaarOrCardLikeNumber = /\b\d{4,16}\b/;
-    return sensitiveKeyword.test(lower) || (/(aadhaar|card|upi|pin|otp|password)/i.test(lower) && aadhaarOrCardLikeNumber.test(lower));
-  };
+  const containsSensitiveData = containsSensitiveBankingData;
 
   const findBankInMessage = (message: string) => {
     const lower = message.toLowerCase();
@@ -566,18 +646,9 @@ export function AiAssistant() {
       };
     }
 
-    const comparisonEntries = VERIFIED_LOAN_COMPARISONS
-      .filter(entry => entry.loanType === loanId)
-      .sort((a, b) => {
-        const aHasRate = a.interestRate > 0;
-        const bHasRate = b.interestRate > 0;
-        if (aHasRate && !bHasRate) return -1;
-        if (!aHasRate && bHasRate) return 1;
-        if (!aHasRate && !bHasRate) return a.bankName.localeCompare(b.bankName);
-        return a.interestRate - b.interestRate;
-      });
+    const comparisonEntries = getSortedLoanComparison(loanId);
 
-    if (comparisonEntries.length === 0 || comparisonEntries.every(entry => entry.interestRate <= 0)) {
+    if (comparisonEntries.length === 0) {
       return {
         text: "I do not have verified official interest rate data for this yet. Please check the official bank website."
       };
@@ -586,24 +657,24 @@ export function AiAssistant() {
     const labelSource = comparisonEntries[0];
     const loanTypeLabel = labelSource.loanTypeLabel[activeLang] || labelSource.loanTypeLabel.english || loanId.replace(/_/g, " ");
     const rankedLines = comparisonEntries.map((entry, index) => {
-      const bank = BANKS.find(item => item.id === entry.bankId);
+      const bank = BANK_BY_ID.get(entry.bankId);
       const bankName = bank ? getBankDisplayName(bank, activeLang) : entry.bankName;
-      const rate = entry.interestRate > 0
+      const rate = entry.numericRate !== null
         ? (entry.interestRateDisplay[activeLang] || entry.interestRateDisplay.english || `${entry.interestRate}% p.a.`)
         : "Check official website";
 
       return `${index + 1}. ${bankName} — ${rate}`;
     });
 
-    const lowestVerified = comparisonEntries.find(entry => entry.interestRate > 0);
-    const linkedEntry = comparisonEntries.find(entry => isHttpsOfficialUrl(entry.officialWebsite));
+    const lowestVerified = comparisonEntries.find(entry => entry.numericRate !== null);
+    const linkedEntry = comparisonEntries.find(entry => entry.verified && entry.officialReferenceLink);
     const linkNote = linkedEntry
-      ? `\n\nOfficial reference link available for ${BANKS.find(bank => bank.id === linkedEntry.bankId)?.name || linkedEntry.bankName}.`
+      ? `\n\nOfficial reference link available for ${BANK_BY_ID.get(linkedEntry.bankId)?.name || linkedEntry.bankName}.`
       : "";
 
     return {
       text: `Here is the verified ${loanTypeLabel.toLowerCase()} comparison available in BankHub:\n\n${rankedLines.join("\n")}\n\nLowest verified rate is shown first.\nInterest rates may change. Please verify latest details on the official bank website.${linkNote}`,
-      actionUrl: linkedEntry?.officialWebsite,
+      actionUrl: linkedEntry?.officialReferenceLink || undefined,
       actionLabel: linkedEntry ? `Open official ${lowestVerified?.bankName || linkedEntry.bankName} loan page` : undefined
     };
   };
@@ -644,7 +715,7 @@ export function AiAssistant() {
       }
 
       const bankNames = loan.verifiedBanks
-        .map(bankId => BANKS.find(bank => bank.id === bankId))
+        .map(bankId => BANK_BY_ID.get(bankId))
         .filter((bank): bank is NonNullable<typeof bank> => Boolean(bank))
         .map(bank => getBankDisplayName(bank, activeLang));
 
@@ -812,17 +883,21 @@ export function AiAssistant() {
 
     // Select browser voice matching target locale
     const voices = window.speechSynthesis.getVoices();
-    let matchingVoice = voices.find(v => v.lang === LANG_CODES[lang] || v.lang.startsWith(LANG_CODES[lang].split('-')[0]));
+    let matchingVoice = voices.find(v => v.lang === LANG_CODES[lang] || v.lang.toLowerCase().startsWith(LANG_CODES[lang].split('-')[0].toLowerCase()));
 
-    // Odia / Urdu fallback logic
+    // Fallback to Hindi first for Indian-language voice gaps, then English.
     if (!matchingVoice) {
-      if (lang === "odia" || lang === "urdu") {
-        const hindiCode = LANG_CODES["hindi"];
-        matchingVoice = voices.find(v => v.lang === hindiCode || v.lang.startsWith("hi"));
-        if (matchingVoice) {
-          utterance.lang = hindiCode;
-        }
+      const hindiCode = LANG_CODES.hindi;
+      matchingVoice = voices.find(v => v.lang === hindiCode || v.lang.toLowerCase().startsWith("hi"));
+      if (matchingVoice) {
+        utterance.lang = hindiCode;
       }
+    }
+
+    if (!matchingVoice) {
+      const englishCode = LANG_CODES.english;
+      matchingVoice = voices.find(v => v.lang === englishCode || v.lang.toLowerCase().startsWith("en"));
+      utterance.lang = englishCode;
     }
 
     if (matchingVoice) {
@@ -868,14 +943,16 @@ export function AiAssistant() {
       if (transcript) {
         setInputText(transcript);
         // Delay slightly and send
-        setTimeout(() => {
+        if (transcriptTimeoutRef.current !== null) {
+          window.clearTimeout(transcriptTimeoutRef.current);
+        }
+        transcriptTimeoutRef.current = window.setTimeout(() => {
           handleSendMessageRef.current(transcript);
         }, 500);
       }
     };
 
     rec.onerror = (event: any) => {
-      console.error("Speech Recognition error", event);
       setIsListening(false);
       setMicState("error");
       if (event.error === "not-allowed") {
@@ -919,7 +996,8 @@ export function AiAssistant() {
       try {
         recognitionRef.current.start();
       } catch (e) {
-        console.error(e);
+        setErrorMessage(LOCALIZED_TEXTS[activeLang].micErrorDefault);
+        setMicState("error");
       }
     }
   };
@@ -927,6 +1005,24 @@ export function AiAssistant() {
   const handleSendMessage = (textToSend?: string) => {
     const text = (textToSend || inputText).trim();
     if (!text) return;
+
+    if (containsSensitiveBankingData(text)) {
+      setInputText("");
+      setShowWarning(true);
+      setMicState("idle");
+
+      const warningMsg: Message = {
+        id: `bot-sensitive-${Date.now()}`,
+        sender: "bot",
+        text: SENSITIVE_DATA_WARNING,
+        isWarning: true,
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, warningMsg]);
+      speakText(SENSITIVE_DATA_WARNING, activeLang);
+      return;
+    }
 
     // Add user message to state
     const userMsgId = `user-${Date.now()}`;
@@ -944,7 +1040,10 @@ export function AiAssistant() {
     setShowWarning(Boolean(verifiedReply.isWarning));
     setMicState(verifiedReply.isWarning ? "idle" : "processing");
 
-    setTimeout(() => {
+    if (replyTimeoutRef.current !== null) {
+      window.clearTimeout(replyTimeoutRef.current);
+    }
+    replyTimeoutRef.current = window.setTimeout(() => {
       const botMsg: Message = {
         id: `bot-reply-${Date.now()}`,
         sender: "bot",
@@ -958,288 +1057,9 @@ export function AiAssistant() {
       setMessages(prev => [...prev, botMsg]);
       setMicState("idle");
       speakText(verifiedReply.text, activeLang);
+      replyTimeoutRef.current = null;
     }, verifiedReply.isWarning ? 500 : 700);
 
-    return;
-
-    // REAL-TIME CRITICAL SENSITIVE DATA SCANNER
-    const sensitiveRegex = /(otp|one time password|pin|atm pin|cvv|cvv2|password|passcode|net banking password|netbanking password|upi pin|card number|card no|aadhaar otp)/i;
-    const isSensitive = sensitiveRegex.test(text);
-
-    if (isSensitive) {
-      setShowWarning(true);
-      setTimeout(() => {
-        const warningMsg: Message = {
-          id: `bot-warn-${Date.now()}`,
-          sender: "bot",
-          text: `🚨 ${LOCALIZED_TEXTS[activeLang].safetyWarning}`,
-          isWarning: true,
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, warningMsg]);
-        speakText(LOCALIZED_TEXTS[activeLang].safetyWarning, activeLang);
-      }, 500);
-      return;
-    }
-
-    setShowWarning(false);
-    setMicState("processing");
-
-    // Retrieval matching engine
-    setTimeout(() => {
-      const query = text.toLowerCase();
-      let replyText = "";
-      let actionUrl: string | undefined = undefined;
-      let actionLabel: string | undefined = undefined;
-
-      // Local language vocabulary mappings for smart fuzzy intent categorization
-      const matches = {
-        bankList: ["bank list", "banks are available", "banks list", "which bank", "available bank", "banks in bankhub", "సహాయక బ్యాంకులు", "బ్యాంకుల జాబితా", "बैंकों की सूची", "बैंक सूची", "बैंक उपलब्ध", "banks available", "which banks"],
-        homeLoan: ["home loan", "housing loan", "గృహ రుణం", "హోమ్ లోన్", "गृह ऋण", "होम लोन", "வீட்டு கடன்", "மனே சாலா", "ଗୃହ ଋଣ", "ہوم لون"],
-        educationLoan: ["education loan", "student loan", "study loan", "శిక్షా రుణం", "విద్యా రుణం", "शिक्षा ऋण", "स्टूडेंट लोन", "கல்வி கடன்", "ವಿದ್ಯಾභ್ಯಾಸ ಸಾಲ", "ଶିକ୍ଷା ଋଣ", "تعلیمی قرض"],
-        personalLoan: ["personal loan", "unsecured loan", "వ్యక్తిగత రుణం", "పర్సనల్ లోన్", "व्यक्तिगत ऋण", "पर्सनल लोन", "தனிநபர் கடன்", "ವಯಕ್ತಿಕ ಸಾಲ", "ବ୍ୟକ୍ତିଗତ ଋଣ", "پرسنل لون", "personal options"],
-        goldLoan: ["gold loan", "jewel loan", "బంగారు రుణం", "గోల్డ్ లోన్", "स्वर्ण ऋण", "தنگ கடன்", "ಚಿನ್ನದ ಸಾಲ", "ସୁନା ଋଣ", "گولڈ لون"],
-        agriLoan: ["agriculture loan", "agri loan", "farmer loan", "kisan loan", "kcc", "crop loan", "వ్యవసాయ రుణం", "కిసాన్ క్రెడిట్ కార్డ్", "कृषि ऋण", "किसान क्रेडिट", "விவசாய கடன்", "ಕೃಷಿ ಸಾಲ", "କୃଷି ଋଣ", "زرعی قرض"],
-        savingsAccount: ["savings account", "saving account", "savings bank", "बचत खाता", "बचत खाते", "సేవింగ్స్ ఖాతా", "సేవింగ్స్ ఎకౌంట్", "சேமிப்புக் கணக்கு", "ಉಳಿತಾಯ ಖಾತೆ", "ସଞ୍ଚୟ ଆକାଉଣ୍ଟ୍", "بچت کھاتہ"],
-        businessLoan: ["business loan", "commercial loan", "msme loan", "sme loan", "व्यापार ऋण", "बिजनेस लोन", "వ్యాపార రుణం", "బిజినెస్ లోన్", "வணிகக் கடன்", "ವ್ಯಾಪಾರ ಸಾಲ", "ବ୍ୟବସାୟ ଋଣ", "تجارتی قرض"],
-        pmjdy: ["pmjdy", "jan dhan", "jan-dhan", "zero balance", "overdraft", "प्रधानमंत्री जन धन", "జన్ ధన్"],
-        pmsby: ["pmsby", "suraksha bima", "accident insurance", "सुरक्षा बीमा", "సురక్షా బీమా"],
-        apy: ["apy", "atal pension", "pension scheme", "अटल पेंशन", "అటల్ పెన్షన్"],
-        studentSchemes: ["student scheme", "scholarship", "vidyalakshmi", "विद्यालक्ष्मी", "విద్యా లક્ષమి", "student schemes"],
-        postOffice: ["post office", "postal", "india post", "পোস্ট ऑफिस", "పోస్టాఫీస్", "डाकघर"],
-        insurance: ["insurance", "lic", "bima", "बीमा", "భీమా", "காப்பீடு", "ವಿಮೆ", "ବୀମା", "انشورنس"],
-        scamSafety: ["scam", "fraud", "fake sms", "phishing", "spam", "cyber", "cybercrime", "1930", "helpline", "धोखा", "मोసం", "ஏமாற்று", "ವಂಚನೆ", "ଠକେଇ", "فریب"],
-        redirection: ["website", "link", "official", "url", "portal", "verify", "वेबसाइट", "लिंक", "లింక్", "వెబ్‌సైట్"],
-        interestRate: ["interest rate", "rate of interest", "roi", "ब्याज दर", "व्याज दर", "వడ్డీ రేటు"]
-      };
-
-      // Detect matched intents
-      let detectedIntent = "";
-      for (const [intent, keywords] of Object.entries(matches)) {
-        if (keywords.some(keyword => query.includes(keyword))) {
-          detectedIntent = intent;
-          break;
-        }
-      }
-
-      // Check if user is asking specifically about DOCUMENTS for loans
-      const isDocQuery = ["document", "documents", "proof", "paper", "papers", "dastavez", "कागजात", "पुल", "పత్రాలు", "ఆధారాలు", "ஆவணங்கள்", "ದಾಖಲೆಗಳು", "ଦସ୍ତାବେଜ", "دستاویزات"].some(w => query.includes(w));
-
-      // Scan query for any short name or name of a bank in the BANKS database
-      const matchedBank = BANKS.find(b => {
-        const shortNameLower = b.shortName.toLowerCase();
-        const fullNameLower = b.name.toLowerCase();
-        const regex = new RegExp(`\\b${shortNameLower}\\b|${fullNameLower}`, "i");
-        return regex.test(query);
-      });
-
-      const hasSpecificIntent = detectedIntent && 
-        detectedIntent !== "bankList" && 
-        detectedIntent !== "redirection" && 
-        detectedIntent !== "interestRate";
-
-      if (hasSpecificIntent) {
-        const loanDbId = INTENT_TO_LOAN_TYPE[detectedIntent];
-        if (loanDbId) {
-          let loanName = "";
-          let loanDesc = "";
-          let eligibility = "";
-          let documents: string[] = [];
-          let safetyNote = "";
-          let fallbackPortal = "https://www.rbi.org.in";
-          let portalName = "RBI Official Portal";
-
-          const kbLoan = VERIFIED_LOANS.find(l => l.id === loanDbId);
-          if (kbLoan) {
-            loanName = getLocalizedValue(kbLoan.name, activeLang);
-            loanDesc = getLocalizedValue(kbLoan.description, activeLang);
-            eligibility = kbLoan.eligibility[activeLang] || kbLoan.eligibility["english"] || "";
-            documents = kbLoan.documents[activeLang] || kbLoan.documents["english"] || [];
-            fallbackPortal = kbLoan.officialInfoPage;
-            if (loanDbId === "education_loan") portalName = "Vidya Lakshmi Portal";
-            else if (loanDbId === "agri_loan") portalName = "NABARD Portal";
-          } else {
-            const dbFirst = VERIFIED_LOAN_COMPARISONS.find(c => c.loanType === loanDbId);
-            if (dbFirst) {
-              loanName = dbFirst.loanTypeLabel[activeLang] || dbFirst.loanTypeLabel["english"] || "";
-              eligibility = dbFirst.eligibility[activeLang] || dbFirst.eligibility["english"] || "";
-              documents = dbFirst.documentsRequired[activeLang] || dbFirst.documentsRequired["english"] || [];
-              safetyNote = dbFirst.safetyNote[activeLang] || dbFirst.safetyNote["english"] || "";
-              
-              if (loanDbId === "vehicle_loan") {
-                fallbackPortal = "https://sbi.co.in/web/personal-banking/loans/auto-loans";
-                portalName = "SBI Auto Loan Portal";
-              } else if (loanDbId === "women_entrepreneur_loan") {
-                fallbackPortal = "https://www.standupmitra.in";
-                portalName = "Stand-Up Mitra Portal";
-              } else if (loanDbId === "msme_loan" || loanDbId === "business_loan") {
-                fallbackPortal = "https://www.udyamregistration.gov.in";
-                portalName = "Udyam Registration Portal";
-              }
-            }
-          }
-
-          if (isDocQuery) {
-            const docHeader = activeLang === "english" ? "Here are the required verified documents to apply for a" : 
-                              activeLang === "hindi" ? "आवेदन करने के लिए आवश्यक सत्यापित दस्तावेज:" : 
-                              activeLang === "telugu" ? "అప్లై చేయడానికి కావలసిన ధృవీకరించబడిన పత్రాలు:" : 
-                              activeLang === "tamil" ? "விண்ணப்பிக்க தேவையான சரிபார்க்கப்பட்ட ஆவணங்கள்:" :
-                              activeLang === "kannada" ? "ಅರ್ಜಿ ಸಲ್ಲಿಸಲು ಅಗತ್ಯವಿರುವ ಪರಿಶೀಲಿಸಿದ ದಾಖಲೆಗಳು:" :
-                              activeLang === "odia" ? "ଆବେଦନ ପାଇଁ ଆବଶ୍ୟକ ଯାଞ୍ଚ ହୋଇଥିବା ଦସ୍ତାବେଜଗୁଡ଼ିକ:" :
-                              "درخواست دینے کے لیے درکار تصدیق شدہ دستاویزات:";
-            replyText = `💬 **Direct Answer**: ${docHeader} ${loanName}:\n${documents.map(d => `• ${d}`).join("\n")}\n\n`;
-          } else {
-            const eligibilityHeader = activeLang === "english" ? "Eligibility" :
-                                      activeLang === "hindi" ? "पात्रता" :
-                                      activeLang === "telugu" ? "అర్హత" :
-                                      activeLang === "tamil" ? "தகுதி" :
-                                      activeLang === "kannada" ? "ಅರ್ಹತೆ" :
-                                      activeLang === "odia" ? "ଯୋଗ୍ୟତା" :
-                                      "اهلیت";
-            if (!loanDesc) {
-              loanDesc = activeLang === "english" ? `Apply and compare the best ${loanName} options from verified lenders.` :
-                         activeLang === "hindi" ? `सत्यापित ऋणदाताओं से सर्वोत्तम ${loanName} विकल्पों की तुलना करें और आवेदन करें।` :
-                         activeLang === "telugu" ? `ధృవీకరించబడిన రుణదాతల నుండి ఉత్తమ ${loanName} ఎంపికలను పోల్చండి మరియు అప్లై చేయండి.` :
-                         activeLang === "tamil" ? `சரிபார்க்கப்பட்ட கடன் வழங்குநர்களிடமிருந்து சிறந்த ${loanName} விருப்பங்களை ஒப்பிட்டு விண்ணப்பிக்கவும்.` :
-                         activeLang === "kannada" ? `ಪರಿಶೀಲಿಸಿದ ಸಾಲದಾತರಿಂದ ಉತ್ತಮ ${loanName} ಆಯ್ಕೆಗಳನ್ನು ಹೋಲಿಸಿ ಮತ್ತು ಅರ್ಜಿ ಸಲ್ಲಿಸಿ.` :
-                         activeLang === "odia" ? `ଯାଞ୍ଚ ହୋଇଥିବା ଋଣ ପ୍ରଦାନକାରୀଙ୍କ ଠାରୁ ସର୍ବୋତ୍ତମ ${loanName} ବିକଳ୍ପଗୁଡ଼ିକୁ ତୁଳନା କରନ୍ତୁ ଏବଂ ଆବେଦନ କରନ୍ତୁ ।` :
-                         `تصدیق شدہ قرض دہندگان سے بہترین ${loanName} کے اختیارات کا موازنہ کریں اور درخواست دیں۔`;
-            }
-            replyText = `💬 **Direct Answer**: ${loanDesc}\n\n📋 **${eligibilityHeader}**: ${eligibility}\n\n`;
-          }
-
-          const compResult = generateLoanComparisonText(detectedIntent, activeLang);
-          replyText += compResult.text;
-
-          if (safetyNote) {
-            replyText += `⚠️ **Verification Notice**: ${safetyNote}`;
-          } else {
-            replyText += activeLang === "english" ? "⚠️ **Verification Notice**: Interest rates are market-linked and set dynamically. Always verify latest rates and eligibility on official bank sites." :
-                         activeLang === "hindi" ? "⚠️ **सत्यापन सूचना**: ब्याज दरें बाजार से जुड़ी हैं और गतिशील रूप से निर्धारित होती हैं। हमेशा आधिकारिक बैंक साइटों पर नवीनतम दरों और पात्रता की पुष्टि करें।" :
-                         activeLang === "telugu" ? "⚠️ **ధృవీకరణ నోటీసు**: వడ్డీ రేట్లు మార్కెట్-లింక్డ్ మరియు డైనమిక్ గా సెట్ చేయబడతాయి. ఎల్లప్పుడూ అధికారిక బ్యాంక్ సైట్లలో తాజా రేట్లు మరియు అర్హతను ధృవీకరించండి." :
-                         activeLang === "tamil" ? "⚠️ **சரிபார்ப்பு அறிவிப்பு**: வட்டி விகிதங்கள் சந்தை சார்ந்தவை மற்றும் மாறும் வகையில் அமைக்கப்பட்டுள்ளன. அதிகாரப்பூர்வ வங்கி தளங்களில் சமீபத்திய கட்டணங்கள் மற்றும் தகுதியை எப்போதும் சரிபார்க்கவும்." :
-                         activeLang === "kannada" ? "⚠️ **ಪರಿಶೀಲನೆ ಸೂಚನೆ**: ಬಡ್ಡಿದರಗಳು ಮಾರುಕಟ್ಟೆಗೆ ಲಿಂಕ್ ಆಗಿರುತ್ತವೆ ಮತ್ತು ಕ್ರಿಯಾತ್ಮಕವಾಗಿ ಹೊಂದಿಸಲ್ಪಡುತ್ತವೆ. ಅಧಿಕೃತ ಬ್ಯಾಂಕ್ ಸೈಟ್‌ಗಳಲ್ಲಿ ಇತ್ತೀಚಿನ ದರಗಳು ಮತ್ತು ಅರ್ಹತೆಯನ್ನು ಯಾವಾಗಲೂ ಪರಿಶೀಲಿಸಿ." :
-                         activeLang === "odia" ? "⚠️ **ଯାଞ୍ଚ ସୂଚନା**: ବ୍ୟାଜ ହାର ବଜାର ସହିତ ଜଡିତ ଏବଂ ଗତିଶୀଳ ଭାବରେ ନିର୍ଦ୍ଧାରିତ ହୋଇଥାଏ । ସର୍ବଦା ଅଫିସିଆଲ୍ ବ୍ୟାଙ୍କ ସାଇଟ୍‌ରେ ସର୍ବଶେଷ ହାର ଏବଂ ଯୋગ୍ୟତା ଯାଞ୍ଚ କରନ୍ତୁ ।" :
-                         "⚠️ **تصدیقی نوٹس**: شرح سود مارکیٹ سے منسلک ہے اور متحرک طور پر طے کی جاتی ہے۔ آفیشل بینک سائٹس پر ہمیشہ تازہ ترین شرح سود اور اہلیت کی تصدیق کریں۔";
-          }
-
-          if (compResult.topBankUrl && compResult.topBankLabel) {
-            actionUrl = compResult.topBankUrl;
-            actionLabel = compResult.topBankLabel;
-          } else {
-            actionUrl = fallbackPortal;
-            actionLabel = activeLang === "english" ? `Open ${portalName}` :
-                          activeLang === "hindi" ? `आधिकारिक ${portalName} खोलें` :
-                          activeLang === "telugu" ? `అధికారిక ${portalName} తెరవండి` :
-                          activeLang === "tamil" ? `அதிகாரப்பூர்வ ${portalName} திறக்கவும்` :
-                          activeLang === "kannada" ? `ಅಧಿಕೃತ ${portalName} ತೆರೆಯಿರಿ` :
-                          activeLang === "odia" ? `ଅଫିସିଆଲ୍ ${portalName} ଖୋଲନ୍ତୁ` :
-                          `آفیشل ${portalName} کھولیں`;
-          }
-        }
-        else if (detectedIntent === "pmjdy") {
-          const scheme = VERIFIED_SCHEMES.find(s => s.id === "pmjdy")!;
-          const desc = getLocalizedValue(scheme.description, activeLang);
-          const benefits = scheme.benefits[activeLang] || scheme.benefits["english"] || [];
-          replyText = `💬 **Direct Answer**: Pradhan Mantri Jan Dhan Yojana (PMJDY) is India's premier financial inclusion mission:\n${desc}\n\n🎁 **Key Benefits Include**:\n${benefits.map(b => `• ${b}`).join("\n")}\n\n🏛️ **Affiliated Banks**: Available at all public sector and major private sector banks in India.\n\n⚠️ **Important Verification**: PMJDY is a zero-balance account. Do not pay any fees to open it.`;
-          actionUrl = scheme.officialUrl;
-          actionLabel = "Open PMJDY Official Website";
-        }
-        else if (detectedIntent === "pmsby") {
-          const scheme = VERIFIED_SCHEMES.find(s => s.id === "pmsby")!;
-          const desc = getLocalizedValue(scheme.description, activeLang);
-          const benefits = scheme.benefits[activeLang] || scheme.benefits["english"] || [];
-          replyText = `💬 **Direct Answer**: Pradhan Mantri Suraksha Bima Yojana (PMSBY) accidental cover details:\n${desc}\n\n🎁 **Verified Cover benefits**:\n${benefits.map(b => `• ${b}`).join("\n")}\n\n🏛️ **Providers**: Linked savings bank auto-debit support.\n\n⚠️ **Premium Note**: Standard annual premium is only ₹20. Make sure you keep sufficient funds in your linked savings account before 31st May.`;
-          actionUrl = scheme.officialUrl;
-          actionLabel = "Open Jan Suraksha Portal";
-        }
-        else if (detectedIntent === "apy") {
-          const scheme = VERIFIED_SCHEMES.find(s => s.id === "apy")!;
-          const desc = getLocalizedValue(scheme.description, activeLang);
-          const benefits = scheme.benefits[activeLang] || scheme.benefits["english"] || [];
-          replyText = `💬 **Direct Answer**: Atal Pension Yojana (APY) social safety retirement details:\n${desc}\n\n🎁 **Pension benefits**:\n${benefits.map(b => `• ${b}`).join("\n")}\n\n🏛️ **Affiliation**: Accessible via all commercial bank branches.\n\n⚠️ **Important Verification**: Premium varies depending on entry age (18-40). Verify the exact charts on the official PFRDA website.`;
-          actionUrl = scheme.officialUrl;
-          actionLabel = "Open NPS PFRDA Website";
-        }
-        else if (detectedIntent === "studentSchemes") {
-          replyText = `💬 **Direct Answer**: BankHub integrates official government-supported education loan matching portals such as **Vidya Lakshmi** to support financial accessibility for deserving students.\n\n🎁 **Features & Benefits**:\n• Apply to multiple banks with a single Common Education Loan Application Form (CELAF).\n• Check status of your application online.\n• Access interest subsidy schemes (CSIS) directly.\n\n🏛️ **Affiliated Institutions**: State Bank of India, Bank of Baroda, Canara Bank, HDFC, ICICI, etc.\n\n⚠️ **Important note**: Verify tuition structures on institutional portals.`;
-          actionUrl = "https://www.vidyalakshmi.co.in";
-          actionLabel = "Open Vidya Lakshmi Portal";
-        }
-        else if (detectedIntent === "postOffice") {
-          // Dynamic search in SERVICES_DATA
-          const postServices = SERVICES_DATA.filter(s => s.category === "post_office");
-          const names = postServices.map(s => getLocalizedValue(s.name as any, activeLang)).join(", ");
-          replyText = `💬 **Direct Answer**: India Post offers highly secure savings, deposit, and citizen services directly through its extensive nationwide network.\n\n📮 **Verified Services Available**:\n${names}\n\n⚠️ **Verification Note**: Small savings schemes (PPF, Sukanya Samriddhi, Senior Citizens Schemes) are fully backed by the Central Government. Always check interest rates quarterly on the official site.`;
-          actionUrl = "https://www.indiapost.gov.in";
-          actionLabel = "Open India Post Portal";
-        }
-        else if (detectedIntent === "insurance") {
-          replyText = `💬 **Direct Answer**: Safe insurance options in India include accidental coverages (PMSBY) and life coverages (PMJJBY), fully backed by government-aligned underwriters.\n\n🛡️ **Verified Providers & Portals**:\n• Life Insurance Corporation (LIC)\n• National Insurance & General Insurance Companies\n• IRDAI Regulatory Complaint Portal\n\n⚠️ **Verification Warning**: IRDAI does not sell policies or declare bonuses. Never fall for fraud phone offers.`;
-          actionUrl = "https://www.jansuraksha.gov.in";
-          actionLabel = "Open Jan Suraksha Website";
-        }
-        else if (detectedIntent === "scamSafety") {
-          const safety = VERIFIED_CYBER_SAFETY;
-          const tips = safety.tips[activeLang] || safety.tips["english"] || [];
-          const steps = safety.recoverySteps[activeLang] || safety.recoverySteps["english"] || [];
-          replyText = `💬 **Direct Answer**: If you have faced online financial loss, contact the official national hotline immediately.\n\n🚨 **National Cyber Crime Helpline**: 📞 **${safety.helpline}** (Call within 2 hours of transaction!)\n\n📂 **Emergency Recovery Action Steps**:\n${steps.map(s => `• ${s}`).join("\n")}\n\n🛡️ **Daily Safety Guidelines**:\n${tips.map(t => `• ${t}`).join("\n")}\n\n⚠️ **Disclaimer**: Never search for helpline contacts on unverified search engines. Scammers upload fake numbers. Use BankHub verified channels.`;
-          actionUrl = safety.complaintPortal;
-          actionLabel = "Open Cybercrime Grievance Portal";
-        }
-      } else if (matchedBank) {
-        // Output specific bank details!
-        const dispName = getBankDisplayName(matchedBank, activeLang);
-        const category = matchedBank.category;
-        const website = matchedBank.website;
-        const servicesList = matchedBank.services.map(s => `• ${s}`).join("\n");
-        const description = matchedBank.description;
-        
-        replyText = `🏛️ **${dispName} (${matchedBank.shortName})**\n\n💬 **Category**: ${category} Bank\n📝 **About**: ${description}\n\n💼 **Verified Services Offered**:\n${servicesList}\n\n⚠️ **Important Safety Note**: Always access this bank using verified channels. BankHub does not store your credentials. Make sure the URL begins with 'https://' before logging in.`;
-        actionUrl = website;
-        actionLabel = `Go to Official ${matchedBank.shortName} Website`;
-      } else {
-        if (detectedIntent === "bankList") {
-          // Return active list of BankHub banks
-          const bankList = getSupportedBanksList(activeLang);
-          replyText = `💬 **Direct Answer**: BankHub integrates and links all major Indian commercial and priority sector institutions securely. You can open and access official banking services directly from the Compare Banking Services page.\n\n🏛️ **Verified Banks in BankHub**:\n${bankList}\n\n⚠️ **Important Security Note**: Please verify all bank addresses and services on the official bank site. BankHub will never ask you for passwords or card credentials.`;
-          actionUrl = "https://www.rbi.org.in";
-          actionLabel = "Open RBI Official Portal";
-        }
-        else if (detectedIntent === "interestRate") {
-          replyText = `💬 **Direct Answer**: I do not have verified official interest rate data for this yet.\n\n🏛️ **Reason**: Interest rates are updated frequently by the Reserve Bank of India (RBI) and commercial lenders. \n\n⚠️ **Safety Action**: Please visit the official bank portals directly to inspect active rates. Never trust generic online tables or financial blogs.`;
-          actionUrl = "https://www.rbi.org.in";
-          actionLabel = "Open RBI Official Website";
-        }
-        else if (detectedIntent === "redirection") {
-          replyText = `💬 **Direct Answer**: BankHub redirects you only to safe, secured official banking portals. Always inspect URLs in the browser address bar.\n\n🛡️ **Verified URL Safety check**:\n• Make sure the link starts with 'https://' and has a padlock icon.\n• Official government links end in '.gov.in' or '.nic.in'.\n• Do not enter credentials on third-party blogs or 'http://' pages.\n\n🏛️ **Accessible Banks**: State Bank of India, HDFC Bank, ICICI Bank, Axis, etc.`;
-          actionUrl = "https://www.rbi.org.in";
-          actionLabel = "Open RBI Official Portal";
-        }
-        else {
-          // Default official fallback
-          replyText = LOCALIZED_TEXTS[activeLang].fallback;
-          actionUrl = "https://www.rbi.org.in";
-          actionLabel = "Open RBI Official Portal";
-        }
-      }
-
-      // Add bot message
-      const botMsg: Message = {
-        id: `bot-reply-${Date.now()}`,
-        sender: "bot",
-        text: replyText,
-        timestamp: new Date(),
-        actionUrl,
-        actionLabel
-      };
-
-      setMessages(prev => [...prev, botMsg]);
-      setMicState("idle");
-      
-      // Synthesis speech response
-      speakText(replyText, activeLang);
-    }, 1000);
   };
 
 
@@ -1256,7 +1076,11 @@ export function AiAssistant() {
 
   // Suggestion chips parser trigger
   const handleSuggestionClick = (topic: string) => {
-    const list = SUGGESTIONS_DB[activeLang];
+    if (QUICK_ACTION_LABELS[topic]) {
+      handleSendMessage(QUICK_ACTION_LABELS[topic]);
+      return;
+    }
+    const list = SUGGESTIONS_DB[activeLang] || SUGGESTIONS_DB.english;
     const suggestionObj = list.find(s => s.topic === topic);
     const text = suggestionObj ? suggestionObj.text : "";
     if (text) {
@@ -1269,29 +1093,59 @@ export function AiAssistant() {
   };
 
   return (
-    <div className="bg-white/80 dark:bg-card/70 backdrop-blur-md border border-border/60 rounded-[28px] overflow-hidden shadow-soft transition-all duration-300">
+    <>
+      <AnimatePresence>
+        {!isOpen && (
+          <motion.button
+            type="button"
+            initial={{ opacity: 0, y: 16, scale: 0.92 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 12, scale: 0.92 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            onClick={() => setIsOpen(true)}
+            className="fixed bottom-5 right-5 z-[90] flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200/80 bg-slate-950 text-white shadow-[0_16px_40px_rgba(15,23,42,0.28)] ring-1 ring-white/20 transition-all hover:-translate-y-0.5 hover:bg-slate-900 active:scale-95 sm:bottom-6 sm:right-6"
+            aria-label={t("aiAssistantTitle")}
+          >
+            <MessageCircle className="h-6 w-6" />
+            <span className="absolute -right-0.5 -top-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500" />
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.section
+            initial={{ opacity: 0, y: 24, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 18, scale: 0.96 }}
+            transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed inset-x-3 bottom-3 z-[90] mx-auto flex h-[calc(100vh-24px)] max-h-[680px] w-auto max-w-[420px] flex-col overflow-hidden rounded-[24px] border border-slate-200/80 bg-white/95 shadow-[0_24px_80px_rgba(15,23,42,0.24)] ring-1 ring-white/80 backdrop-blur-xl sm:inset-x-auto sm:bottom-6 sm:right-6 sm:h-[640px] sm:w-[400px]"
+            dir={dir}
+            role="dialog"
+            aria-label={t("aiAssistantTitle")}
+          >
       
       {/* ── Header ── */}
-      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-4 text-white flex flex-wrap items-center justify-between gap-3">
+      <div className="border-b border-slate-200/80 bg-white/90 px-4 py-3.5 text-slate-950 backdrop-blur-xl">
+        <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
-              <Bot className="w-6 h-6 text-white animate-pulse" />
+            <div className="w-10 h-10 rounded-2xl bg-slate-950 flex items-center justify-center shadow-sm">
+              <Bot className="w-5 h-5 text-white" />
             </div>
             {/* Online status indicator */}
-            <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 border-2 border-indigo-600 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+            <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
           </div>
-          <div>
-            <h3 className="font-bold text-[15px] leading-tight flex items-center gap-1.5">
-              BankHub AI Assistant
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+          <div className="min-w-0">
+            <h3 className="font-bold text-[14px] leading-tight flex items-center gap-1.5 text-slate-950">
+              {t("aiAssistantTitle")}
             </h3>
-            <p className="text-[10px] text-white/80 font-medium">Official Multilingual Banking Guide</p>
+            <p className="text-[10.5px] text-slate-500 font-semibold leading-snug">{t("aiAssistantSubtitle")}</p>
           </div>
         </div>
 
         {/* Header Control Buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           
           {/* Stop Speaking Button (Invokes cancellation) */}
           {isSpeaking && (
@@ -1302,8 +1156,8 @@ export function AiAssistant() {
                 }
                 setIsSpeaking(false);
               }}
-              className="bg-rose-500 hover:bg-rose-600 text-white px-3 py-1.5 rounded-full border border-rose-500/40 text-[10px] font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-md shrink-0"
-              title="Stop Speaking Outloud"
+              className="bg-rose-50 hover:bg-rose-100 text-rose-700 px-2.5 py-1.5 rounded-xl border border-rose-100 text-[10px] font-bold flex items-center gap-1.5 transition-all active:scale-95 shrink-0"
+              title={t("stopSpeaking")}
             >
               <StopCircle className="w-3.5 h-3.5" />
               <span>{LOCALIZED_TEXTS[activeLang].stopSpeaking}</span>
@@ -1311,20 +1165,19 @@ export function AiAssistant() {
           )}
 
           {/* Language Selector */}
-          <div className="relative flex items-center bg-white/10 hover:bg-white/20 active:scale-95 transition-all rounded-full px-3 py-1.5 border border-white/20 cursor-pointer">
-            <Globe className="w-3.5 h-3.5 mr-1.5 text-white/90" />
+          <div className="relative flex items-center bg-slate-50 hover:bg-slate-100 active:scale-95 transition-all rounded-xl px-2.5 py-1.5 border border-slate-200 cursor-pointer">
+            <Globe className="w-3.5 h-3.5 mr-1.5 text-slate-500" />
             <select
               value={activeLang}
               onChange={(e) => {
                 const nextLang = e.target.value as Language;
-                setActiveLang(nextLang);
+                setAppLang(nextLang);
               }}
-              className="bg-transparent text-[11px] font-bold text-white outline-none border-none cursor-pointer pr-1"
-              style={{ colorScheme: "dark" }}
-              aria-label="Select AI Assistant Language"
+              className="max-w-[86px] sm:max-w-[118px] bg-transparent text-[11px] font-bold text-slate-700 outline-none border-none cursor-pointer pr-1"
+              aria-label={t("selectAiAssistantLanguage")}
             >
               {Object.entries(LANGUAGE_LABELS).map(([key, label]) => (
-                <option key={key} value={key} className="text-foreground bg-white dark:bg-card">
+                <option key={key} value={key} className="text-foreground bg-white">
                   {label}
                 </option>
               ))}
@@ -1343,21 +1196,45 @@ export function AiAssistant() {
             }}
             className={`p-2 rounded-full border transition-all active:scale-90 ${
               isVoiceEnabled 
-                ? "bg-white/20 border-white/30 text-white hover:bg-white/30" 
-                : "bg-black/20 border-white/10 text-white/50 hover:bg-black/30"
+                ? "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100" 
+                : "bg-slate-100 border-slate-200 text-slate-400 hover:bg-slate-200"
             }`}
-            title={isVoiceEnabled ? "Mute Voice Output" : "Enable Voice Output"}
+            title={isVoiceEnabled ? t("muteVoiceOutput") : t("enableVoiceOutput")}
           >
             {isVoiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </button>
+          <button
+            type="button"
+            onClick={() => setIsOpen(false)}
+            className="p-2 rounded-full border border-slate-200 bg-slate-50 text-slate-600 transition-all hover:bg-slate-100 active:scale-90"
+            aria-label="Minimize assistant"
+            title="Minimize"
+          >
+            <Minimize2 className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+              setIsSpeaking(false);
+              setIsOpen(false);
+            }}
+            className="p-2 rounded-full border border-slate-200 bg-slate-50 text-slate-600 transition-all hover:bg-slate-100 active:scale-90"
+            aria-label={t("close")}
+            title={t("close")}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
         </div>
       </div>
 
       {/* ── Chat Content Response Area ── */}
-      <div className="h-[340px] overflow-y-auto p-4 space-y-4 bg-slate-50/40 dark:bg-black/10 no-scrollbar">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 bg-slate-50/70 no-scrollbar">
         <AnimatePresence initial={false}>
           {messages.map((msg) => {
             const isBot = msg.sender === "bot";
+            const safeActionUrl = isVerifiedOfficialUrl(msg.actionUrl) ? msg.actionUrl : undefined;
             return (
               <motion.div
                 key={msg.id}
@@ -1372,8 +1249,8 @@ export function AiAssistant() {
                     isBot
                       ? msg.isWarning
                         ? "bg-rose-50 border-rose-200 text-rose-950 dark:bg-rose-950/20 dark:border-rose-900/40 dark:text-rose-100 rounded-tl-sm"
-                        : "bg-white dark:bg-card border-border/40 text-foreground rounded-tl-sm"
-                      : "bg-indigo-600 border-indigo-700 text-white rounded-tr-sm"
+                        : "bg-white border-slate-200/70 text-foreground rounded-tl-sm"
+                      : "bg-slate-950 border-slate-900 text-white rounded-tr-sm"
                   }`}
                 >
                   
@@ -1381,7 +1258,7 @@ export function AiAssistant() {
                   {msg.isWarning && (
                     <div className="flex items-center gap-1.5 mb-1.5 text-rose-600 dark:text-rose-400 font-bold text-[12px]">
                       <ShieldAlert className="w-4 h-4 shrink-0 animate-bounce" />
-                      <span>Security Intercept Warning</span>
+                      <span>{t("securityInterceptWarning")}</span>
                     </div>
                   )}
 
@@ -1391,15 +1268,15 @@ export function AiAssistant() {
                   </p>
 
                   {/* Redirect button inside message */}
-                  {isBot && msg.actionUrl && !msg.isWarning && (
+                  {isBot && safeActionUrl && !msg.isWarning && (
                     <div className="mt-3">
                       <a
-                        href={msg.actionUrl}
+                        href={safeActionUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10.5px] px-3.5 py-2 rounded-xl shadow-md transition-all active:scale-95 border border-indigo-500/20"
+                        className="inline-flex items-center gap-1.5 fintech-button font-bold text-[10.5px] px-3.5 py-2 rounded-xl transition-all active:scale-95"
                       >
-                        <span>{msg.actionLabel || "Open Official Portal"}</span>
+                        <span>{msg.actionLabel || t("openOfficialPortal")}</span>
                         <ArrowRight className="w-3.5 h-3.5" />
                       </a>
                     </div>
@@ -1440,9 +1317,9 @@ export function AiAssistant() {
               ) : (
                 <>
                   <span className="flex gap-1 items-center shrink-0">
-                    <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                    <span className="w-1.5 h-1.5 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-1.5 h-1.5 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="w-1.5 h-1.5 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                   </span>
                   <span>{LOCALIZED_TEXTS[activeLang].micProcessing}</span>
                 </>
@@ -1460,7 +1337,7 @@ export function AiAssistant() {
           >
             <ShieldAlert className="w-4 h-4 text-rose-500 shrink-0 animate-bounce" />
             <p className="text-[11px] font-bold leading-normal">
-              Warning: Bank credentials or passwords detected. Grounded security blocks active.
+              {t("credentialsDetectedWarning")}
             </p>
           </motion.div>
         )}
@@ -1485,7 +1362,7 @@ export function AiAssistant() {
               setErrorMessage(""); 
             }} 
             className="text-rose-500 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 active:scale-95 shrink-0"
-            aria-label="Dismiss message banner"
+            aria-label={t("dismissMessage")}
           >
             <X className="w-4 h-4" />
           </button>
@@ -1493,21 +1370,27 @@ export function AiAssistant() {
       )}
 
       {/* ── Quick Action Suggestion Chips ── */}
-      <div className="px-4 py-2 border-t border-border/30 bg-white/40 dark:bg-card/20 flex gap-2 overflow-x-auto no-scrollbar">
-        {SUGGESTIONS_DB[activeLang].map((suggestion, idx) => (
+      <div className="px-4 py-2.5 border-t border-slate-200/70 bg-white/80 flex gap-2 overflow-x-auto no-scrollbar">
+        {QUICK_ACTION_TOPICS.map((topic, idx) => {
+          const suggestion = {
+            topic,
+            text: QUICK_ACTION_LABELS[topic],
+          };
+          return (
           <button
             key={idx}
             onClick={() => handleSuggestionClick(suggestion.topic)}
-            className="shrink-0 bg-white dark:bg-card border border-border/80 hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 font-bold text-[11px] text-muted-foreground px-3.5 py-1.5 rounded-full active:scale-95 transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+            className="shrink-0 bg-white border border-slate-200 hover:border-slate-400 hover:text-slate-950 font-bold text-[11px] text-slate-600 px-3.5 py-1.5 rounded-full active:scale-95 transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
           >
             <HelpCircle className="w-3 h-3 text-muted-foreground/75" />
             <span>{suggestion.text}</span>
           </button>
-        ))}
+          );
+        })}
       </div>
 
       {/* ── Footer Input Controls ── */}
-      <div className="p-3 border-t border-border/50 bg-white/70 dark:bg-card/30 flex items-center gap-2.5">
+      <div className="p-3 border-t border-slate-200/70 bg-white/90 flex items-center gap-2.5">
         
         {/* Mic toggle */}
         <div className="relative">
@@ -1515,11 +1398,11 @@ export function AiAssistant() {
             onClick={toggleListening}
             className={`p-3 rounded-2xl transition-all relative cursor-pointer ${
               isListening
-                ? "bg-rose-500 text-white shadow-[0_0_15px_rgba(244,63,94,0.6)] animate-pulse"
-                : "bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground"
+                ? "bg-rose-600 text-white shadow-[0_0_0_4px_rgba(225,29,72,0.12)]"
+                : "bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-950"
             }`}
-            aria-label="Voice input button"
-            title={sttSupported ? (isListening ? "Stop listening" : "Start voice typing") : "Voice typing unsupported"}
+            aria-label={t("voiceInputButton")}
+            title={sttSupported ? (isListening ? t("stopListening") : t("startVoiceTyping")) : t("voiceTypingUnsupported")}
           >
             {isListening ? (
               <Mic className="w-5 h-5" />
@@ -1541,9 +1424,7 @@ export function AiAssistant() {
             value={inputText}
             onChange={(e) => {
               setInputText(e.target.value);
-              // Active scanner warning trigger
-              const sensitiveRegex = /(otp|pin|cvv|password|passcode|upi pin)/i;
-              setShowWarning(sensitiveRegex.test(e.target.value));
+              setShowWarning(containsSensitiveBankingData(e.target.value));
             }}
             onKeyPress={handleKeyPress}
             placeholder={
@@ -1553,7 +1434,7 @@ export function AiAssistant() {
                 ? LOCALIZED_TEXTS[activeLang].placeholder
                 : LOCALIZED_TEXTS[activeLang].placeholderUnsupported
             }
-            className="w-full bg-white dark:bg-card border border-border/80 rounded-2xl pl-4 pr-10 py-3 text-[13px] font-semibold outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all placeholder:font-normal"
+            className="w-full bg-white border border-slate-200 rounded-2xl pl-4 pr-10 py-3 text-[13px] font-semibold outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 transition-all placeholder:font-normal"
           />
           
           {/* Send query button inside input box */}
@@ -1562,7 +1443,7 @@ export function AiAssistant() {
             disabled={!inputText.trim()}
             className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-xl transition-all cursor-pointer ${
               inputText.trim()
-                ? "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 shadow-md"
+                ? "bg-slate-950 text-white hover:bg-slate-800 active:scale-95 shadow-md"
                 : "text-muted-foreground/30 pointer-events-none"
             }`}
             aria-label="Send query button"
@@ -1573,13 +1454,19 @@ export function AiAssistant() {
       </div>
 
       {/* ── Security Trust Notice Banner Footer ── */}
-      <div className="px-4 py-2 bg-slate-100 dark:bg-black/30 border-t border-border/30 flex items-center justify-center gap-1.5 select-none">
-        <ShieldCheck className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-        <p className="text-[10px] font-bold text-muted-foreground tracking-wide text-center">
+      <div className="px-4 py-2 bg-slate-50 border-t border-slate-200/70 flex items-center justify-center gap-1.5 select-none">
+        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+        <p className="text-[10px] font-bold text-muted-foreground tracking-wide text-center leading-snug">
           {LOCALIZED_TEXTS[activeLang].trustBanner}
+          <span className="block mt-1 font-semibold normal-case tracking-normal">
+            {t("voiceCompatibilityNotice")}
+          </span>
         </p>
       </div>
 
-    </div>
+          </motion.section>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

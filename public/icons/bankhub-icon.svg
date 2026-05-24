@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-label="BankHub">
+  <rect width="192" height="192" rx="48" fill="#0f172a"/>
+  <path d="M42 88h108v16H42z" fill="#e2e8f0"/>
+  <path d="M54 112h15v36H54zm34 0h15v36H88zm35 0h15v36h-15z" fill="#cbd5e1"/>
+  <path d="M36 156h120v16H36z" fill="#e2e8f0"/>
+  <path d="M30 74 96 28l66 46v14H30z" fill="#34d399"/>
+  <path d="M96 46 50 78h92z" fill="#0f172a" opacity=".18"/>
+</svg>

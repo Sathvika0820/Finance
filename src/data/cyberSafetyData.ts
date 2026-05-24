@@ -1,8 +1,10 @@
+import { getOfficialLink } from "@/data/officialLinks";
+
 export const CYBER_FRAUD_HELPLINE = "1930";
 
 export const CYBER_COMPLAINT_PORTAL = {
   name: "National Cyber Crime Reporting Portal",
-  officialWebsite: "https://cybercrime.gov.in/",
+  officialWebsite: getOfficialLink("cyberSafety", "cyber-complaint") || "",
   verified: true,
 };
 

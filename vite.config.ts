@@ -1,4 +1,4 @@
-// @lovable.dev/vite-tanstack-config already includes the following — do NOT add them manually
+// @lovable.dev/vite-tanstack-config already includes the following - do NOT add them manually
 // or the app will break with duplicate plugins:
 //   - tanstackStart, viteReact, tailwindcss, tsConfigPaths, cloudflare (build-only),
 //     componentTagger (dev-only), VITE_* env injection, @ path alias, React/TanStack dedupe,
@@ -11,6 +11,32 @@ import { nitro } from "nitro/vite";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isVercel = process.env.VERCEL === "1";
+const isNetlify = process.env.NETLIFY === "true" || process.env.NETLIFY === "1";
+const usesNitroAdapter = isVercel || isNetlify;
+
+function shouldIgnoreKnownDependencyWarning(warning: { code?: string; id?: string; message?: string }) {
+  const warningText = `${warning.id || ""} ${warning.message || ""}`;
+
+  if (
+    warning.code === "MODULE_LEVEL_DIRECTIVE" &&
+    /node_modules[\\/](@tanstack|sonner)/.test(warningText)
+  ) {
+    return true;
+  }
+
+  if (
+    warning.code === "UNUSED_EXTERNAL_IMPORT" &&
+    /node_modules[\\/]@tanstack/.test(warningText)
+  ) {
+    return true;
+  }
+
+  if (/Generated an empty chunk: "_libs\//.test(warningText)) {
+    return true;
+  }
+
+  return false;
+}
 
 function stripTanStackSourceMapComments() {
   const sourceMapComment = /\/\/# sourceMappingURL=.*$/gm;
@@ -30,13 +56,24 @@ function stripTanStackSourceMapComments() {
 }
 
 // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-// @cloudflare/vite-plugin builds from this — wrangler.jsonc main alone is insufficient.
+// @cloudflare/vite-plugin builds from this - wrangler.jsonc main alone is insufficient.
 export default defineConfig({
-  cloudflare: isVercel ? false : undefined,
+  cloudflare: usesNitroAdapter ? false : undefined,
   tanstackStart: {
     server: { entry: "server" },
   },
-  plugins: isVercel ? [nitro()] : [],
+  plugins: usesNitroAdapter
+    ? [
+        nitro({
+          rollupConfig: {
+            onwarn(warning, defaultHandler) {
+              if (shouldIgnoreKnownDependencyWarning(warning)) return;
+              defaultHandler(warning);
+            },
+          },
+        }),
+      ]
+    : [],
   vite: {
     resolve: {
       alias: {
@@ -47,6 +84,14 @@ export default defineConfig({
     },
     ssr: {
       noExternal: ["framer-motion"],
+    },
+    build: {
+      rollupOptions: {
+        onwarn(warning, defaultHandler) {
+          if (shouldIgnoreKnownDependencyWarning(warning)) return;
+          defaultHandler(warning);
+        },
+      },
     },
     plugins: [stripTanStackSourceMapComments()],
   },

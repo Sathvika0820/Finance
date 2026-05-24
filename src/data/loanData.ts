@@ -1,18 +1,22 @@
+import { getOfficialLink } from "./officialLinks";
+
+export type LoanComparisonLoanType =
+  | "personal_loan"
+  | "home_loan"
+  | "education_loan"
+  | "vehicle_loan"
+  | "gold_loan"
+  | "business_loan"
+  | "agriculture_loan"
+  | "women_entrepreneur_loan"
+  | "msme_loan"
+  | "savings_account"
+  | "credit_card";
+
 export interface LoanComparisonEntry {
   bankId: string;
   bankName: string;
-  loanType:
-    | "personal_loan"
-    | "home_loan"
-    | "education_loan"
-    | "vehicle_loan"
-    | "gold_loan"
-    | "business_loan"
-    | "agriculture_loan"
-    | "women_entrepreneur_loan"
-    | "msme_loan"
-    | "savings_account"
-    | "credit_card";
+  loanType: LoanComparisonLoanType;
   loanTypeLabel: Record<string, string>;
   interestRate: number; // Numeric rate for sorting (ascending). Use 0 for unverified/unavailable rates.
   interestRateDisplay: Record<string, string>;
@@ -26,10 +30,32 @@ export interface LoanComparisonEntry {
   safetyNote: Record<string, string>;
 }
 
-export interface NormalizedLoanComparisonEntry extends LoanComparisonEntry {
+export interface NormalizedLoanComparisonEntry {
+  bankId: string;
+  bankCategory: string;
+  bankName: string;
+  loanType: LoanComparisonLoanType;
+  loanTypeLabel: Record<string, string>;
+  interestRateText: string;
   numericRate: number | null;
-  officialApplyLink: string;
+  processingFee: string | null;
+  officialApplyLink: string | null;
+  officialReferenceLink: string | null;
   verified: boolean;
+  documentsRequired: string[];
+  eligibility: string[];
+  howToApply: string[];
+  benefits: string[];
+  repaymentPeriod: string | null;
+  interestRateDisplay: Record<string, string>;
+  processingFeeByLang: Record<string, string>;
+  repaymentPeriodByLang: Record<string, string>;
+  documentsRequiredByLang: Record<string, string[]>;
+  eligibilityByLang: Record<string, string>;
+  howToApplyByLang: Record<string, string>;
+  benefitsByLang: Record<string, string[]>;
+  safetyNote: string;
+  safetyNoteByLang: Record<string, string>;
 }
 
 export const VERIFIED_LOAN_COMPARISONS: LoanComparisonEntry[] = [
@@ -1345,14 +1371,162 @@ export const VERIFIED_LOAN_COMPARISONS: LoanComparisonEntry[] = [
   }
 ];
 
+const BANK_CATEGORY_BY_ID: Record<string, string> = {
+  sbi: "Public Sector",
+  pnb: "Public Sector",
+  bob: "Public Sector",
+  canara: "Public Sector",
+  union: "Public Sector",
+  indianbank: "Public Sector",
+  boi: "Public Sector",
+  cbi: "Public Sector",
+  iob: "Public Sector",
+  uco: "Public Sector",
+  bom: "Public Sector",
+  psb: "Public Sector",
+  hdfc: "Private Sector",
+  icici: "Private Sector",
+  axis: "Private Sector",
+  kotak: "Private Sector",
+  idfc: "Private Sector",
+  indusind: "Private Sector",
+  federal: "Private Sector",
+  sib: "Private Sector",
+  rbl: "Private Sector",
+  yes: "Private Sector",
+  bandhan: "Private Sector",
+  dcb: "Private Sector",
+  ausfb: "Small Finance",
+  ujjivan: "Small Finance",
+  equitas: "Small Finance",
+  jana: "Small Finance",
+  suryoday: "Small Finance",
+  esaf: "Small Finance",
+};
+
+const LOAN_TYPE_ALIASES: Record<string, LoanComparisonLoanType> = {
+  personal: "personal_loan",
+  "personal loan": "personal_loan",
+  personal_loan: "personal_loan",
+  home: "home_loan",
+  house: "home_loan",
+  housing: "home_loan",
+  "home loan": "home_loan",
+  "housing loan": "home_loan",
+  home_loan: "home_loan",
+  education: "education_loan",
+  student: "education_loan",
+  study: "education_loan",
+  "education loan": "education_loan",
+  "student loan": "education_loan",
+  education_loan: "education_loan",
+  vehicle: "vehicle_loan",
+  car: "vehicle_loan",
+  auto: "vehicle_loan",
+  bike: "vehicle_loan",
+  "vehicle loan": "vehicle_loan",
+  "car loan": "vehicle_loan",
+  vehicle_loan: "vehicle_loan",
+  gold: "gold_loan",
+  jewel: "gold_loan",
+  jewellery: "gold_loan",
+  jewelry: "gold_loan",
+  "gold loan": "gold_loan",
+  gold_loan: "gold_loan",
+  business: "business_loan",
+  "business loan": "business_loan",
+  business_loan: "business_loan",
+  agriculture: "agriculture_loan",
+  agricultural: "agriculture_loan",
+  farmer: "agriculture_loan",
+  crop: "agriculture_loan",
+  "agriculture loan": "agriculture_loan",
+  agriculture_loan: "agriculture_loan",
+  women: "women_entrepreneur_loan",
+  "women entrepreneur": "women_entrepreneur_loan",
+  "women entrepreneur loan": "women_entrepreneur_loan",
+  women_entrepreneur_loan: "women_entrepreneur_loan",
+  msme: "msme_loan",
+  "msme loan": "msme_loan",
+  sme: "msme_loan",
+  msme_loan: "msme_loan",
+};
+
+function getComparableHost(url: string): string {
+  try {
+    return new URL(url).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
+function isVerifiedOfficialLoanUrl(entry: LoanComparisonEntry): boolean {
+  if (!entry.officialWebsite.startsWith("https://")) return false;
+
+  const officialBankLink = getOfficialLink("banks", entry.bankId);
+  if (!officialBankLink) return false;
+
+  const loanHost = getComparableHost(entry.officialWebsite);
+  const bankHost = getComparableHost(officialBankLink);
+  if (!loanHost || !bankHost) return false;
+
+  return loanHost === bankHost || loanHost.endsWith(`.${bankHost}`);
+}
+
+function normalizeLoanType(loanType: string): string {
+  const normalized = loanType.trim().toLowerCase().replace(/[-\s]+/g, "_");
+  const aliasKey = loanType.trim().toLowerCase().replace(/[-_]+/g, " ").replace(/\s+/g, " ");
+  return LOAN_TYPE_ALIASES[normalized] || LOAN_TYPE_ALIASES[aliasKey] || normalized;
+}
+
 export const LOAN_COMPARISON_DATA: NormalizedLoanComparisonEntry[] =
   VERIFIED_LOAN_COMPARISONS.map((entry) => {
-    const verified = entry.officialWebsite.startsWith("https://");
+    const verified = isVerifiedOfficialLoanUrl(entry);
+    const interestRateText = entry.interestRate > 0
+      ? entry.interestRateDisplay.english
+      : "Check official website";
+    const processingFee = verified && !/check official website/i.test(entry.processingFee.english)
+      ? entry.processingFee.english
+      : null;
 
     return {
-      ...entry,
+      bankId: entry.bankId,
+      bankName: entry.bankName,
+      bankCategory: BANK_CATEGORY_BY_ID[entry.bankId] || "Unknown",
+      loanType: entry.loanType,
+      loanTypeLabel: entry.loanTypeLabel,
+      interestRateText,
       numericRate: entry.interestRate > 0 ? entry.interestRate : null,
-      officialApplyLink: verified ? entry.officialWebsite : "",
+      processingFee,
+      officialApplyLink: verified ? entry.officialWebsite : null,
+      officialReferenceLink: verified ? entry.officialWebsite : null,
       verified,
+      documentsRequired: entry.documentsRequired.english || [],
+      eligibility: entry.eligibility.english ? [entry.eligibility.english] : [],
+      howToApply: entry.howToApply.english ? [entry.howToApply.english] : [],
+      benefits: entry.benefits.english || [],
+      repaymentPeriod: verified ? entry.repaymentPeriod.english || null : null,
+      interestRateDisplay: entry.interestRateDisplay,
+      processingFeeByLang: entry.processingFee,
+      repaymentPeriodByLang: entry.repaymentPeriod,
+      documentsRequiredByLang: entry.documentsRequired,
+      eligibilityByLang: entry.eligibility,
+      howToApplyByLang: entry.howToApply,
+      benefitsByLang: entry.benefits,
+      safetyNote: entry.safetyNote.english || "",
+      safetyNoteByLang: entry.safetyNote,
     };
   });
+
+export function getSortedLoanComparison(loanType: string): NormalizedLoanComparisonEntry[] {
+  const selectedLoanType = normalizeLoanType(loanType);
+  const filteredResults = LOAN_COMPARISON_DATA.filter(
+    (item) => item.loanType.toLowerCase() === selectedLoanType
+  );
+  return [...filteredResults].sort((a, b) => {
+    if (a.numericRate === null && b.numericRate === null) return 0;
+    if (a.numericRate === null) return 1;
+    if (b.numericRate === null) return -1;
+    return a.numericRate - b.numericRate;
+  });
+}

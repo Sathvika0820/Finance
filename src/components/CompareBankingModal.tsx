@@ -17,9 +17,9 @@ import {
   TrendingDown,
   AlertCircle,
 } from "lucide-react";
-import { useState, useMemo } from "react";
-import { LOAN_COMPARISON_DATA, NormalizedLoanComparisonEntry } from "@/data/loanData";
-import { BANKS, Bank, getBankDisplayName } from "@/data/banks";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { getSortedLoanComparison, NormalizedLoanComparisonEntry } from "@/data/loanData";
+import { BANKS, Bank, bankMatchesSearch, getBankDisplayName } from "@/data/banks";
 import { BankLogo } from "@/components/BankLogo";
 import { OfficialLinkButton } from "@/components/OfficialLinkButton";
 import { LoanInfoModal } from "@/components/LoanInfoModal";
@@ -45,6 +45,8 @@ const LOAN_TYPES = [
   { id: "msme_loan", labelEn: "MSME Loan", labelHi: "एमएसएमई ऋण", icon: Landmark },
 ] as const;
 
+const BANK_BY_ID = new Map(BANKS.map((bank) => [bank.id, bank]));
+
 export function CompareBankingModal({
   isOpen,
   onClose,
@@ -57,23 +59,22 @@ export function CompareBankingModal({
   const [selectedLoanType, setSelectedLoanType] = useState<string>("personal_loan");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [comparisonResults, setComparisonResults] = useState<NormalizedLoanComparisonEntry[]>([]);
   const [isCompared, setIsCompared] = useState<boolean>(false);
   const [isComparing, setIsComparing] = useState<boolean>(false);
   
   // Selected Loan entry for the details modal
   const [selectedLoanForModal, setSelectedLoanForModal] = useState<NormalizedLoanComparisonEntry | null>(null);
+  const compareTimerRef = useRef<number | null>(null);
 
   // Localized string helper
   const l = (obj: Record<string, string>) => obj[lang] || obj["english"] || "";
 
   // Perform filtering and sorting of loan data
-  const comparisonResults = useMemo(() => {
-    const rawResults = LOAN_COMPARISON_DATA.filter((entry) => {
-      // 1. Filter by Loan Type
-      if (entry.loanType !== selectedLoanType) return false;
-
+  const pendingComparisonResults = useMemo(() => {
+    const rawResults = getSortedLoanComparison(selectedLoanType).filter((entry) => {
       // Find the corresponding bank in the system
-      const bank = BANKS.find((b) => b.id === entry.bankId);
+      const bank = BANK_BY_ID.get(entry.bankId);
       if (!bank) return false;
 
       // 2. Filter by Bank Category
@@ -83,44 +84,43 @@ export function CompareBankingModal({
 
       // 3. Filter by Search Query (Bank Name)
       if (searchQuery.trim().length > 0) {
-        const bankNameText = getBankDisplayName(bank, lang).toLowerCase();
-        const searchVal = searchQuery.toLowerCase();
-        if (!bankNameText.includes(searchVal)) return false;
+        if (!bankMatchesSearch(bank, searchQuery, lang, [entry.bankName])) return false;
       }
 
       return true;
     });
 
-    // 4. Sort results: lowest interest rate first, unverified rates (0) strictly at the bottom
-    return [...rawResults].sort((a, b) => {
-      const aRate = a.numericRate;
-      const bRate = b.numericRate;
-
-      const aHasRate = typeof aRate === "number";
-      const bHasRate = typeof bRate === "number";
-
-      if (aHasRate && bHasRate) {
-        return aRate - bRate; // Ascending order
-      }
-      if (aHasRate && !bHasRate) {
-        return -1; // Numeric rates go first
-      }
-      if (!aHasRate && bHasRate) {
-        return 1; // Unverified rates go after
-      }
-      return 0; // Both are unverified/0
-    });
+    return rawResults;
   }, [selectedLoanType, selectedCategory, searchQuery]);
 
+  useEffect(() => {
+    if (isCompared && !isComparing) {
+      setComparisonResults(pendingComparisonResults);
+    }
+  }, [isCompared, isComparing, pendingComparisonResults]);
+
+  useEffect(() => {
+    return () => {
+      if (compareTimerRef.current !== null) {
+        window.clearTimeout(compareTimerRef.current);
+      }
+    };
+  }, []);
+
   const handleCompareClick = () => {
+    if (compareTimerRef.current !== null) {
+      window.clearTimeout(compareTimerRef.current);
+    }
     setIsComparing(true);
     speakVoice("comparingLoans", {
       loanType: LOAN_TYPES.find((t) => t.id === selectedLoanType)?.labelEn || "Loans",
     });
 
-    setTimeout(() => {
+    compareTimerRef.current = window.setTimeout(() => {
+      setComparisonResults(pendingComparisonResults);
       setIsComparing(false);
       setIsCompared(true);
+      compareTimerRef.current = null;
     }, 600);
   };
 
@@ -147,35 +147,33 @@ export function CompareBankingModal({
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="relative w-full sm:max-w-[460px] h-[92vh] sm:h-[85vh] bg-white rounded-t-[32px] sm:rounded-[28px] shadow-2xl flex flex-col overflow-hidden border border-border/15"
+          className="relative w-full sm:max-w-[460px] h-[92vh] sm:h-[85vh] bg-white/95 rounded-t-[28px] sm:rounded-[24px] shadow-2xl flex flex-col overflow-hidden border border-border/70 backdrop-blur-xl"
         >
           {/* Header */}
-          <div className="shrink-0 p-5 pb-3 border-b border-border/40 flex items-center justify-between bg-white relative z-10">
+          <div className="shrink-0 p-5 pb-3 border-b border-border/50 flex items-center justify-between bg-white/90 relative z-10">
             <div>
               <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2">
-                <ArrowLeftRight className="w-5 h-5 text-purple-500" />
-                {lang === "hindi" ? "बैंकिंग सेवाओं की तुलना" : "Compare Banking Services"}
+                <ArrowLeftRight className="w-5 h-5 text-slate-700" />
+                {t("compareBankingServices")}
               </h2>
               <p className="text-xs font-semibold text-muted-foreground mt-0.5">
-                {lang === "hindi"
-                  ? "ऋण ब्याज दरों और शुल्कों की तुरंत तुलना करें"
-                  : "Compare loan interest rates and fees instantly"}
+                {t("compareBankingOptions")}
               </p>
             </div>
             <button
               onClick={onClose}
-              className="p-2 bg-muted/50 hover:bg-muted rounded-full transition-colors active:scale-95"
+              className="tap-target p-2 bg-muted/50 hover:bg-muted rounded-full transition-colors active:scale-95"
             >
               <X className="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
 
           {/* Interactive Workspace */}
-          <div className="flex-1 overflow-y-auto flex flex-col bg-slate-50/30">
+          <div className="flex-1 overflow-y-auto flex flex-col bg-slate-50/55">
             {/* Step 1: Select Loan Type (Horizontal Picker) */}
             <div className="shrink-0 p-4 pb-2 bg-white border-b border-border/30">
               <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-2">
-                {lang === "hindi" ? "1. ऋण का प्रकार चुनें" : "1. Select Loan Type"}
+                {t("selectLoanType")}
               </label>
               <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none snap-x -mx-4 px-4">
                 {LOAN_TYPES.map((type) => {
@@ -192,11 +190,11 @@ export function CompareBankingModal({
                       }}
                       className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold whitespace-nowrap snap-center active:scale-95 transition-all border shrink-0 ${
                         isSelected
-                          ? "bg-purple-600 border-purple-600 text-white shadow-sm"
+                          ? "bg-slate-950 border-slate-950 text-white shadow-sm"
                           : "bg-white border-border/80 text-foreground hover:bg-slate-50"
                       }`}
                     >
-                      <IconComponent className={`w-3.5 h-3.5 ${isSelected ? "text-white" : "text-purple-500"}`} />
+                      <IconComponent className={`w-3.5 h-3.5 ${isSelected ? "text-white" : "text-slate-600"}`} />
                       {label}
                     </button>
                   );
@@ -210,7 +208,7 @@ export function CompareBankingModal({
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                   <SlidersHorizontal className="w-3 h-3 text-slate-500" />
-                  {lang === "hindi" ? "2. बैंक श्रेणी" : "2. Bank Category"}
+                  {t("bankCategory")}
                 </label>
                 <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
                   {["All", "Public Sector", "Private Sector", "Small Finance"].map((cat) => {
@@ -256,10 +254,10 @@ export function CompareBankingModal({
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder={lang === "hindi" ? "बैंक का नाम खोजें..." : "Search bank by name..."}
+                  placeholder={t("searchBankByName")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-border/80 rounded-2xl text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-purple-500 focus:bg-white transition-all placeholder:text-muted-foreground/60 text-foreground"
+                  className="w-full pl-10 pr-4 py-2.5 fintech-input rounded-2xl text-xs font-semibold focus:outline-none transition-all placeholder:text-muted-foreground/60 text-foreground"
                 />
                 {searchQuery.length > 0 && (
                   <button
@@ -275,13 +273,13 @@ export function CompareBankingModal({
               <button
                 onClick={handleCompareClick}
                 disabled={isComparing}
-                className="w-full py-3 bg-purple-600 text-white rounded-2xl font-bold text-xs shadow-md shadow-purple-600/10 hover:bg-purple-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                className="w-full py-3 fintech-button rounded-2xl font-bold text-xs active:scale-[0.98] transition-all flex items-center justify-center gap-2"
               >
                 <ArrowLeftRight className={`w-4 h-4 ${isComparing ? "animate-spin" : ""}`} />
                 {isComparing
                   ? lang === "hindi"
-                    ? "तुलना की जा रही है..."
-                    : "Comparing..."
+                    ? "तुलना डेटा लोड हो रहा है..."
+                    : "Loading comparison data..."
                   : lang === "hindi"
                   ? `${activeLoanTypeLabel} की तुलना करें`
                   : `Compare ${activeLoanTypeLabel}`}
@@ -296,7 +294,7 @@ export function CompareBankingModal({
                   {[1, 2, 3].map((n) => (
                     <div
                       key={n}
-                      className="bg-white border border-border/40 p-4 rounded-3xl animate-pulse space-y-2"
+                      className="bg-white border border-border/50 p-4 rounded-2xl animate-pulse space-y-2"
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-slate-200 rounded-full" />
@@ -316,7 +314,7 @@ export function CompareBankingModal({
                 comparisonResults.length > 0 ? (
                   <>
                     {/* Disclaimer Banner at the top of results */}
-                    <div className="bg-amber-50/50 border border-amber-200/50 rounded-2xl p-3 flex items-start gap-2 shrink-0">
+                    <div className="bg-amber-50/75 border border-amber-200/70 rounded-2xl p-3 flex items-start gap-2 shrink-0">
                       <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                       <p className="text-[10px] font-semibold text-amber-900/80 leading-snug">
                         {lang === "hindi"
@@ -327,16 +325,16 @@ export function CompareBankingModal({
 
                     <div className="space-y-3.5">
                       {comparisonResults.map((entry, index) => {
-                        const bankEntity = BANKS.find((b) => b.id === entry.bankId);
+                        const bankEntity = BANK_BY_ID.get(entry.bankId);
                         if (!bankEntity) return null;
 
                         const isLowestRate = index === 0 && entry.numericRate !== null;
                         const hasRate = entry.numericRate !== null;
-                        const processingFee = l(entry.processingFee);
+                        const processingFee = l(entry.processingFeeByLang);
                         const hasVerifiedProcessingFee =
                           entry.verified && processingFee && !/check official website/i.test(processingFee);
                         const loanPageUrl =
-                          entry.verified && entry.officialApplyLink.startsWith("https://") ? entry.officialApplyLink : "";
+                          entry.verified && entry.officialApplyLink?.startsWith("https://") ? entry.officialApplyLink : "";
                         const bankName = getBankDisplayName(bankEntity, lang);
 
                         return (
@@ -345,9 +343,9 @@ export function CompareBankingModal({
                             initial={{ opacity: 0, y: 15 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.05 }}
-                            className={`bg-white border p-4 rounded-3xl shadow-sm relative overflow-hidden transition-all ${
+                            className={`bg-white/95 border p-4 rounded-2xl shadow-soft relative overflow-hidden transition-all ${
                               isLowestRate
-                                ? "border-emerald-300 ring-1 ring-emerald-300/30 bg-emerald-50/5"
+                                ? "border-emerald-300 ring-1 ring-emerald-300/30 bg-emerald-50/30"
                                 : "border-border/40 hover:border-border"
                             }`}
                           >
@@ -355,7 +353,7 @@ export function CompareBankingModal({
                             {isLowestRate && (
                               <div className="absolute top-0 right-0 bg-emerald-600 text-white px-3 py-1 text-[8.5px] font-extrabold rounded-bl-2xl uppercase tracking-wider flex items-center gap-1">
                                 <TrendingDown className="w-3 h-3" />
-                                {lang === "hindi" ? "न्यूनतम दर" : "Lowest Rate"}
+                                {t("lowestRate")}
                               </div>
                             )}
 
@@ -396,7 +394,7 @@ export function CompareBankingModal({
                                   </p>
                                 ) : (
                                   <span className="inline-block mt-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">
-                                    {lang === "hindi" ? "आधिकारिक जांचें" : "Check official website"}
+                                    {t("checkOfficialWebsite")}
                                   </span>
                                 )}
                               </div>
@@ -424,17 +422,17 @@ export function CompareBankingModal({
                                 className="flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200/80 text-foreground text-[11.5px] font-bold rounded-2xl active:scale-95 transition-all shrink-0"
                               >
                                 <Info className="w-3.5 h-3.5 text-slate-600" />
-                                {lang === "hindi" ? "जानकारी" : "Info"}
+                                {t("info")}
                               </button>
 
                               <OfficialLinkButton
                                 item={{
                                   name: `${bankName} ${l(entry.loanTypeLabel)}`,
-                                  officialWebsite: entry.officialApplyLink,
+                                  officialWebsite: entry.officialApplyLink || "",
                                   verified: entry.verified,
                                 }}
-                                label={lang === "hindi" ? "आवेदन करें" : "Apply"}
-                                unverifiedLabel="Official loan link not verified yet."
+                                label={t("apply")}
+                                unverifiedLabel={t("officialLoanLinkNotVerified")}
                                 className="flex-1 py-2.5 text-[11.5px]"
                               />
                             </div>
@@ -450,20 +448,20 @@ export function CompareBankingModal({
                       <SlidersHorizontal className="w-6 h-6 text-slate-400" />
                     </div>
                     <p className="text-sm font-extrabold text-foreground">
-                      {lang === "hindi" ? "कोई मिलान नहीं मिला" : "No banks matching filters"}
+                      {t("noVerifiedComparisonData")}
                     </p>
                     <p className="text-xs font-semibold text-muted-foreground mt-1.5 max-w-[280px]">
                       {lang === "hindi"
                         ? "चयनित ऋण प्रकार या बैंक नाम खोज के लिए कोई प्रविष्टि नहीं मिली। कृपया अपने फ़िल्टर रीसेट करें।"
-                        : "No entries found for the selected loan type or bank category. Try adjusting your search query."}
+                        : t("noVerifiedComparisonData")}
                     </p>
                   </div>
                 )
               ) : (
                 // Initial prompt state
                 <div className="flex flex-col items-center justify-center py-14 px-6 text-center">
-                  <div className="w-16 h-16 rounded-[24px] bg-purple-50 flex items-center justify-center mb-4 shadow-inner">
-                    <ArrowLeftRight className="w-8 h-8 text-purple-500 animate-pulse" />
+                  <div className="w-16 h-16 rounded-[20px] bg-slate-100 flex items-center justify-center mb-4 shadow-inner">
+                    <ArrowLeftRight className="w-8 h-8 text-slate-700 animate-pulse" />
                   </div>
                   <h3 className="text-[15px] font-extrabold text-foreground">
                     {lang === "hindi" ? "ऋण विकल्पों की तुलना करें" : "Compare Loan Options"}

@@ -1,123 +1,127 @@
+import { getOfficialLink } from "@/data/officialLinks";
+
+const smartUrl = (id: string) => getOfficialLink("smartServices", id) || "";
+
 export const serviceUrlMap: Record<string, Record<string, { label: string; url: string }>> = {
   educationLoan: {
     sbi: {
       label: "SBI Education Loan",
-      url: "https://sbi.co.in/web/personal-banking/loans/education-loans"
+      url: smartUrl("educationLoan:sbi")
     },
     canara: {
       label: "Canara Bank Education Loan",
-      url: "https://canarabank.com/education-loan.aspx"
+      url: smartUrl("educationLoan:canara")
     },
     union: {
       label: "Union Bank Education Loan",
-      url: "https://www.unionbankofindia.co.in/english/personal-education-loan.aspx"
+      url: smartUrl("educationLoan:union")
     },
     bob: {
       label: "Bank of Baroda Education Loan",
-      url: "https://www.bankofbaroda.in/personal-banking/loans/education-loan"
+      url: smartUrl("educationLoan:bob")
     }
   },
 
   homeLoan: {
     sbi: {
       label: "SBI Home Loan",
-      url: "https://homeloans.sbi/"
+      url: smartUrl("homeLoan:sbi")
     },
     hdfc: {
       label: "HDFC Bank Home Loan",
-      url: "https://www.hdfcbank.com/personal/borrow/popular-loans/home-loan"
+      url: smartUrl("homeLoan:hdfc")
     },
     icici: {
       label: "ICICI Bank Home Loan",
-      url: "https://www.icicibank.com/personal-banking/loans/home-loan"
+      url: smartUrl("homeLoan:icici")
     },
     axis: {
       label: "Axis Bank Home Loan",
-      url: "https://www.axisbank.com/retail/loans/home-loan"
+      url: smartUrl("homeLoan:axis")
     }
   },
 
   fixedDeposit: {
     sbi: {
       label: "SBI FD Rates",
-      url: "https://sbi.co.in/web/interest-rates/deposit-rates/retail-domestic-term-deposits"
+      url: smartUrl("fixedDeposit:sbi")
     },
     hdfc: {
       label: "HDFC Bank FD Rates",
-      url: "https://www.hdfcbank.com/personal/save/deposits/fixed-deposit-interest-rate"
+      url: smartUrl("fixedDeposit:hdfc")
     },
     icici: {
       label: "ICICI Bank FD Rates",
-      url: "https://www.icicibank.com/personal-banking/deposits/fixed-deposit/fd-interest-rates"
+      url: smartUrl("fixedDeposit:icici")
     },
     axis: {
       label: "Axis Bank FD Rates",
-      url: "https://www.axisbank.com/interest-rate-on-deposits"
+      url: smartUrl("fixedDeposit:axis")
     },
     pnb: {
       label: "PNB FD Rates",
-      url: "https://www.pnbindia.in/Interest-Rates-Deposit.html"
+      url: smartUrl("fixedDeposit:pnb")
     },
     bob: {
       label: "Bank of Baroda FD Rates",
-      url: "https://www.bankofbaroda.in/interest-rate-and-service-charges/deposits-interest-rates"
+      url: smartUrl("fixedDeposit:bob")
     }
   },
 
   savingsAccount: {
     sbi: {
       label: "SBI Savings Account",
-      url: "https://sbi.co.in/web/personal-banking/accounts/saving-account"
+      url: smartUrl("savingsAccount:sbi")
     },
     hdfc: {
       label: "HDFC Bank Savings Account",
-      url: "https://www.hdfcbank.com/personal/save/accounts/savings-accounts"
+      url: smartUrl("savingsAccount:hdfc")
     },
     icici: {
       label: "ICICI Bank Savings Account",
-      url: "https://www.icicibank.com/personal-banking/accounts/savings-account"
+      url: smartUrl("savingsAccount:icici")
     },
     bob: {
       label: "Bank of Baroda Savings Account",
-      url: "https://www.bankofbaroda.in/personal-banking/accounts/saving-accounts"
+      url: smartUrl("savingsAccount:bob")
     },
     pnb: {
       label: "PNB Savings Account",
-      url: "https://www.pnbindia.in/savings-account.html"
+      url: smartUrl("savingsAccount:pnb")
     }
   },
 
   goldLoan: {
     sbi: {
       label: "SBI Gold Loan",
-      url: "https://sbi.co.in/web/personal-banking/loans/gold-loan"
+      url: smartUrl("goldLoan:sbi")
     },
     hdfc: {
       label: "HDFC Bank Gold Loan",
-      url: "https://www.hdfcbank.com/personal/borrow/popular-loans/gold-loan"
+      url: smartUrl("goldLoan:hdfc")
     },
     icici: {
       label: "ICICI Bank Gold Loan",
-      url: "https://www.icicibank.com/personal-banking/loans/gold-loan"
+      url: smartUrl("goldLoan:icici")
     },
     axis: {
       label: "Axis Bank Gold Loan",
-      url: "https://www.axisbank.com/retail/loans/gold-loan"
+      url: smartUrl("goldLoan:axis")
     }
   },
 
   complaintSupport: {
     rbiComplaintPortal: {
       label: "RBI Complaint Portal",
-      url: "https://cms.rbi.org.in/cms/IndexPage.aspx"
+      url: smartUrl("complaintSupport:rbiComplaintPortal")
     },
     rbiSachet: {
       label: "RBI Sachet Portal",
-      url: "https://sachet.rbi.org.in/"
+      url: smartUrl("complaintSupport:rbiSachet")
     },
     cyberCrimePortal: {
       label: "National Cyber Crime Portal",
-      url: "https://cybercrime.gov.in/"
+      url: smartUrl("complaintSupport:cyberCrimePortal")
     }
   }
 };
