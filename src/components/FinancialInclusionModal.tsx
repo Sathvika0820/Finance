@@ -41,9 +41,19 @@ function SchemeCard({
   const officialEntry = getOfficialLinkEntry("governmentSchemes", scheme.id);
   return (
     <article className="flex items-center justify-between gap-3 rounded-[16px] border border-border/60 bg-white/95 px-3 py-2.5 shadow-sm">
-      <h4 className="min-w-0 flex-1 text-[13px] font-bold leading-snug text-foreground">
-        {scheme.name}
-      </h4>
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+          <h4 className="min-w-0 text-[13px] font-bold leading-snug text-foreground">
+            {scheme.name}
+          </h4>
+          {scheme.badge && (
+            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[8px] font-bold uppercase text-emerald-700">
+              {scheme.badge}
+            </span>
+          )}
+        </div>
+        <p className="mt-0.5 text-[10px] font-semibold text-muted-foreground">{scheme.subcategory}</p>
+      </div>
       <div className="flex shrink-0 items-center gap-2">
         <button
           type="button"
@@ -84,7 +94,7 @@ function SchemeInfoModal({
       <div className="w-full max-w-md rounded-t-[24px] border border-border/70 bg-white p-5 shadow-2xl sm:rounded-[24px]">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase text-slate-500">{scheme.type}</p>
+            <p className="text-[11px] font-bold uppercase text-slate-500">{scheme.subcategory}</p>
             <h3 className="mt-1 text-[17px] font-bold leading-tight text-foreground">{scheme.name}</h3>
           </div>
           <button
@@ -100,7 +110,7 @@ function SchemeInfoModal({
         <div className="mt-4 space-y-3">
           <section className="rounded-[16px] bg-slate-50 p-3">
             <h4 className="text-[11px] font-bold uppercase text-slate-600">Information</h4>
-            <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{scheme.description}</p>
+            <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{scheme.shortDescription}</p>
           </section>
           <section className="rounded-[16px] bg-slate-50 p-3">
             <h4 className="text-[11px] font-bold uppercase text-slate-600">{t("eligibility")}</h4>
@@ -110,6 +120,12 @@ function SchemeInfoModal({
             <h4 className="text-[11px] font-bold uppercase text-slate-600">{t("benefits")}</h4>
             <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{scheme.benefits}</p>
           </section>
+          {scheme.importantNotes && (
+            <section className="rounded-[16px] border border-amber-200 bg-amber-50 p-3">
+              <h4 className="text-[11px] font-bold uppercase text-amber-800">Important Notes</h4>
+              <p className="mt-1 text-[12px] font-medium leading-relaxed text-amber-900/80">{scheme.importantNotes}</p>
+            </section>
+          )}
         </div>
       </div>
     </div>
@@ -157,6 +173,7 @@ function CategoryCard({
 export function FinancialInclusionModal({ isOpen, onClose, t, speakVoice }: FinancialInclusionModalProps) {
   const [selectedCategoryId, setSelectedCategoryId] = useState<FinancialInclusionCategoryId | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeSubcategory, setActiveSubcategory] = useState("All");
   const [selectedSchemeInfo, setSelectedSchemeInfo] = useState<FinancialInclusionScheme | null>(null);
 
   const selectedCategory = useMemo(
@@ -164,34 +181,45 @@ export function FinancialInclusionModal({ isOpen, onClose, t, speakVoice }: Fina
     [selectedCategoryId]
   );
 
-  const selectedSchemes = useMemo(() => {
+  const categorySchemes = useMemo(() => {
     if (!selectedCategoryId) return [];
+    return getSchemesByCategory(selectedCategoryId);
+  }, [selectedCategoryId]);
+
+  const subcategories = useMemo(() => {
+    return ["All", ...Array.from(new Set(categorySchemes.map((scheme) => scheme.subcategory)))];
+  }, [categorySchemes]);
+
+  const selectedSchemes = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
-    const categorySchemes = getSchemesByCategory(selectedCategoryId);
-
-    if (!normalizedQuery) return categorySchemes;
-
     return categorySchemes.filter((scheme) => {
+      if (activeSubcategory !== "All" && scheme.subcategory !== activeSubcategory) return false;
+      if (!normalizedQuery) return true;
+
       const searchableText = [
         scheme.name,
+        scheme.subcategory,
         scheme.type,
-        scheme.description,
+        scheme.shortDescription,
         scheme.eligibility,
         scheme.benefits,
-        ...scheme.keywords,
+        scheme.importantNotes,
+        ...scheme.tags,
       ]
+        .filter(Boolean)
         .join(" ")
         .toLowerCase();
 
       return searchableText.includes(normalizedQuery);
     });
-  }, [searchQuery, selectedCategoryId]);
+  }, [activeSubcategory, categorySchemes, searchQuery]);
 
   if (!isOpen) return null;
 
   const handleCategorySelect = (category: FinancialInclusionCategory) => {
     setSelectedCategoryId(category.id);
     setSearchQuery("");
+    setActiveSubcategory("All");
     speakVoice("showingTopic", { serviceName: category.name });
   };
 
@@ -237,7 +265,11 @@ export function FinancialInclusionModal({ isOpen, onClose, t, speakVoice }: Fina
               <>
                 <button
                   type="button"
-                  onClick={() => setSelectedCategoryId(null)}
+                  onClick={() => {
+                    setSelectedCategoryId(null);
+                    setSearchQuery("");
+                    setActiveSubcategory("All");
+                  }}
                   className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-white px-3 py-2 text-[12px] font-bold text-foreground shadow-sm hover:bg-slate-50"
                 >
                   <ArrowLeft className="h-4 w-4" />
@@ -268,6 +300,26 @@ export function FinancialInclusionModal({ isOpen, onClose, t, speakVoice }: Fina
                   iconClassName="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 shrink-0 text-muted-foreground pointer-events-none"
                   inputClassName="min-w-0 w-full bg-transparent pl-6 text-[13px] font-semibold text-foreground outline-none placeholder:text-muted-foreground"
                 />
+
+                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                  {subcategories.map((subcategory) => {
+                    const active = activeSubcategory === subcategory;
+                    return (
+                      <button
+                        key={subcategory}
+                        type="button"
+                        onClick={() => setActiveSubcategory(subcategory)}
+                        className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-bold transition-colors ${
+                          active
+                            ? "border-slate-900 bg-slate-900 text-white"
+                            : "border-border/70 bg-white text-muted-foreground hover:bg-slate-50"
+                        }`}
+                      >
+                        {subcategory}
+                      </button>
+                    );
+                  })}
+                </div>
 
                 <div className="space-y-3">
                   {selectedSchemes.length > 0 ? (

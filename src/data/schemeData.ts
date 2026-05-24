@@ -16,15 +16,20 @@ export interface FinancialInclusionCategory {
 export interface FinancialInclusionScheme {
   id: string;
   category: FinancialInclusionCategoryId;
+  subcategory: string;
   name: string;
+  shortDescription: string;
   type: string;
   description: string;
   eligibility: string;
   benefits: string;
+  importantNotes?: string;
   officialWebsite: string;
   verified: boolean;
   sourceAuthority: "official";
+  tags: string[];
   keywords: string[];
+  badge?: "Most Popular" | "Recommended" | "Recently Added";
 }
 
 export const FINANCIAL_INCLUSION_CATEGORIES: FinancialInclusionCategory[] = [
@@ -76,20 +81,93 @@ function scheme(
   officialWebsite: string,
   keywords: string[] = [],
   verified = true,
+  badge?: FinancialInclusionScheme["badge"],
+  importantNotes?: string,
 ): FinancialInclusionScheme {
+  const subcategory = inferSubcategory(category, id, type, keywords);
+  const tags = [category, subcategory, type, name, ...keywords];
   return {
     id,
     category,
+    subcategory,
     name,
+    shortDescription: description,
     type,
     description,
     eligibility,
     benefits,
+    importantNotes,
     officialWebsite,
     verified,
     sourceAuthority: "official",
-    keywords: [category, type, name, ...keywords],
+    tags,
+    keywords: tags,
+    badge,
   };
+}
+
+function inferSubcategory(
+  category: FinancialInclusionCategoryId,
+  id: string,
+  type: string,
+  keywords: string[],
+): string {
+  const text = [id, type, ...keywords].join(" ").toLowerCase();
+
+  if (category === "student") {
+    if (/scholar|pragati|saksham|central/.test(text)) return "Scholarships";
+    if (/loan|vidya/.test(text)) return "Education Loans";
+    if (/skill|apprentice/.test(text)) return "Skills & Training";
+    if (/swayam|nptel|evidya|library|ndli|digital/.test(text)) return "Online Learning";
+    if (/intern|career/.test(text)) return "Internships & Career";
+    return "Startup & Innovation";
+  }
+
+  if (category === "employee") {
+    if (/epf|provident|edli/.test(text)) return "Provident Fund";
+    if (/pension|nps|apy|eps/.test(text)) return "Pension";
+    if (/insurance|bima|esic|esi/.test(text)) return "Insurance";
+    if (/skill|career/.test(text)) return "Skill Upgradation";
+    return "Welfare & Protection";
+  }
+
+  if (category === "farmer") {
+    if (/kisan|income/.test(text)) return "Farmer Income Support";
+    if (/insurance|fasal|crop/.test(text)) return "Crop Insurance";
+    if (/credit|kcc|nabard/.test(text)) return "Agriculture Credit";
+    if (/subsidy|kusum|solar|machinery/.test(text)) return "Subsidies";
+    if (/irrigation|infra|sinchai|market|enam/.test(text)) return "Irrigation & Infrastructure";
+    if (/dairy|fish|matsya|animal/.test(text)) return "Dairy/Fisheries";
+    return "Sustainable Farming";
+  }
+
+  if (category === "self-employed") {
+    if (/udyam|msme|cgtmse|sidbi/.test(text)) return "MSME Support";
+    if (/loan|mudra|stand-up|svanidhi/.test(text)) return "Business Loans";
+    if (/startup|seed|vishwakarma/.test(text)) return "Startup Support";
+    if (/gem|marketplace|digital/.test(text)) return "Government Marketplaces";
+    return "Entrepreneurship";
+  }
+
+  if (category === "women") {
+    if (/sukanya|samman|savings/.test(text)) return "Savings";
+    if (/entrepreneur|stand-up|msme|wep/.test(text)) return "Entrepreneurship";
+    if (/shg|nrlm/.test(text)) return "Self-help Groups";
+    return "Welfare & Support";
+  }
+
+  if (category === "senior-citizen") {
+    if (/saving|scss/.test(text)) return "Savings";
+    if (/pension|apy|vaya|jeevan|pramaan/.test(text)) return "Pension";
+    if (/health|insurance|ayushman/.test(text)) return "Insurance & Healthcare";
+    return "Elderly Financial Support";
+  }
+
+  if (/aadhaar|pan|digilocker|document/.test(text)) return "Identity & Documents";
+  if (/jan dhan|banking|insurance|pension/.test(text)) return "Banking Inclusion";
+  if (/digital|umang|abha|sanchar|csc/.test(text)) return "Digital Services";
+  if (/scheme|myscheme|dbt/.test(text)) return "Scheme Discovery";
+  return "Government Services";
 }
 
 export const FINANCIAL_INCLUSION_SCHEMES: FinancialInclusionScheme[] = [
@@ -107,6 +185,8 @@ export const FINANCIAL_INCLUSION_SCHEMES: FinancialInclusionScheme[] = [
   scheme("pm-evidya", "student", "PM eVIDYA", "Digital Education", "Government digital education initiative for multi-mode learning access.", "Students, teachers, and learners using official school education resources.", "Access TV, radio, digital, and online education initiatives.", "https://www.education.gov.in/pm-evidya", ["digital india", "school"]),
   scheme("startup-india-students", "student", "Startup India", "Startup Support", "Official Startup India portal for startup learning, recognition, and support.", "Students and innovators building eligible startups or learning entrepreneurship.", "Access startup recognition, learning, and ecosystem resources.", "https://www.startupindia.gov.in", ["innovation"]),
   scheme("atal-innovation-mission", "student", "Atal Innovation Mission", "Innovation Support", "Official innovation mission supporting tinkering, incubation, and entrepreneurship.", "Students, schools, innovators, and incubation ecosystem participants as per program rules.", "Find official innovation programs and startup ecosystem support.", "https://aim.gov.in", ["innovation", "startup"]),
+  scheme("apprenticeship-india", "student", "Apprenticeship India", "Skills & Training", "Official apprenticeship portal for candidates, establishments, and training partners.", "Eligible candidates and establishments as per apprenticeship rules.", "Find and apply for official apprenticeship opportunities.", "https://www.apprenticeshipindia.gov.in", ["apprenticeship", "career"], true, "Recommended"),
+  scheme("ndli", "student", "National Digital Library of India", "Online Learning", "Official digital learning library supported by the Ministry of Education.", "Students, teachers, researchers, and lifelong learners.", "Access learning resources through an official national digital library.", "https://www.ndl.gov.in", ["library", "ndli"], true, "Recommended"),
 
   scheme("epfo", "employee", "EPFO", "Provident Fund", "Official Employees' Provident Fund Organisation services.", "Employees and employers covered under EPF rules.", "Access PF, pension, nomination, passbook, and member services.", "https://www.epfindia.gov.in", ["pf"]),
   scheme("employees-pension-scheme", "employee", "Employees Pension Scheme", "Pension", "EPFO information and services linked to employee pension benefits.", "EPF members eligible under EPS rules.", "Access official employee pension information and services.", "https://www.epfindia.gov.in", ["eps"]),
@@ -120,6 +200,8 @@ export const FINANCIAL_INCLUSION_SCHEMES: FinancialInclusionScheme[] = [
   scheme("skill-upgradation", "employee", "Skill Upgradation Programs", "Skill Development", "Official Skill India platform for job and career skill development.", "Employees and job seekers looking for upskilling or reskilling.", "Access official skill courses and digital credentials.", "https://www.skillindiadigital.gov.in", ["upskill"]),
   scheme("income-tax-efiling", "employee", "Income Tax e-Filing", "Tax Services", "Official Income Tax Department portal for filing and tax services.", "Taxpayers and employees with income tax filing or PAN-linked services.", "File returns and access official taxpayer services.", "https://www.incometax.gov.in/iec/foportal", ["tax"]),
   scheme("national-career-service", "employee", "National Career Service", "Career Support", "Official career services portal of the Ministry of Labour and Employment.", "Job seekers, employees, employers, and career service users.", "Access job search, career guidance, and employment services.", "https://www.ncs.gov.in", ["jobs"]),
+  scheme("edli", "employee", "Employees Deposit Linked Insurance", "Insurance", "EPFO-linked insurance benefit information for eligible members.", "Eligible EPF members as per EDLI rules.", "Understand official insurance benefit coverage linked to EPF membership.", "https://www.epfindia.gov.in", ["edli", "insurance"], true, "Recommended"),
+  scheme("labour-welfare", "employee", "Labour Welfare Schemes", "Welfare & Protection", "Official Ministry of Labour and Employment portal for worker welfare information.", "Workers and employees covered under relevant labour welfare rules.", "Access official worker welfare, labour law, and protection information.", "https://labour.gov.in", ["welfare", "labour"]),
 
   scheme("pm-kisan", "farmer", "PM-KISAN", "Income Support", "Official Pradhan Mantri Kisan Samman Nidhi portal.", "Eligible farmer families as per PM-KISAN rules.", "Check beneficiary status and income support services.", "https://pmkisan.gov.in", ["income"]),
   scheme("kisan-credit-card", "farmer", "Kisan Credit Card", "Agriculture Credit", "Official agriculture credit guidance through NABARD.", "Eligible farmers and allied activity borrowers as per bank/KCC rules.", "Credit support information for crop and allied agriculture needs.", "https://www.nabard.org", ["kcc"]),
@@ -134,6 +216,8 @@ export const FINANCIAL_INCLUSION_SCHEMES: FinancialInclusionScheme[] = [
   scheme("paramparagat-krishi-vikas", "farmer", "Organic Farming Schemes", "Organic Farming", "Official PGS India portal for organic certification and PKVY-linked information.", "Farmers and groups participating in organic farming systems.", "Access official organic farming and certification resources.", "https://pgsindia-ncof.gov.in", ["organic"]),
   scheme("pm-kusum", "farmer", "PM-KUSUM", "Solar Pump Support", "Official PM-KUSUM portal for solar agriculture pump support.", "Eligible farmers and institutions as per PM-KUSUM component rules.", "Access solar pump and farm energy support information.", "https://pmkusum.mnre.gov.in/index.html", ["solar pump"]),
   scheme("agri-machinery", "farmer", "Agricultural Mechanization", "Subsidy Support", "Official agriculture machinery portal for mechanization support.", "Farmers and custom hiring centres as per state and scheme rules.", "Find official machinery, subsidy, and custom hiring information.", "https://agrimachinery.nic.in", ["subsidy", "machinery"]),
+  scheme("nabard-support", "farmer", "NABARD Support Schemes", "Agriculture Credit", "Official NABARD portal for agriculture and rural development support information.", "Farmers, FPOs, cooperatives, and rural institutions as per program rules.", "Discover official refinance, development, and rural credit support.", "https://www.nabard.org", ["nabard", "credit"], true, "Recommended"),
+  scheme("agri-startup-support", "farmer", "Agri Startup Support", "Startup & Innovation", "Official Startup India route for agriculture and rural innovation support discovery.", "Eligible agri startups and innovators as per program rules.", "Find startup recognition, learning, and support resources for agri innovation.", "https://www.startupindia.gov.in", ["agri startup", "innovation"]),
 
   scheme("pm-mudra", "self-employed", "PM Mudra Yojana", "Micro Enterprise Loan", "Official MUDRA portal for micro and small enterprise loan information.", "Eligible non-corporate, non-farm micro or small business borrowers.", "Understand Shishu, Kishor, and Tarun loan categories.", "https://www.mudra.org.in", ["business loan"]),
   scheme("stand-up-india-self-employed", "self-employed", "Stand-Up India", "Enterprise Loan", "Official bank loan support portal for eligible entrepreneurs.", "Eligible SC/ST and women entrepreneurs as per scheme rules.", "Access guidance and bank loan support for greenfield enterprises.", "https://www.standupmitra.in", ["enterprise"]),
@@ -145,6 +229,8 @@ export const FINANCIAL_INCLUSION_SCHEMES: FinancialInclusionScheme[] = [
   scheme("pm-vishwakarma", "self-employed", "PM Vishwakarma", "Artisan Support", "Official portal for artisan recognition, skilling, toolkit, and credit support.", "Eligible traditional artisans and craftspeople as per scheme rules.", "Access official Vishwakarma benefits and application services.", "https://pmvishwakarma.gov.in", ["artisan"]),
   scheme("pm-svanidhi", "self-employed", "PM SVANidhi", "Street Vendor Loan", "Official portal for street vendor working capital loan support.", "Eligible street vendors as per PM SVANidhi rules.", "Access working capital loan and digital incentive information.", "https://pmsvanidhi.mohua.gov.in", ["street vendor"]),
   scheme("gem", "self-employed", "Government e-Marketplace", "Digital Business", "Official public procurement marketplace.", "Eligible sellers and service providers onboarding to GeM.", "Sell goods or services to government buyers through the official marketplace.", "https://gem.gov.in", ["digital business"]),
+  scheme("sidbi", "self-employed", "SIDBI MSME Support", "MSME Support", "Official SIDBI portal for MSME promotion, financing, and development support.", "MSMEs and entrepreneurs eligible under SIDBI products or linked programs.", "Access official MSME finance and development support information.", "https://www.sidbi.in", ["sidbi", "msme"], true, "Recommended"),
+  scheme("startup-india-seed-fund", "self-employed", "Startup India Seed Fund", "Startup Support", "Official seed fund information under Startup India.", "Eligible DPIIT-recognised startups as per scheme rules.", "Find seed-stage support information through the official Startup India platform.", "https://www.startupindia.gov.in/content/sih/en/startup-scheme.html", ["seed fund", "startup"], true, "Recently Added"),
 
   scheme("sukanya-samriddhi", "women", "Sukanya Samriddhi Yojana", "Savings Scheme", "Official India Post information for girl child savings scheme.", "Eligible girl child accounts opened by guardians as per SSY rules.", "Long-term savings support for education and future needs.", "https://www.indiapost.gov.in/Financial/Pages/Content/SSY.aspx", ["girl child"]),
   scheme("stand-up-india-women", "women", "Stand-Up India for Women", "Enterprise Loan", "Official portal for bank loans supporting women entrepreneurs.", "Eligible women entrepreneurs as per scheme rules.", "Bank loan guidance for eligible greenfield enterprise projects.", "https://www.standupmitra.in", ["women entrepreneur"]),
@@ -153,6 +239,8 @@ export const FINANCIAL_INCLUSION_SCHEMES: FinancialInclusionScheme[] = [
   scheme("pmmvy", "women", "PM Matru Vandana Yojana", "Maternity Benefit", "Official maternity benefit scheme portal.", "Eligible pregnant women and lactating mothers as per PMMVY rules.", "Access maternity benefit information and services.", "https://pmmvy.wcd.gov.in", ["maternity"]),
   scheme("women-helpline", "women", "Women Helpline Scheme", "Safety & Welfare", "Official Ministry of Women and Child Development information on women helpline support.", "Women seeking emergency or welfare-related support as per helpline rules.", "Find official helpline and support information.", "https://wcd.nic.in/schemes/women-helpline-scheme-2", ["safety"]),
   scheme("beti-bachao-beti-padhao", "women", "Beti Bachao Beti Padhao", "Girl Child Welfare", "Official women and child development program information.", "Citizens and stakeholders covered under girl child welfare initiatives.", "Access official awareness and girl child support information.", "https://wcd.nic.in", ["girl child"]),
+  scheme("mahila-samman-savings", "women", "Mahila Samman Savings Certificate", "Savings Scheme", "Official India Post information for Mahila Samman Savings Certificate.", "Eligible women and girl child account holders as per scheme rules.", "Access official women-focused savings scheme information.", "https://www.indiapost.gov.in/Financial/Pages/Content/MSSC.aspx", ["savings", "mahila"], true, "Recommended"),
+  scheme("women-msme-support", "women", "Women MSME Support", "MSME Support", "Official MSME scheme discovery for women-led enterprises.", "Women entrepreneurs and MSMEs as per individual scheme rules.", "Find official MSME support and scheme information for enterprises.", "https://my.msme.gov.in/mymsme/Reg/home.aspx", ["women msme", "enterprise"]),
 
   scheme("senior-citizen-savings-scheme", "senior-citizen", "Senior Citizen Savings Scheme", "Savings Scheme", "Official India Post page for SCSS.", "Eligible senior citizens as per SCSS rules.", "Government-backed savings scheme information.", "https://www.indiapost.gov.in/Financial/Pages/Content/SCSS.aspx", ["scss"]),
   scheme("pension-portals", "senior-citizen", "Pension Portals", "Pension", "Official PFRDA pension information portal.", "Citizens and subscribers eligible under pension scheme rules.", "Access NPS, APY, and pension-related information.", "https://www.pfrda.org.in", ["pfrda"]),
@@ -163,6 +251,7 @@ export const FINANCIAL_INCLUSION_SCHEMES: FinancialInclusionScheme[] = [
   scheme("jeevan-pramaan", "senior-citizen", "Jeevan Pramaan", "Digital Life Certificate", "Official digital life certificate service for pensioners.", "Pensioners who need to submit life certificates.", "Generate and manage digital life certificate services.", "https://jeevanpramaan.gov.in", ["life certificate"]),
   scheme("pensioners-portal", "senior-citizen", "Pensioners' Portal", "Pension Services", "Official Department of Pension and Pensioners' Welfare portal.", "Government pensioners and family pensioners seeking official services.", "Access pensioner services, grievances, and official pension information.", "https://pensionersportal.gov.in", ["pensioner"]),
   scheme("ayushman-bharat", "senior-citizen", "Ayushman Bharat PM-JAY", "Health Support", "Official beneficiary portal for PM-JAY health coverage services.", "Eligible beneficiaries as per PM-JAY rules.", "Check eligibility and access official health benefit services.", "https://beneficiary.nha.gov.in", ["health"]),
+  scheme("reverse-mortgage-awareness", "senior-citizen", "Reverse Mortgage Awareness", "Elderly Financial Support", "Official RBI public awareness route for safe banking and regulated financial products.", "Senior citizens exploring regulated bank-linked financial products.", "Use official regulator information before considering reverse mortgage or similar products.", "https://rbi.org.in", ["reverse mortgage", "rbi"], true, undefined, "Check terms only with regulated banks and official RBI or bank sources."),
 
   scheme("jan-dhan-yojana", "others", "Jan Dhan Yojana", "Financial Inclusion", "Official PMJDY portal for basic banking access.", "Eligible citizens seeking basic banking access.", "Information on basic savings accounts, RuPay card, insurance, and inclusion services.", "https://pmjdy.gov.in", ["pmjdy"]),
   scheme("digilocker", "others", "DigiLocker", "Digital Documents", "Official Digital India document wallet.", "Citizens needing issued digital documents and certificates.", "Store, access, and share official digital documents securely.", "https://www.digilocker.gov.in", ["documents"]),
@@ -175,6 +264,10 @@ export const FINANCIAL_INCLUSION_SCHEMES: FinancialInclusionScheme[] = [
   scheme("india-gov", "others", "National Portal of India", "Citizen Services", "Official national portal for government information and services.", "Citizens seeking official government information and service links.", "Access official central and state government service information.", "https://www.india.gov.in", ["citizen"]),
   scheme("abha", "others", "ABHA Health Account", "Digital Health", "Official Ayushman Bharat Digital Mission ABHA service.", "Citizens who want a digital health account as per ABDM rules.", "Create or manage official digital health identity services.", "https://abha.abdm.gov.in", ["health id"]),
   scheme("sanchar-saathi", "others", "Sanchar Saathi", "Telecom Safety", "Official citizen-centric telecom safety portal.", "Citizens checking mobile connections or reporting lost/stolen devices.", "Access official telecom safety and mobile connection services.", "https://sancharsaathi.gov.in", ["telecom"]),
+  scheme("maadhaar", "others", "mAadhaar", "Identity Services", "Official UIDAI mobile Aadhaar service information.", "Residents using official Aadhaar mobile services.", "Access official mobile Aadhaar service information and links.", "https://uidai.gov.in", ["aadhaar", "mobile"]),
+  scheme("instant-epan", "others", "Instant e-PAN", "Identity & Documents", "Official Income Tax e-Filing service for instant e-PAN.", "Eligible individuals with Aadhaar and linked mobile as per Income Tax portal rules.", "Generate or download e-PAN through the official e-Filing portal.", "https://www.incometax.gov.in/iec/foportal/help/all-topics/e-filing-services/instant-e-pan/instant-UM", ["pan", "epan"]),
+  scheme("csc-services", "others", "Common Service Centres", "Government Services", "Official CSC portal for assisted digital government and citizen services.", "Citizens using CSC access points and eligible village-level entrepreneurs.", "Find official CSC service and access information.", "https://www.csc.gov.in", ["csc", "digital services"]),
+  scheme("digital-india", "others", "Digital India", "Digital Services", "Official Digital India programme portal.", "Citizens and institutions using official digital governance initiatives.", "Discover official Digital India services and program information.", "https://www.digitalindia.gov.in", ["digital india"]),
 ];
 
 export function getSchemesByCategory(categoryId: FinancialInclusionCategoryId) {
