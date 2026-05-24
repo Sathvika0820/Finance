@@ -298,6 +298,32 @@ const SERVICE_ICONS: Record<string, any> = {
   Award
 };
 
+const SERVICE_SUBCATEGORY_LABELS: Record<string, string> = {
+  "india-post": "Postal Services",
+  "speed-post-tracking": "Postal Services",
+  "ippb": "Postal Banking",
+  "post-office-savings-account": "Postal Savings Schemes",
+  "recurring-deposit": "Postal Savings Schemes",
+  "monthly-income-scheme": "Postal Savings Schemes",
+  "senior-citizen-savings-scheme": "Postal Savings Schemes",
+  "public-provident-fund": "Postal Savings Schemes",
+  "sukanya-samriddhi-yojana": "Postal Savings Schemes",
+  "national-savings-certificate": "Postal Savings Schemes",
+  "kisan-vikas-patra": "Postal Savings Schemes",
+  "postal-life-insurance": "Postal Insurance",
+  "rural-postal-life-insurance": "Postal Insurance",
+};
+
+const SERVICE_SUBCATEGORY_ORDER: Record<ServiceCategory, string[]> = {
+  post_office: [
+    "Postal Services",
+    "Postal Banking",
+    "Postal Savings Schemes",
+    "Postal Insurance",
+  ],
+  insurance: ["Insurance Providers"],
+};
+
 const LOCAL_STRINGS: Record<string, Record<string, string>> = {
   english: {
     postOfficeInsurance: "Post Office & Insurance",
@@ -390,7 +416,7 @@ function ServiceCard({ service, isFav, onToggleFav, onOpen, lang }: ServiceCardP
   const Icon = SERVICE_ICONS[service.iconName] || Mail;
   const serviceName = getServiceName(service, lang);
   const serviceDescription = getServiceDescription(service, lang);
-  const serviceLogoSrc = service.logoDomain ? logoUrl(service.logoDomain) : "";
+  const serviceLogoSrc = service.logo ? service.logo : (service.logoDomain ? logoUrl(service.logoDomain) : "");
   const officialItem = {
     name: serviceName,
     officialWebsite: service.officialWebsite,
@@ -408,11 +434,11 @@ function ServiceCard({ service, isFav, onToggleFav, onOpen, lang }: ServiceCardP
         }
       }}
       aria-label={`Open ${serviceName}`}
-      className={`${SURFACE_CARD_INTERACTIVE} p-4 flex items-center justify-between gap-3 relative group min-w-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring/30`}
+      className={`${SURFACE_CARD_INTERACTIVE} p-2 sm:p-2.5 flex items-center justify-between gap-2 relative group min-w-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring/30`}
     >
-      <div className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer focus:outline-none">
+      <div className="flex items-center gap-2 flex-1 min-w-0 text-left cursor-pointer focus:outline-none">
         {!logoErrored && serviceLogoSrc ? (
-          <div className="w-11 h-11 rounded-full bg-white shadow-soft shrink-0 overflow-hidden flex items-center justify-center border border-border/60 p-1.5 transition-transform group-hover:scale-105">
+          <div className="w-8 h-8 rounded-full bg-white shadow-soft shrink-0 overflow-hidden flex items-center justify-center border border-border/60 p-1.5 transition-transform group-hover:scale-105">
             <img
               src={serviceLogoSrc}
               alt={`${serviceName} logo`}
@@ -422,29 +448,29 @@ function ServiceCard({ service, isFav, onToggleFav, onOpen, lang }: ServiceCardP
             />
           </div>
         ) : (
-          <div className="w-11 h-11 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-soft shrink-0 transition-transform group-hover:scale-105">
-            <Icon className="w-5 h-5 stroke-[2.5]" />
+          <div className="w-8 h-8 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-soft shrink-0 transition-transform group-hover:scale-105">
+            <Icon className="w-3.5 h-3.5 stroke-[2.5]" />
           </div>
         )}
 
         <div className="min-w-0 flex-1 pl-1">
-          <p className="font-bold text-[13px] text-foreground leading-snug group-hover:text-slate-950 transition-colors">
+          <p className="font-bold text-[10px] sm:text-[11px] text-foreground leading-snug group-hover:text-slate-950 transition-colors">
             {serviceName}
           </p>
-          <p className="text-[11px] font-medium text-muted-foreground mt-0.5 leading-snug line-clamp-2">
+          <p className="text-[8px] sm:text-[9px] font-medium text-muted-foreground mt-0.5 leading-snug line-clamp-2">
             {serviceDescription}
           </p>
         </div>
       </div>
 
-      <div className="flex items-center gap-0.5 shrink-0">
+      <div className="flex items-center gap-1 shrink-0">
         <button
           onClick={(e) => {
             e.stopPropagation();
             e.preventDefault();
             onToggleFav();
           }}
-          className="p-1.5 rounded-full hover:bg-rose-50/80 transition-colors focus:outline-none"
+          className="p-0.5 rounded-full hover:bg-rose-50/80 transition-colors focus:outline-none"
           aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
         >
           <Heart className={`w-4 h-4 ${isFav ? "fill-red-500 text-red-500" : "text-muted-foreground/30 hover:text-red-400"}`} />
@@ -453,7 +479,7 @@ function ServiceCard({ service, isFav, onToggleFav, onOpen, lang }: ServiceCardP
         <OfficialLinkButton
           item={officialItem}
           compact
-          className="px-2 py-1.5"
+          iconOnly={isPostOfficeService(service) || isInsuranceService(service)}
           onVerifiedClick={(event) => {
             event.stopPropagation();
           }}
@@ -525,11 +551,31 @@ function ServiceGroup({
     [services, query, lang],
   );
 
+  const groupedServices = useMemo(() => {
+    const groups = new Map<string, FinanceService[]>();
+    filteredServices.forEach((service) => {
+      const label = SERVICE_SUBCATEGORY_LABELS[service.id] ||
+        (service.category === "post_office" ? "Other Post Office Services" : "Insurance Providers");
+      if (!groups.has(label)) groups.set(label, []);
+      groups.get(label)!.push(service);
+    });
+
+    const order = SERVICE_SUBCATEGORY_ORDER[category] || [];
+    return Array.from(groups.entries()).sort(([a], [b]) => {
+      const indexA = order.indexOf(a);
+      const indexB = order.indexOf(b);
+      if (indexA === -1 && indexB === -1) return a.localeCompare(b);
+      if (indexA === -1) return 1;
+      if (indexB === -1) return -1;
+      return indexA - indexB;
+    });
+  }, [filteredServices, category]);
+
   return (
     <div className={`${SURFACE_CARD} overflow-hidden`}>
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between gap-3 p-4 text-left active:bg-muted/30 transition-colors"
+        className="w-full flex items-center justify-between gap-3 p-2.5 sm:p-3 text-left active:bg-muted/30 transition-colors"
         aria-expanded={isOpen}
         aria-controls={`${category}-services-panel`}
       >
@@ -556,7 +602,7 @@ function ServiceGroup({
             exit={{ height: 0 }}
             className="overflow-hidden border-t border-border/50"
           >
-            <div className="p-3 space-y-3 bg-background/20">
+            <div className="p-2 bg-background/20 space-y-2">
               <div className="relative">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground stroke-[2.5]" />
                 <input
@@ -564,20 +610,29 @@ function ServiceGroup({
                   value={query}
                   onChange={(e) => onQueryChange(e.target.value)}
                   placeholder={placeholder}
-                  className={`w-full pl-10 pr-4 py-2.5 text-[13px] font-medium ${CONTROL_INPUT} placeholder:font-normal`}
+                  className={`w-full pl-10 pr-4 py-2 text-[13px] font-medium ${CONTROL_INPUT} placeholder:font-normal`}
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-3.5">
-                {filteredServices.map((service) => (
-                  <ServiceCard
-                    key={service.id}
-                    service={service}
-                    isFav={service.isFavorite || isServiceFav(service.id)}
-                    onToggleFav={() => toggleServiceFav(service.id)}
-                    onOpen={(e) => onServiceSelect(service, e)}
-                    lang={lang}
-                  />
+              <div className="space-y-2">
+                {groupedServices.map(([subCategory, servicesInGroup]) => (
+                  <div key={subCategory} className="space-y-1.5">
+                    <div className="px-2 py-1 rounded-2xl bg-slate-100 text-[10px] font-semibold text-slate-700">
+                      {subCategory}
+                    </div>
+                    <div className="grid grid-cols-1 gap-1.5">
+                      {servicesInGroup.map((service) => (
+                        <ServiceCard
+                          key={service.id}
+                          service={service}
+                          isFav={service.isFavorite || isServiceFav(service.id)}
+                          onToggleFav={() => toggleServiceFav(service.id)}
+                          onOpen={(e) => onServiceSelect(service, e)}
+                          lang={lang}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
 
@@ -621,7 +676,7 @@ function ServiceDetailModal({ service, lang, onClose }: { service: FinanceServic
   const serviceDescription = getServiceDescription(service, lang);
   const Icon = SERVICE_ICONS[service.iconName] || Mail;
   const categoryLabel = isPostOfficeService(service) ? strings.categoryPostOffice : strings.categoryInsurance;
-  const serviceLogoSrc = service.logoDomain ? logoUrl(service.logoDomain) : "";
+  const serviceLogoSrc = service.logo ? service.logo : (service.logoDomain ? logoUrl(service.logoDomain) : "");
 
   return (
     <AnimatePresence>
@@ -816,50 +871,34 @@ function Dashboard() {
 
   return (
     <div className="space-y-8 pb-6 pt-2">
-      <header className={`${SURFACE_CARD} -mt-2 px-4 py-5 sm:p-6`}>
-        <div className="flex items-center justify-end gap-2">
-            <select
-              value={lang}
-              onChange={(event) => setLang(event.target.value)}
-              className="max-w-[118px] rounded-xl border border-border/70 bg-white/85 px-2 py-1.5 text-[11px] font-bold text-foreground outline-none focus:ring-2 focus:ring-ring/30"
-              aria-label={t("language")}
-              dir={lang === "urdu" ? "rtl" : "ltr"}
-            >
-              {LANGUAGE_OPTIONS.map((option) => (
-                <option key={option.id} value={option.id} dir={option.dir || "ltr"}>
-                  {option.nativeLabel}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={() => setIsSettingsOpen(true)}
-              className="tap-target rounded-xl p-2 -mr-1 text-muted-foreground hover:bg-slate-100 hover:text-foreground transition-colors"
-              aria-label={t("settings")}
-            >
-              <Settings className="w-5 h-5 stroke-[2.5]" />
-            </button>
+      <header className={`${SURFACE_CARD} -mt-2 px-4 py-5 sm:p-6 relative`}>
+        <div className="absolute right-4 top-4 h-16 sm:h-20 w-auto opacity-95">
+          <CrestLogo className="h-full w-auto" />
+        </div>
+        <div className="absolute right-4 top-20 sm:top-24 w-auto">
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="tap-target rounded-2xl p-1.5 text-muted-foreground hover:text-foreground transition-all"
+            aria-label={t("settings")}
+          >
+            <Settings className="w-5 h-5 stroke-[2.5]" />
+          </button>
         </div>
 
-        <div className="mx-auto flex w-full max-w-[38rem] flex-col items-center px-1 text-center sm:px-3">
-          <p className="text-[12px] uppercase tracking-[0.08em] text-muted-foreground font-bold leading-tight">{t("welcomeTo")}</p>
-          <h1 className="text-[33px] font-bold text-foreground leading-none mt-2">{t("bankHub")}</h1>
-          <p className="mx-auto mt-3 w-full max-w-[22.5rem] px-1 text-center text-[16px] sm:max-w-[34rem] sm:text-[17px] font-bold leading-[1.32] sm:leading-[1.35] tracking-0 text-muted-foreground [text-wrap:balance] [word-break:keep-all] [overflow-wrap:normal] hyphens-none">
-            {t("tagline")}
-          </p>
-          <div className="mt-4 h-16 sm:h-20 w-auto opacity-95 flex items-center justify-center">
-             <CrestLogo className="h-full w-auto" />
+        <div className="flex flex-col gap-6 pr-0 sm:pr-28">
+          <div className="min-w-0">
+            <p className="text-[12px] uppercase tracking-[0.08em] text-muted-foreground font-bold leading-tight">
+              {t("welcomeTo")}
+            </p>
+            <h1 className="text-[33px] font-bold text-foreground leading-none mt-2">
+              {t("bankHub")}
+            </h1>
+            <p className="mt-3 max-w-[34rem] text-[16px] sm:text-[17px] font-bold leading-[1.32] text-muted-foreground [text-wrap:balance] [word-break:keep-all] [overflow-wrap:normal] hyphens-none">
+              {t("tagline")}
+            </p>
           </div>
         </div>
       </header>
-
-      <section className="rounded-[18px] border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-[12px] font-semibold text-emerald-950 shadow-soft">
-        <div className="flex items-start gap-2">
-          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
-          <p className="leading-relaxed">
-            We redirect only to official websites. Never share OTP, PIN, CVV, card numbers, or banking passwords. Call 1930 immediately for online financial fraud.
-          </p>
-        </div>
-      </section>
 
       {/* Selected Banks */}
       <section>
