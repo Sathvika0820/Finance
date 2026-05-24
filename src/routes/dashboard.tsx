@@ -884,7 +884,7 @@ function Dashboard() {
             <p className="text-[12px] uppercase tracking-[0.08em] text-muted-foreground font-bold leading-tight">
               {t("welcomeTo")}
             </p>
-            <h1 className="text-[33px] font-bold text-foreground leading-none mt-2">
+            <h1 className="text-[28px] font-bold text-foreground leading-none mt-2">
               {t("bankHub")}
             </h1>
             <p className="mt-3 max-w-[34rem] text-[16px] sm:text-[17px] font-bold leading-[1.32] text-muted-foreground [text-wrap:balance] [word-break:keep-all] [overflow-wrap:normal] hyphens-none">

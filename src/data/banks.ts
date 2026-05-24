@@ -263,6 +263,7 @@ export function logoUrl(domain: string): string {
     "jiopaymentsbank.com": "jio_payments.png",
     "nsdlbank.com": "NSDL Payments Bank.png",
     "paytmbank.com": "Paytm.png",
+    "indiapost.gov.in": "India Post.png",
     "apgvbank.in": "Andhra Pradesh Grameena Vikas Bank.png",
     "karnatakagraminbank.com": "Karnataka Gramin Bank.png",
     "keralagbank.com": "Kerala Gramin Bank.png",
