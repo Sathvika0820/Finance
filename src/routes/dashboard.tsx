@@ -426,6 +426,10 @@ function ServiceCard({ service, isFav, onToggleFav, onOpen, lang }: ServiceCardP
     verified: service.verified,
   };
 
+  const isCompactService = isPostOfficeService(service) || isInsuranceService(service);
+  const nameClass = `font-bold ${isCompactService ? 'text-[9px] sm:text-[10px]' : 'text-[10px] sm:text-[11px]'} text-foreground leading-snug group-hover:text-slate-950 transition-colors`;
+  const descClass = `${isCompactService ? 'text-[7px] sm:text-[8px]' : 'text-[8px] sm:text-[9px]'} font-medium text-muted-foreground mt-0.5 leading-snug line-clamp-2`;
+
   return (
     <div
       role="button"
@@ -457,10 +461,10 @@ function ServiceCard({ service, isFav, onToggleFav, onOpen, lang }: ServiceCardP
         )}
 
         <div className="min-w-0 flex-1 pl-1">
-          <p className="font-bold text-[10px] sm:text-[11px] text-foreground leading-snug group-hover:text-slate-950 transition-colors">
+          <p className={nameClass}>
             {serviceName}
           </p>
-          <p className="text-[8px] sm:text-[9px] font-medium text-muted-foreground mt-0.5 leading-snug line-clamp-2">
+          <p className={descClass}>
             {serviceDescription}
           </p>
         </div>
