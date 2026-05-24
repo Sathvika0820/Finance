@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, CheckCircle2, GraduationCap, Landmark, SearchCheck, Users, UserRound, Wheat, X } from "lucide-react";
+import { ArrowLeft, GraduationCap, Info, Landmark, SearchCheck, Users, UserRound, Wheat, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { OfficialLinkButton } from "@/components/OfficialLinkButton";
 import { SearchInput } from "@/components/SearchInput";
@@ -29,45 +29,90 @@ const categoryIconMap: Record<FinancialInclusionCategoryId, typeof Users> = {
   others: SearchCheck,
 };
 
-function SchemeCard({ scheme, t }: { scheme: FinancialInclusionScheme; t: (key: string) => string }) {
+function SchemeCard({
+  scheme,
+  t,
+  onInfo,
+}: {
+  scheme: FinancialInclusionScheme;
+  t: (key: string) => string;
+  onInfo: (scheme: FinancialInclusionScheme) => void;
+}) {
   const officialEntry = getOfficialLinkEntry("governmentSchemes", scheme.id);
   return (
-    <article className="rounded-[18px] border border-border/60 bg-white/95 p-4 shadow-soft">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-600">{scheme.type}</p>
-          <h4 className="mt-1 text-[15px] font-bold leading-tight text-foreground">{scheme.name}</h4>
-          <p className="mt-2 text-[12px] font-medium leading-relaxed text-muted-foreground">{scheme.description}</p>
-        </div>
-      </div>
-      <div className="mt-3 grid gap-2">
-        <div className="rounded-[14px] bg-muted/40 p-3">
-          <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-foreground">
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-            {t("eligibility")}
-          </p>
-          <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{scheme.eligibility}</p>
-        </div>
-        <div className="rounded-[14px] bg-slate-50 p-3 border border-slate-100">
-          <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-700">
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            {t("benefits")}
-          </p>
-          <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{scheme.benefits}</p>
-        </div>
-      </div>
-      <div className="mt-3 flex justify-end">
+    <article className="flex items-center justify-between gap-3 rounded-[16px] border border-border/60 bg-white/95 px-3 py-2.5 shadow-sm">
+      <h4 className="min-w-0 flex-1 text-[13px] font-bold leading-snug text-foreground">
+        {scheme.name}
+      </h4>
+      <div className="flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onInfo(scheme)}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-slate-50 text-slate-700 transition-colors hover:bg-slate-100"
+          aria-label={`View ${scheme.name} information`}
+        >
+          <Info className="h-4 w-4" />
+        </button>
         <OfficialLinkButton
           item={{
             name: scheme.name,
             officialWebsite: officialEntry?.officialLink || "",
             verified: Boolean(officialEntry?.verified),
           }}
-          label={t("knowMore")}
+          label="Open"
           unverifiedLabel={t("officialLinkNotVerifiedYet")}
+          className="h-9 px-3"
         />
       </div>
     </article>
+  );
+}
+
+function SchemeInfoModal({
+  scheme,
+  t,
+  onClose,
+}: {
+  scheme: FinancialInclusionScheme | null;
+  t: (key: string) => string;
+  onClose: () => void;
+}) {
+  if (!scheme) return null;
+
+  return (
+    <div className="fixed inset-0 z-[130] flex items-end justify-center bg-black/35 px-3 py-4 backdrop-blur-sm sm:items-center">
+      <div className="w-full max-w-md rounded-t-[24px] border border-border/70 bg-white p-5 shadow-2xl sm:rounded-[24px]">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase text-slate-500">{scheme.type}</p>
+            <h3 className="mt-1 text-[17px] font-bold leading-tight text-foreground">{scheme.name}</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-label={t("close")}
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="mt-4 space-y-3">
+          <section className="rounded-[16px] bg-slate-50 p-3">
+            <h4 className="text-[11px] font-bold uppercase text-slate-600">Information</h4>
+            <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{scheme.description}</p>
+          </section>
+          <section className="rounded-[16px] bg-slate-50 p-3">
+            <h4 className="text-[11px] font-bold uppercase text-slate-600">{t("eligibility")}</h4>
+            <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{scheme.eligibility}</p>
+          </section>
+          <section className="rounded-[16px] bg-slate-50 p-3">
+            <h4 className="text-[11px] font-bold uppercase text-slate-600">{t("benefits")}</h4>
+            <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{scheme.benefits}</p>
+          </section>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -112,6 +157,7 @@ function CategoryCard({
 export function FinancialInclusionModal({ isOpen, onClose, t, speakVoice }: FinancialInclusionModalProps) {
   const [selectedCategoryId, setSelectedCategoryId] = useState<FinancialInclusionCategoryId | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedSchemeInfo, setSelectedSchemeInfo] = useState<FinancialInclusionScheme | null>(null);
 
   const selectedCategory = useMemo(
     () => FINANCIAL_INCLUSION_CATEGORIES.find((category) => category.id === selectedCategoryId),
@@ -225,7 +271,14 @@ export function FinancialInclusionModal({ isOpen, onClose, t, speakVoice }: Fina
 
                 <div className="space-y-3">
                   {selectedSchemes.length > 0 ? (
-                    selectedSchemes.map((scheme) => <SchemeCard key={scheme.id} scheme={scheme} t={t} />)
+                    selectedSchemes.map((scheme) => (
+                      <SchemeCard
+                        key={scheme.id}
+                        scheme={scheme}
+                        t={t}
+                        onInfo={setSelectedSchemeInfo}
+                      />
+                    ))
                   ) : (
                     <div className="rounded-[18px] border border-amber-200 bg-amber-50 p-4 text-[13px] font-bold text-amber-800">
                       {t("officialLinkNotVerifiedYet")}
@@ -262,6 +315,11 @@ export function FinancialInclusionModal({ isOpen, onClose, t, speakVoice }: Fina
             </p>
           </div>
         </motion.div>
+        <SchemeInfoModal
+          scheme={selectedSchemeInfo}
+          t={t}
+          onClose={() => setSelectedSchemeInfo(null)}
+        />
       </div>
     </AnimatePresence>
   );
