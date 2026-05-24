@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { memo, useMemo, useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, ChevronDown, Search, ExternalLink, ArrowDownUp, Settings, Landmark, Building2, Wallet, CreditCard, Home, Users, X, Mail, PiggyBank, Globe, MapPin, Shield, Activity, HeartHandshake, Award } from "lucide-react";
+import { Heart, ChevronDown, ExternalLink, ArrowDownUp, Settings, Landmark, Building2, Wallet, CreditCard, Home, Users, X, Mail, PiggyBank, Globe, MapPin, Shield, Activity, HeartHandshake, Award } from "lucide-react";
 import { BANKS, CATEGORIES, getBankDisplayName, Bank, logoUrl, bankMatchesSearch } from "@/data/banks";
 import { SERVICES_DATA, FinanceService, ServiceCategory, getServiceDescription, getServiceName } from "@/data/services";
 import { openServiceAction } from "@/lib/serviceRedirect";
@@ -18,6 +18,7 @@ import { FinancialInclusionModal } from "@/components/FinancialInclusionModal";
 import { CompareBankingModal } from "@/components/CompareBankingModal";
 import { ShieldCheck, ArrowLeftRight } from "lucide-react";
 import { OfficialLinkButton, UNVERIFIED_LABEL } from "@/components/OfficialLinkButton";
+import { SearchInput } from "@/components/SearchInput";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -175,15 +176,12 @@ const AddBankSearchPanel = memo(function AddBankSearchPanel({
   return (
     <div className="p-3 flex flex-col h-[60vh] bg-background/20">
       <div className="relative mb-3 shrink-0">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground stroke-[2.5]" />
-        <input
-          type="search"
+        <SearchInput
           placeholder={t("searchBanks")}
           value={query}
-          onChange={(event) => setQuery(event.currentTarget.value)}
-          className={`w-full pl-10 pr-4 py-2.5 text-[13px] font-medium ${CONTROL_INPUT} placeholder:font-normal`}
-          autoComplete="off"
-          spellCheck={false}
+          onValueChange={setQuery}
+          iconClassName="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground stroke-[2.5] pointer-events-none"
+          inputClassName={`w-full pl-10 pr-4 py-2.5 text-[13px] font-medium ${CONTROL_INPUT} placeholder:font-normal`}
         />
       </div>
 
@@ -604,13 +602,12 @@ function ServiceGroup({
           >
             <div className="p-2 bg-background/20 space-y-2">
               <div className="relative">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground stroke-[2.5]" />
-                <input
-                  type="text"
+                <SearchInput
                   value={query}
-                  onChange={(e) => onQueryChange(e.target.value)}
+                  onValueChange={onQueryChange}
                   placeholder={placeholder}
-                  className={`w-full pl-10 pr-4 py-2 text-[13px] font-medium ${CONTROL_INPUT} placeholder:font-normal`}
+                  iconClassName="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground stroke-[2.5] pointer-events-none"
+                  inputClassName={`w-full pl-10 pr-4 py-2 text-[13px] font-medium ${CONTROL_INPUT} placeholder:font-normal`}
                 />
               </div>
 
@@ -1265,16 +1262,15 @@ function Dashboard() {
                 <div>
                   <label className="text-[12px] font-bold text-foreground">{t("bankSearchSelect")}</label>
                   <div className="relative mt-2">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground stroke-[2.5]" />
-                    <input
+                    <SearchInput
                       value={nearbyBankSearch}
-                      onChange={(event) => {
-                        setNearbyBankSearch(event.target.value);
+                      onValueChange={(value) => {
+                        setNearbyBankSearch(value);
                         setNearbyBankId("");
                       }}
                       placeholder={t("typeBankNameExample")}
-                      className={`w-full pl-10 pr-4 py-3 text-[13px] font-semibold ${CONTROL_INPUT} placeholder:font-normal`}
-                      autoComplete="off"
+                      iconClassName="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground stroke-[2.5] pointer-events-none"
+                      inputClassName={`w-full pl-10 pr-4 py-3 text-[13px] font-semibold ${CONTROL_INPUT} placeholder:font-normal`}
                     />
                   </div>
                 </div>

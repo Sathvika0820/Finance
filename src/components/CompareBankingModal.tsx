@@ -2,7 +2,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
   ArrowLeftRight,
-  Search,
   SlidersHorizontal,
   Coins,
   Home,
@@ -23,6 +22,7 @@ import { BANKS, Bank, bankMatchesSearch, getBankDisplayName } from "@/data/banks
 import { BankLogo } from "@/components/BankLogo";
 import { OfficialLinkButton } from "@/components/OfficialLinkButton";
 import { LoanInfoModal } from "@/components/LoanInfoModal";
+import { SearchInput } from "@/components/SearchInput";
 
 interface CompareBankingModalProps {
   isOpen: boolean;
@@ -250,24 +250,14 @@ export function CompareBankingModal({
               </div>
 
               {/* Search bar */}
-              <div className="relative">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder={t("searchBankByName")}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 fintech-input rounded-2xl text-xs font-semibold focus:outline-none transition-all placeholder:text-muted-foreground/60 text-foreground"
-                />
-                {searchQuery.length > 0 && (
-                  <button
-                    onClick={() => setSearchQuery("")}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
+              <SearchInput
+                placeholder={t("searchBankByName")}
+                value={searchQuery}
+                onValueChange={setSearchQuery}
+                clearable
+                iconClassName="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none"
+                inputClassName="w-full pl-10 pr-10 py-2.5 fintech-input rounded-2xl text-xs font-semibold focus:outline-none transition-all placeholder:text-muted-foreground/60 text-foreground"
+              />
 
               {/* Action Trigger */}
               <button

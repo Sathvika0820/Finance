@@ -1,7 +1,8 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, CheckCircle2, GraduationCap, Landmark, Search, SearchCheck, Users, UserRound, Wheat, X } from "lucide-react";
+import { ArrowLeft, CheckCircle2, GraduationCap, Landmark, SearchCheck, Users, UserRound, Wheat, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { OfficialLinkButton } from "@/components/OfficialLinkButton";
+import { SearchInput } from "@/components/SearchInput";
 import { getOfficialLinkEntry } from "@/data/officialLinks";
 import {
   FINANCIAL_INCLUSION_CATEGORIES,
@@ -213,15 +214,14 @@ export function FinancialInclusionModal({ isOpen, onClose, t, speakVoice }: Fina
                   </p>
                 </section>
 
-                <label className="flex items-center gap-2 rounded-[16px] border border-border/70 bg-white px-3 py-2 shadow-sm focus-within:ring-2 focus-within:ring-slate-200">
-                  <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <input
-                    value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                    placeholder={t("searchSchemesInCategory")}
-                    className="min-w-0 flex-1 bg-transparent text-[13px] font-semibold text-foreground outline-none placeholder:text-muted-foreground"
-                  />
-                </label>
+                <SearchInput
+                  value={searchQuery}
+                  onValueChange={setSearchQuery}
+                  placeholder={t("searchSchemesInCategory")}
+                  containerClassName="relative rounded-[16px] border border-border/70 bg-white px-3 py-2 shadow-sm focus-within:ring-2 focus-within:ring-slate-200"
+                  iconClassName="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 shrink-0 text-muted-foreground pointer-events-none"
+                  inputClassName="min-w-0 w-full bg-transparent pl-6 text-[13px] font-semibold text-foreground outline-none placeholder:text-muted-foreground"
+                />
 
                 <div className="space-y-3">
                   {selectedSchemes.length > 0 ? (
