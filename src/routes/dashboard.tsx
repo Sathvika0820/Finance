@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { memo, useMemo, useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, ChevronDown, ExternalLink, ArrowDownUp, Settings, Landmark, Building2, Wallet, CreditCard, Home, Users, X, Mail, PiggyBank, Globe, MapPin, Shield, Activity, HeartHandshake, Award } from "lucide-react";
+import { Heart, ChevronDown, Search, ExternalLink, ArrowDownUp, Settings, Landmark, Building2, Wallet, CreditCard, Home, Users, X, Mail, PiggyBank, Globe, MapPin, Shield, Activity, HeartHandshake, Award } from "lucide-react";
 import { BANKS, CATEGORIES, getBankDisplayName, Bank, logoUrl, bankMatchesSearch } from "@/data/banks";
 import { SERVICES_DATA, FinanceService, ServiceCategory, getServiceDescription, getServiceName } from "@/data/services";
 import { openServiceAction } from "@/lib/serviceRedirect";
@@ -164,10 +164,6 @@ const AddBankSearchPanel = memo(function AddBankSearchPanel({
 }: AddBankSearchPanelProps) {
   const [query, setQuery] = useState("");
 
-  const handleQueryChange = useCallback((value: string) => {
-    setQuery(value);
-  }, []);
-
   const results = useMemo(() => {
     const trimmedQuery = query.trim();
     if (!trimmedQuery) return banks;
@@ -180,12 +176,17 @@ const AddBankSearchPanel = memo(function AddBankSearchPanel({
   return (
     <div className="p-3 flex flex-col h-[60vh] bg-background/20">
       <div className="relative mb-3 shrink-0">
-        <SearchInput
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground stroke-[2.5] pointer-events-none" />
+        <input
+          type="text"
           placeholder={t("searchBanks")}
-          value={query}
-          onValueChange={handleQueryChange}
-          iconClassName="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground stroke-[2.5] pointer-events-none"
-          inputClassName={`w-full pl-10 pr-4 py-2.5 text-[13px] font-medium ${CONTROL_INPUT} placeholder:font-normal`}
+          defaultValue={query}
+          onInput={(event) => setQuery(event.currentTarget.value)}
+          className={`w-full pl-10 pr-4 py-2.5 text-[13px] font-medium ${CONTROL_INPUT} placeholder:font-normal`}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          inputMode="search"
         />
       </div>
 
