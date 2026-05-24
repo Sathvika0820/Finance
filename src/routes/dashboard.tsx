@@ -164,6 +164,10 @@ const AddBankSearchPanel = memo(function AddBankSearchPanel({
 }: AddBankSearchPanelProps) {
   const [query, setQuery] = useState("");
 
+  const handleQueryChange = useCallback((value: string) => {
+    setQuery(value);
+  }, []);
+
   const results = useMemo(() => {
     const trimmedQuery = query.trim();
     if (!trimmedQuery) return banks;
@@ -179,7 +183,7 @@ const AddBankSearchPanel = memo(function AddBankSearchPanel({
         <SearchInput
           placeholder={t("searchBanks")}
           value={query}
-          onValueChange={setQuery}
+          onValueChange={handleQueryChange}
           iconClassName="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground stroke-[2.5] pointer-events-none"
           inputClassName={`w-full pl-10 pr-4 py-2.5 text-[13px] font-medium ${CONTROL_INPUT} placeholder:font-normal`}
         />

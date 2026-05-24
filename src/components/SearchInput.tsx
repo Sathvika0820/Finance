@@ -26,15 +26,20 @@ export function SearchInput({
 }: SearchInputProps) {
   const [draft, setDraft] = useState(value);
   const isComposingRef = useRef(false);
+  const previousValueRef = useRef(value);
 
   useEffect(() => {
-    if (!isComposingRef.current && value !== draft) {
+    if (value === previousValueRef.current) return;
+
+    previousValueRef.current = value;
+    if (!isComposingRef.current) {
       setDraft(value);
     }
-  }, [draft, value]);
+  }, [value]);
 
   const commitValue = (nextValue: string) => {
     setDraft(nextValue);
+    previousValueRef.current = nextValue;
     if (!isComposingRef.current) {
       onValueChange(nextValue);
     }
@@ -55,6 +60,7 @@ export function SearchInput({
           isComposingRef.current = false;
           const nextValue = event.currentTarget.value;
           setDraft(nextValue);
+          previousValueRef.current = nextValue;
           onValueChange(nextValue);
         }}
         autoComplete={autoComplete}
@@ -68,6 +74,7 @@ export function SearchInput({
           type="button"
           onClick={() => {
             setDraft("");
+            previousValueRef.current = "";
             onValueChange("");
           }}
           className={clearButtonClassName}
