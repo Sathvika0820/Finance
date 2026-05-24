@@ -24,19 +24,15 @@ export function SearchInput({
   spellCheck = false,
   ...inputProps
 }: SearchInputProps) {
-  const [draft, setDraft] = useState(value);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [local, setLocal] = useState(value ?? "");
+  const composing = useRef(false);
 
   useEffect(() => {
-    const input = inputRef.current;
-    if (input && input.value !== value) {
-      input.value = value;
-      setDraft(value);
-    }
+    if (!composing.current && value !== local) setLocal(value ?? "");
   }, [value]);
 
   const commitValue = (nextValue: string) => {
-    setDraft(nextValue);
+    setLocal(nextValue);
     onValueChange(nextValue);
   };
 
@@ -45,10 +41,19 @@ export function SearchInput({
       <Search className={iconClassName} />
       <input
         {...inputProps}
-        ref={inputRef}
         type="text"
-        defaultValue={value}
-        onInput={(event) => commitValue(event.currentTarget.value)}
+        value={local}
+        onChange={(e) => {
+          const v = e.currentTarget.value;
+          setLocal(v);
+          if (!composing.current) onValueChange(v);
+        }}
+        onCompositionStart={() => (composing.current = true)}
+        onCompositionEnd={(e) => {
+          composing.current = false;
+          const v = (e.target as HTMLInputElement).value;
+          commitValue(v);
+        }}
         autoComplete={autoComplete}
         autoCorrect="off"
         spellCheck={spellCheck}
@@ -59,8 +64,7 @@ export function SearchInput({
         <button
           type="button"
           onClick={() => {
-            if (inputRef.current) inputRef.current.value = "";
-            setDraft("");
+            setLocal("");
             onValueChange("");
           }}
           className={clearButtonClassName}
