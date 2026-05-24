@@ -18,7 +18,7 @@ import { FinancialInclusionModal } from "@/components/FinancialInclusionModal";
 import { CompareBankingModal } from "@/components/CompareBankingModal";
 import { ShieldCheck, ArrowLeftRight } from "lucide-react";
 import { OfficialLinkButton, UNVERIFIED_LABEL } from "@/components/OfficialLinkButton";
-import { SearchInput } from "@/components/SearchInput";
+import { SearchBar } from "@/components/SearchBar";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -176,18 +176,7 @@ const AddBankSearchPanel = memo(function AddBankSearchPanel({
   return (
     <div className="p-3 flex flex-col h-[60vh] bg-background/20">
       <div className="relative mb-3 shrink-0">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground stroke-[2.5] pointer-events-none" />
-        <input
-          type="text"
-          placeholder={t("searchBanks")}
-          defaultValue={query}
-          onInput={(event) => setQuery(event.currentTarget.value)}
-          className={`w-full pl-10 pr-4 py-2.5 text-[13px] font-medium ${CONTROL_INPUT} placeholder:font-normal`}
-          autoComplete="off"
-          autoCorrect="off"
-          spellCheck={false}
-          inputMode="search"
-        />
+        <SearchBar value={query} onChange={setQuery} placeholder={t("searchBanks")} />
       </div>
 
       <div className="overflow-y-auto pr-1 flex-1 relative bg-white/90 rounded-xl border border-border/50 divide-y divide-border/30">
@@ -611,13 +600,7 @@ function ServiceGroup({
           >
             <div className="p-2 bg-background/20 space-y-2">
               <div className="relative">
-                <SearchInput
-                  value={query}
-                  onValueChange={onQueryChange}
-                  placeholder={placeholder}
-                  iconClassName="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground stroke-[2.5] pointer-events-none"
-                  inputClassName={`w-full pl-10 pr-4 py-2 text-[13px] font-medium ${CONTROL_INPUT} placeholder:font-normal`}
-                />
+                <SearchBar value={query} onChange={onQueryChange} placeholder={placeholder} />
               </div>
 
               <div className="grid grid-cols-1 gap-1.5">
@@ -1264,15 +1247,13 @@ function Dashboard() {
                 <div>
                   <label className="text-[12px] font-bold text-foreground">{t("bankSearchSelect")}</label>
                   <div className="relative mt-2">
-                    <SearchInput
+                    <SearchBar
                       value={nearbyBankSearch}
-                      onValueChange={(value) => {
+                      onChange={(value) => {
                         setNearbyBankSearch(value);
                         setNearbyBankId("");
                       }}
                       placeholder={t("typeBankNameExample")}
-                      iconClassName="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground stroke-[2.5] pointer-events-none"
-                      inputClassName={`w-full pl-10 pr-4 py-3 text-[13px] font-semibold ${CONTROL_INPUT} placeholder:font-normal`}
                     />
                   </div>
                 </div>
