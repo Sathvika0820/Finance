@@ -18,11 +18,10 @@ import {
 } from "lucide-react";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { getSortedLoanComparison, NormalizedLoanComparisonEntry } from "@/data/loanData";
-import { BANKS, Bank, bankMatchesSearch, getBankDisplayName } from "@/data/banks";
+import { BANKS, Bank, getBankDisplayName } from "@/data/banks";
 import { BankLogo } from "@/components/BankLogo";
 import { OfficialLinkButton } from "@/components/OfficialLinkButton";
 import { LoanInfoModal } from "@/components/LoanInfoModal";
-import { SearchInput } from "@/components/SearchInput";
 
 interface CompareBankingModalProps {
   isOpen: boolean;
@@ -58,7 +57,6 @@ export function CompareBankingModal({
   // State for selections & filters
   const [selectedLoanType, setSelectedLoanType] = useState<string>("personal_loan");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [searchQuery, setSearchQuery] = useState<string>("");
   const [comparisonResults, setComparisonResults] = useState<NormalizedLoanComparisonEntry[]>([]);
   const [isCompared, setIsCompared] = useState<boolean>(false);
   const [isComparing, setIsComparing] = useState<boolean>(false);
@@ -82,16 +80,11 @@ export function CompareBankingModal({
         if (bank.category !== selectedCategory) return false;
       }
 
-      // 3. Filter by Search Query (Bank Name)
-      if (searchQuery.trim().length > 0) {
-        if (!bankMatchesSearch(bank, searchQuery, lang, [entry.bankName])) return false;
-      }
-
       return true;
     });
 
     return rawResults;
-  }, [selectedLoanType, selectedCategory, searchQuery]);
+  }, [selectedLoanType, selectedCategory]);
 
   useEffect(() => {
     if (isCompared && !isComparing) {
@@ -248,16 +241,6 @@ export function CompareBankingModal({
                   })}
                 </div>
               </div>
-
-              {/* Search bar */}
-              <SearchInput
-                placeholder={t("searchBankByName")}
-                value={searchQuery}
-                onValueChange={setSearchQuery}
-                clearable
-                iconClassName="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none"
-                inputClassName="w-full pl-10 pr-10 py-2.5 fintech-input rounded-2xl text-xs font-semibold focus:outline-none transition-all placeholder:text-muted-foreground/60 text-foreground"
-              />
 
               {/* Action Trigger */}
               <button

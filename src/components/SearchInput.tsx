@@ -1,8 +1,9 @@
-import { InputHTMLAttributes, useEffect, useRef, useState } from "react";
+import * as React from "react";
+import { useRef, useEffect } from "react";
 import { Search, X } from "lucide-react";
 
 interface SearchInputProps
-  extends Omit<InputHTMLAttributes<HTMLInputElement>, "onChange" | "type" | "value"> {
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "type" | "value"> {
   value: string;
   onValueChange: (value: string) => void;
   containerClassName?: string;
@@ -24,50 +25,53 @@ export function SearchInput({
   spellCheck = false,
   ...inputProps
 }: SearchInputProps) {
-  const [local, setLocal] = useState(value ?? "");
   const composing = useRef(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextValue = event.currentTarget.value;
+    if (!composing.current) {
+      onValueChange(nextValue);
+    }
+  };
+
+  const handleCompositionStart = () => {
+    composing.current = true;
+  };
+
+  const handleCompositionEnd = (event: React.CompositionEvent<HTMLInputElement>) => {
+    composing.current = false;
+    onValueChange(event.currentTarget.value);
+  };
 
   useEffect(() => {
-    if (!composing.current && value !== local) setLocal(value ?? "");
+    if (!composing.current && inputRef.current && document.activeElement !== inputRef.current) {
+      inputRef.current.focus();
+    }
   }, [value]);
-
-  const commitValue = (nextValue: string) => {
-    setLocal(nextValue);
-    onValueChange(nextValue);
-  };
 
   return (
     <div className={containerClassName}>
       <Search className={iconClassName} />
       <input
+        ref={inputRef}
         {...inputProps}
         type="text"
-        value={local}
-        onChange={(e) => {
-          const v = e.currentTarget.value;
-          setLocal(v);
-          if (!composing.current) onValueChange(v);
-        }}
-        onCompositionStart={() => (composing.current = true)}
-        onCompositionEnd={(e) => {
-          composing.current = false;
-          const v = (e.target as HTMLInputElement).value;
-          commitValue(v);
-        }}
+        value={value}
+        onChange={handleChange}
+        onCompositionStart={handleCompositionStart}
+        onCompositionEnd={handleCompositionEnd}
         autoComplete={autoComplete}
         autoCorrect="off"
         spellCheck={spellCheck}
         enterKeyHint="search"
         className={inputClassName}
       />
-      {clearable && draft.length > 0 && (
+      {clearable && (
         <button
           type="button"
-          onClick={() => {
-            setLocal("");
-            onValueChange("");
-          }}
-          className={clearButtonClassName}
+          onClick={() => onValueChange("")}
+          className={`${clearButtonClassName} ${value.length === 0 ? "opacity-0 pointer-events-none" : "opacity-100"}`}
           aria-label="Clear search"
         >
           <X className="w-3.5 h-3.5" />

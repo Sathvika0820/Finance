@@ -1210,12 +1210,14 @@ function Dashboard() {
       <AnimatePresence>
         {isExplorerOpen && (
           <motion.div
+            key="nearest-branch-overlay"
             className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center bg-slate-950/45 px-3 py-4 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
             <motion.div
+              key="nearest-branch-modal"
               initial={{ opacity: 0, y: 26, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 18, scale: 0.98 }}
