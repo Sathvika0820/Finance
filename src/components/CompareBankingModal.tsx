@@ -286,16 +286,6 @@ export function CompareBankingModal({
               ) : isCompared ? (
                 comparisonResults.length > 0 ? (
                   <>
-                    {/* Disclaimer Banner at the top of results */}
-                    <div className="bg-amber-50/75 border border-amber-200/70 rounded-2xl p-3 flex items-start gap-2 shrink-0">
-                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                      <p className="text-[10px] font-semibold text-amber-900/80 leading-snug">
-                        {lang === "hindi"
-                          ? "ब्याज दरें बदल सकती हैं। आवेदन करने से पहले आधिकारिक बैंक वेबसाइट पर नवीनतम दर की पुष्टि अवश्य करें।"
-                          : "Interest rates may change. Please verify latest details on the official bank website before applying."}
-                      </p>
-                    </div>
-
                     <div className="space-y-3.5">
                       {comparisonResults.map((entry, index) => {
                         const bankEntity = BANK_BY_ID.get(entry.bankId);

@@ -268,7 +268,6 @@ const english = {
   documentsChecklist: "Documents Checklist",
   tapDocumentsReady: "Tap documents you have ready",
   importantWarnings: "Important Warnings",
-  verifyLatestDetailsBeforeApplying: "Interest rates may change. Please verify latest details on the official bank website before applying.",
   applyAtOfficialBank: "Apply at Official {bank}",
 };
 
@@ -458,7 +457,6 @@ const extendedTranslations: Partial<Record<AppLanguage, Record<string, string>>>
     documentsChecklist: "दस्तावेज़ चेकलिस्ट",
     tapDocumentsReady: "जो दस्तावेज़ तैयार हैं उन्हें टैप करें",
     importantWarnings: "महत्वपूर्ण चेतावनियां",
-    verifyLatestDetailsBeforeApplying: "ब्याज दरें बदल सकती हैं। आवेदन से पहले आधिकारिक बैंक वेबसाइट पर नवीनतम विवरण सत्यापित करें।",
     applyAtOfficialBank: "आधिकारिक {bank} पर आवेदन करें",
     "financialCategory.student.name": "छात्र",
     "financialCategory.student.description": "छात्रवृत्ति, शिक्षा ऋण, कौशल और पढ़ाई सहायता।",
@@ -551,7 +549,7 @@ const extendedTranslations: Partial<Record<AppLanguage, Record<string, string>>>
     officialLinkNotVerifiedYet: "سرکاری لنک ابھی تصدیق شدہ نہیں ہے۔", bankHubOfficialRedirectTrust: "Bank Hub صرف سرکاری سروس ویب سائٹس پر لے جاتا ہے۔ کوئی تفصیلات محفوظ نہیں ہوتیں۔",
     interestRate: "شرح سود", repaymentPeriod: "واپسی کی مدت", allAboutLoan: "قرض کی مکمل معلومات", howToApply: "درخواست کیسے دیں",
     documentsChecklist: "دستاویزات چیک لسٹ", tapDocumentsReady: "جو دستاویزات تیار ہیں انہیں ٹیپ کریں", importantWarnings: "اہم انتباہات",
-    verifyLatestDetailsBeforeApplying: "شرح سود بدل سکتی ہے۔ درخواست سے پہلے سرکاری بینک ویب سائٹ پر تازہ تفصیلات چیک کریں۔", applyAtOfficialBank: "سرکاری {bank} پر درخواست دیں",
+ applyAtOfficialBank: "سرکاری {bank} پر درخواست دیں",
     "financialCategory.student.name": "طالب علم", "financialCategory.employee.name": "ملازم", "financialCategory.farmer.name": "کسان", "financialCategory.self-employed.name": "خود روزگار", "financialCategory.women.name": "خواتین", "financialCategory.senior-citizen.name": "بزرگ شہری", "financialCategory.others.name": "دیگر",
   },
   marathi: {

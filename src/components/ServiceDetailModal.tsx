@@ -83,7 +83,7 @@ export function ServiceDetailModal({ service, lang, onClose }: ServiceDetailModa
   const serviceDescription = getServiceDescription(service, lang);
   const Icon = SERVICE_ICONS[service.iconName] || Mail;
   const categoryLabel = isPostOfficeService(service) ? t.categoryPostOffice : t.categoryInsurance;
-  const serviceLogoSrc = service.logoDomain ? logoUrl(service.logoDomain) : "";
+  const serviceLogoSrc = service.logo ? service.logo : (service.logoDomain ? logoUrl(service.logoDomain) : "");
 
   return (
     <AnimatePresence>

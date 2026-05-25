@@ -270,11 +270,6 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
 
           {/* Action Footer */}
           <div className="shrink-0 p-4 border-t border-border/40 bg-white flex flex-col gap-3 relative z-10">
-            {/* Localized Disclaimer */}
-            <p className="text-[9.5px] font-bold text-center text-muted-foreground/90 leading-tight">
-              {t("verifyLatestDetailsBeforeApplying")}
-            </p>
-
             <OfficialLinkButton
               item={{
                 name: `${entry.bankName} ${loanTypeLabel}`,

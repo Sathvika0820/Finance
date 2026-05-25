@@ -673,7 +673,7 @@ export function AiAssistant() {
       : "";
 
     return {
-      text: `Here is the verified ${loanTypeLabel.toLowerCase()} comparison available in BankHub:\n\n${rankedLines.join("\n")}\n\nLowest verified rate is shown first.\nInterest rates may change. Please verify latest details on the official bank website.${linkNote}`,
+      text: `Here is the verified ${loanTypeLabel.toLowerCase()} comparison available in BankHub:\n\n${rankedLines.join("\n")}\n\nLowest verified rate is shown first.${linkNote}`,
       actionUrl: linkedEntry?.officialReferenceLink || undefined,
       actionLabel: linkedEntry ? `Open official ${lowestVerified?.bankName || linkedEntry.bankName} loan page` : undefined
     };
