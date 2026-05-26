@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useRef, useEffect } from "react";
 import { Search, X } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
 interface SearchInputProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "type" | "value"> {
@@ -25,6 +26,7 @@ export function SearchInput({
   spellCheck = false,
   ...inputProps
 }: SearchInputProps) {
+  const { t } = useTranslation();
   const composing = useRef(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -72,7 +74,7 @@ export function SearchInput({
           type="button"
           onClick={() => onValueChange("")}
           className={`${clearButtonClassName} ${value.length === 0 ? "opacity-0 pointer-events-none" : "opacity-100"}`}
-          aria-label="Clear search"
+          aria-label={t("clearSearch")}
         >
           <X className="w-3.5 h-3.5" />
         </button>

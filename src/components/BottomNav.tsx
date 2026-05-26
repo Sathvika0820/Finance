@@ -1,18 +1,20 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { Home, Landmark, Heart } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
 const items = [
-  { to: "/dashboard", label: "Home", icon: Home },
-  { to: "/banks", label: "Banks", icon: Landmark },
-  { to: "/favorites", label: "Favorites", icon: Heart },
+  { to: "/dashboard", labelKey: "home", icon: Home },
+  { to: "/banks", labelKey: "banks", icon: Landmark },
+  { to: "/favorites", labelKey: "favorites", icon: Heart },
 ] as const;
 
 export function BottomNav() {
   const location = useLocation();
+  const { t } = useTranslation();
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 px-3 pb-3 pt-2 pointer-events-none">
       <div className="mx-auto max-w-md glass shadow-glow rounded-[22px] flex items-center justify-around py-2 pointer-events-auto border border-white/50">
-        {items.map(({ to, label, icon: Icon }) => {
+        {items.map(({ to, labelKey, icon: Icon }) => {
           const active = location.pathname === to || location.pathname.startsWith(to + "/");
           return (
             <Link
@@ -32,7 +34,7 @@ export function BottomNav() {
                   active ? "text-foreground" : "text-muted-foreground"
                 }`}
               >
-                {label}
+                {t(labelKey)}
               </span>
             </Link>
           );

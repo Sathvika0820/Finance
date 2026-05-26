@@ -10,7 +10,6 @@ import {
   Sparkles,
   Briefcase,
   Sprout,
-  HeartHandshake,
   Landmark,
   Info,
   TrendingDown,
@@ -26,22 +25,21 @@ import { LoanInfoModal } from "@/components/LoanInfoModal";
 interface CompareBankingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  t: (key: string) => string;
+  t: (key: string, values?: Record<string, string | number>) => string;
   lang: string;
   openBankSafely: (b: Bank, source?: string, event?: any) => void;
   speakVoice: (eventKey: string, payload?: any) => void;
 }
 
 const LOAN_TYPES = [
-  { id: "personal_loan", labelEn: "Personal Loan", labelHi: "व्यक्तिगत ऋण", icon: Coins },
-  { id: "home_loan", labelEn: "Home Loan", labelHi: "गृह ऋण", icon: Home },
-  { id: "education_loan", labelEn: "Education Loan", labelHi: "शिक्षा ऋण", icon: BookOpen },
-  { id: "vehicle_loan", labelEn: "Vehicle Loan", labelHi: "वाहन ऋण", icon: Car },
-  { id: "gold_loan", labelEn: "Gold Loan", labelHi: "स्वर्ण ऋण", icon: Sparkles },
-  { id: "business_loan", labelEn: "Business Loan", labelHi: "व्यापार ऋण", icon: Briefcase },
-  { id: "agriculture_loan", labelEn: "Agriculture Loan", labelHi: "कृषि ऋण", icon: Sprout },
-  { id: "women_entrepreneur_loan", labelEn: "Women Entrepreneur Loan", labelHi: "महिला उद्यमी ऋण", icon: HeartHandshake },
-  { id: "msme_loan", labelEn: "MSME Loan", labelHi: "एमएसएमई ऋण", icon: Landmark },
+  { id: "personal_loan", labelKey: "personalLoan", icon: Coins },
+  { id: "home_loan", labelKey: "homeLoan", icon: Home },
+  { id: "education_loan", labelKey: "educationLoan", icon: BookOpen },
+  { id: "vehicle_loan", labelKey: "vehicleLoan", icon: Car },
+  { id: "gold_loan", labelKey: "goldLoan", icon: Sparkles },
+  { id: "business_loan", labelKey: "businessLoan", icon: Briefcase },
+  { id: "agriculture_loan", labelKey: "agricultureLoan", icon: Sprout },
+  { id: "msme_loan", labelKey: "msmeLoan", icon: Landmark },
 ] as const;
 
 const BANK_BY_ID = new Map(BANKS.map((bank) => [bank.id, bank]));
@@ -66,7 +64,7 @@ export function CompareBankingModal({
   const compareTimerRef = useRef<number | null>(null);
 
   // Localized string helper
-  const l = (obj: Record<string, string>) => obj[lang] || obj["english"] || "";
+  const l = (obj: Record<string, string>) => obj[lang] || (lang === "english" ? obj.english : "") || "";
 
   // Perform filtering and sorting of loan data
   const pendingComparisonResults = useMemo(() => {
@@ -106,7 +104,7 @@ export function CompareBankingModal({
     }
     setIsComparing(true);
     speakVoice("comparingLoans", {
-      loanType: LOAN_TYPES.find((t) => t.id === selectedLoanType)?.labelEn || "Loans",
+      loanType: t(LOAN_TYPES.find((type) => type.id === selectedLoanType)?.labelKey || "loans"),
     });
 
     compareTimerRef.current = window.setTimeout(() => {
@@ -118,7 +116,7 @@ export function CompareBankingModal({
   };
 
   const activeLoanTypeLabel =
-    LOAN_TYPES.find((t) => t.id === selectedLoanType)?.[lang === "hindi" ? "labelHi" : "labelEn"] || "Loans";
+    t(LOAN_TYPES.find((type) => type.id === selectedLoanType)?.labelKey || "loans");
 
   if (!isOpen) return null;
 
@@ -172,7 +170,7 @@ export function CompareBankingModal({
                 {LOAN_TYPES.map((type) => {
                   const IconComponent = type.icon;
                   const isSelected = selectedLoanType === type.id;
-                  const label = lang === "hindi" ? type.labelHi : type.labelEn;
+                  const label = t(type.labelKey);
 
                   return (
                     <button
@@ -206,24 +204,12 @@ export function CompareBankingModal({
                 <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
                   {["All", "Public Sector", "Private Sector", "Small Finance"].map((cat) => {
                     const isSelected = selectedCategory === cat;
-                    const displayLabel =
-                      cat === "All"
-                        ? lang === "hindi"
-                          ? "सभी"
-                          : "All Banks"
-                        : cat === "Public Sector"
-                        ? lang === "hindi"
-                          ? "सरकारी"
-                          : "Public Sector"
-                        : cat === "Private Sector"
-                        ? lang === "hindi"
-                          ? "निजी"
-                          : "Private Sector"
-                        : cat === "Small Finance"
-                        ? lang === "hindi"
-                          ? "स्मॉल फाइनेंस"
-                          : "Small Finance"
-                        : cat;
+                    const displayLabel = t({
+                      All: "allBanksFilter",
+                      "Public Sector": "publicSector",
+                      "Private Sector": "privateSector",
+                      "Small Finance": "smallFinance",
+                    }[cat] || cat);
 
                     return (
                       <button
@@ -250,12 +236,8 @@ export function CompareBankingModal({
               >
                 <ArrowLeftRight className={`w-4 h-4 ${isComparing ? "animate-spin" : ""}`} />
                 {isComparing
-                  ? lang === "hindi"
-                    ? "तुलना डेटा लोड हो रहा है..."
-                    : "Loading comparison data..."
-                  : lang === "hindi"
-                  ? `${activeLoanTypeLabel} की तुलना करें`
-                  : `Compare ${activeLoanTypeLabel}`}
+                  ? t("loadingComparison")
+                  : t("compareSelectedLoan", { loan: activeLoanTypeLabel })}
               </button>
             </div>
 
@@ -330,7 +312,7 @@ export function CompareBankingModal({
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="block font-bold text-[14px] text-foreground leading-tight underline-offset-2 hover:underline"
-                                    aria-label={`Open ${bankName} ${l(entry.loanTypeLabel)} official page`}
+                                    aria-label={t("officialBankProductPage", { bank: bankName, loan: activeLoanTypeLabel })}
                                   >
                                     {bankName}
                                   </a>
@@ -340,7 +322,7 @@ export function CompareBankingModal({
                                   </h4>
                                 )}
                                 <span className="text-[10px] font-bold text-muted-foreground">
-                                  {l(entry.loanTypeLabel)}
+                                  {activeLoanTypeLabel}
                                 </span>
                               </div>
                             </div>
@@ -349,11 +331,11 @@ export function CompareBankingModal({
                             <div className="grid grid-cols-2 gap-3.5 mt-4 pt-3.5 border-t border-slate-100">
                               <div>
                                 <p className="text-[9px] font-extrabold text-muted-foreground uppercase tracking-wider leading-none">
-                                  Interest Rate
+                                  {t("interestRate")}
                                 </p>
                                 {hasRate ? (
                                   <p className="text-[13px] font-extrabold text-slate-800 mt-1">
-                                    {l(entry.interestRateDisplay)}
+                                    {entry.numericRate}%
                                   </p>
                                 ) : (
                                   <span className="inline-block mt-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">
@@ -364,7 +346,7 @@ export function CompareBankingModal({
 
                               <div>
                                 <p className="text-[9px] font-extrabold text-muted-foreground uppercase tracking-wider leading-none">
-                                  Processing Fee
+                                  {t("processingFee")}
                                 </p>
                                 {hasVerifiedProcessingFee ? (
                                   <p className="text-[12px] font-bold text-slate-600 mt-1 line-clamp-1 truncate" title={processingFee}>
@@ -372,7 +354,7 @@ export function CompareBankingModal({
                                   </p>
                                 ) : (
                                   <span className="inline-block mt-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">
-                                    Check official website
+                                    {t("checkOfficialWebsite")}
                                   </span>
                                 )}
                               </div>
@@ -414,9 +396,7 @@ export function CompareBankingModal({
                       {t("noVerifiedComparisonData")}
                     </p>
                     <p className="text-xs font-semibold text-muted-foreground mt-1.5 max-w-[280px]">
-                      {lang === "hindi"
-                        ? "चयनित ऋण प्रकार या बैंक नाम खोज के लिए कोई प्रविष्टि नहीं मिली। कृपया अपने फ़िल्टर रीसेट करें।"
-                        : t("noVerifiedComparisonData")}
+                      {t("noVerifiedComparisonData")}
                     </p>
                   </div>
                 )
@@ -427,12 +407,10 @@ export function CompareBankingModal({
                     <ArrowLeftRight className="w-8 h-8 text-slate-700 animate-pulse" />
                   </div>
                   <h3 className="text-[15px] font-extrabold text-foreground">
-                    {lang === "hindi" ? "ऋण विकल्पों की तुलना करें" : "Compare Loan Options"}
+                    {t("compareLoanOptions")}
                   </h3>
                   <p className="text-[12px] font-semibold text-muted-foreground mt-2 max-w-[280px] leading-relaxed">
-                    {lang === "hindi"
-                      ? "ऋण प्रकार चुनें, फ़िल्टर जोड़ें और भारत के सर्वश्रेष्ठ बैंकों की ब्याज दरों की तुलना करने के लिए 'तुलना करें' बटन दबाएं।"
-                      : "Select a loan type above, refine your bank criteria, and tap 'Compare' to inspect rates side-by-side!"}
+                    {t("selectComparePrompt")}
                   </p>
                 </div>
               )}

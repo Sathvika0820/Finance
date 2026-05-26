@@ -1,7 +1,12 @@
 import { useState, useCallback, useEffect } from "react";
 import { Bank } from "@/data/banks";
 import { getSafeBankUrl } from "@/lib/urlHealth";
-import { SPEECH_LOCALE_BY_LANGUAGE, normalizeLanguage as normalizeAppLanguage, type AppLanguage } from "@/lib/i18n";
+import {
+  SPEECH_LOCALE_BY_LANGUAGE,
+  normalizeLanguage as normalizeAppLanguage,
+  translate,
+  type AppLanguage,
+} from "@/lib/i18n";
 
 export type SupportedLanguage = AppLanguage;
 
@@ -164,12 +169,34 @@ export function speakVoice(eventKey: string, payload: any = {}) {
 
   let text = voiceLines[safeLanguage]?.[eventKey];
 
+  if (!text) {
+    const localizedVoiceKeys: Record<string, string> = {
+      welcome: "tagline",
+      muted: "voiceAssistantMuted",
+      unmuted: "voiceAssistantActive",
+      showingGuidance: "bankingTools",
+      showingGuidanceOption: "officialServiceDescription",
+      showingSafety: "bankingSafetyShield",
+      showingFinancialHelp: "financialInclusionHelp",
+      showingTopic: "officialServiceDescription",
+      showingComparison: "compareBankingServices",
+      showingRuralSupport: "ruralBankingSupport",
+      openingBank: "openOfficialWebsite",
+      openingService: "openOfficialLink",
+      showingServiceDetails: "officialServiceDescription",
+      openingServiceAction: "openOfficialLink",
+    };
+    text = translate(safeLanguage, localizedVoiceKeys[eventKey] || "voiceCompatibilityNotice", {
+      item: bankName || serviceName,
+    });
+  }
+
   if (eventKey === "openingService") {
     text = {
       english: `Opening ${serviceName} official website.`,
       hindi: `${serviceName} की आधिकारिक वेबसाइट खोली जा रही है।`,
       telugu: `${serviceName} అధికారిక వెబ్‌సైట్ తెరవబడుతోంది.`,
-    }[safeLanguage];
+    }[safeLanguage] || text;
   }
 
   if (eventKey === "showingServiceDetails") {
@@ -177,7 +204,7 @@ export function speakVoice(eventKey: string, payload: any = {}) {
       english: `Showing ${serviceName} services.`,
       hindi: `${serviceName} सेवाएं दिखाई जा रही हैं।`,
       telugu: `${serviceName} సేవలు చూపబడుతున్నాయి.`,
-    }[safeLanguage];
+    }[safeLanguage] || text;
   }
 
   if (eventKey === "openingServiceAction") {
@@ -186,7 +213,7 @@ export function speakVoice(eventKey: string, payload: any = {}) {
       english: `Opening ${actionName}.`,
       hindi: `${actionName} खोला जा रहा है।`,
       telugu: `${actionName} తెరవబడుతోంది.`,
-    }[safeLanguage];
+    }[safeLanguage] || text;
   }
 
   if (!text) {

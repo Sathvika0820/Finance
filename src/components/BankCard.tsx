@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { ExternalLink, Info, Heart } from "lucide-react";
 import { Bank, getBankDisplayName } from "@/data/banks";
 import { BankLogo } from "./BankLogo";
-import { OfficialLinkButton, UNVERIFIED_LABEL } from "./OfficialLinkButton";
+import { OfficialLinkButton } from "./OfficialLinkButton";
 import { pushRecent, useFavorites } from "@/lib/favorites";
 import { speakVoice } from "@/lib/voice";
 import { useTranslation } from "@/lib/i18n";
@@ -39,7 +39,7 @@ export function BankCard({ bank, index = 0 }: { bank: Bank; index?: number }) {
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-foreground truncate text-[15px]">{displayName}</p>
           <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
-            <ExternalLink className="w-3 h-3" /> {bank.verified ? t(getCatKey(bank.category)) : UNVERIFIED_LABEL}
+            <ExternalLink className="w-3 h-3" /> {bank.verified ? t(getCatKey(bank.category)) : t("officialLinkNotVerifiedYet")}
           </p>
         </div>
       </div>
@@ -63,7 +63,7 @@ export function BankCard({ bank, index = 0 }: { bank: Bank; index?: number }) {
           }
           toggle(bank.id);
         }}
-        aria-label={`${isFav ? 'Remove from' : 'Add to'} favorites`}
+        aria-label={t(isFav ? "removeFromFavorites" : "addToFavorites")}
         className={`p-4 transition-colors ${isFav ? 'text-red-500 hover:text-red-600' : 'text-muted-foreground hover:text-foreground'}`}
       >
         <Heart className={`w-4 h-4 ${isFav ? 'fill-current' : ''}`} />
@@ -74,7 +74,7 @@ export function BankCard({ bank, index = 0 }: { bank: Bank; index?: number }) {
           e.preventDefault();
           navigate({ to: "/banks/$bankId", params: { bankId: bank.id } });
         }}
-        aria-label={`View ${displayName} details`}
+        aria-label={t("viewBankDetails", { bank: displayName })}
         className="p-4 text-muted-foreground hover:text-foreground"
       >
         <Info className="w-4 h-4" />
@@ -84,7 +84,7 @@ export function BankCard({ bank, index = 0 }: { bank: Bank; index?: number }) {
 }
 
 export function BankTile({ bank }: { bank: Bank }) {
-  const { lang } = useTranslation();
+  const { lang, t } = useTranslation();
   const { toggle, isFavorite } = useFavorites();
   const isFav = isFavorite(bank.id);
   const displayName = getBankDisplayName(bank, lang);
@@ -117,7 +117,7 @@ export function BankTile({ bank }: { bank: Bank }) {
           }
           toggle(bank.id);
         }}
-        aria-label={`${isFav ? 'Remove from' : 'Add to'} favorites`}
+        aria-label={t(isFav ? "removeFromFavorites" : "addToFavorites")}
         className={`absolute top-2 right-2 p-1.5 rounded-lg transition-colors ${isFav ? 'text-red-500 hover:text-red-600 bg-white/80' : 'text-muted-foreground hover:text-foreground bg-white/60'}`}
       >
         <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-current' : ''}`} />
@@ -128,7 +128,7 @@ export function BankTile({ bank }: { bank: Bank }) {
 
 export function BankGridCard({ bank }: { bank: Bank }) {
   const navigate = useNavigate();
-  const { lang } = useTranslation();
+  const { lang, t } = useTranslation();
   const { toggle, isFavorite } = useFavorites();
   const isFav = isFavorite(bank.id);
   const displayName = getBankDisplayName(bank, lang);
@@ -156,7 +156,7 @@ export function BankGridCard({ bank }: { bank: Bank }) {
         }}
         className="text-[10px] text-muted-foreground"
       >
-        Details
+        {t("details")}
       </button>
       <button
         onClick={(e) => {
@@ -169,7 +169,7 @@ export function BankGridCard({ bank }: { bank: Bank }) {
           }
           toggle(bank.id);
         }}
-        aria-label={`${isFav ? 'Remove from' : 'Add to'} favorites`}
+        aria-label={t(isFav ? "removeFromFavorites" : "addToFavorites")}
         className={`absolute top-2 right-2 p-1.5 rounded-lg transition-colors ${isFav ? 'text-red-500 hover:text-red-600 bg-white/80' : 'text-muted-foreground hover:text-foreground bg-white/60'}`}
       >
         <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-current' : ''}`} />

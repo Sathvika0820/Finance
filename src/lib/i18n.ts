@@ -1,4 +1,15 @@
 import { useState, useCallback, useEffect } from "react";
+import enLocale from "@/translations/en.json";
+import hiLocale from "@/translations/hi.json";
+import teLocale from "@/translations/te.json";
+import taLocale from "@/translations/ta.json";
+import knLocale from "@/translations/kn.json";
+import orLocale from "@/translations/or.json";
+import urLocale from "@/translations/ur.json";
+import mrLocale from "@/translations/mr.json";
+import bnLocale from "@/translations/bn.json";
+import guLocale from "@/translations/gu.json";
+import paLocale from "@/translations/pa.json";
 
 export type AppLanguage =
   | "english"
@@ -48,6 +59,21 @@ export const LEGACY_LANGUAGE_KEYS: Partial<Record<AppLanguage, "english" | "hind
 };
 
 const LANGUAGE_STORAGE_KEY = "bankHubLanguage";
+type TranslationValues = Record<string, string | number>;
+
+const localeResources: Record<AppLanguage, Record<string, string>> = {
+  english: enLocale,
+  hindi: hiLocale,
+  telugu: teLocale,
+  tamil: taLocale,
+  kannada: knLocale,
+  odia: orLocale,
+  urdu: urLocale,
+  marathi: mrLocale,
+  bengali: bnLocale,
+  gujarati: guLocale,
+  punjabi: paLocale,
+};
 
 const languageByCode = new Map(LANGUAGE_OPTIONS.map((lang) => [lang.code, lang.id]));
 const languageIds = new Set(LANGUAGE_OPTIONS.map((lang) => lang.id));
@@ -596,6 +622,25 @@ export function getCurrentStoredLanguage(): AppLanguage {
   return normalizeLanguage(window.localStorage.getItem(LANGUAGE_STORAGE_KEY));
 }
 
+export function translate(language: AppLanguage | string, key: string, values?: TranslationValues) {
+  const lang = normalizeLanguage(language);
+  const typedKey = key as TranslationKey;
+  const translated =
+    localeResources[lang]?.[key] ||
+    extendedTranslations[lang]?.[key] ||
+    translations[lang]?.[typedKey] ||
+    localeResources.english[key] ||
+    translations.english[typedKey] ||
+    extendedTranslations.english?.[key] ||
+    key;
+
+  if (!values) return translated;
+  return Object.entries(values).reduce(
+    (message, [name, value]) => message.replaceAll(`{${name}}`, String(value)),
+    translated,
+  );
+}
+
 export function useTranslation() {
   const [lang, setLangState] = useState<AppLanguage>("english");
 
@@ -630,10 +675,10 @@ export function useTranslation() {
     };
   }, []);
 
-  const t = useCallback((key: string) => {
-    const typedKey = key as TranslationKey;
-    return extendedTranslations[lang]?.[key] || translations[lang]?.[typedKey] || translations.english[typedKey] || extendedTranslations.english?.[key] || key;
-  }, [lang]);
+  const t = useCallback(
+    (key: string, values?: TranslationValues) => translate(lang, key, values),
+    [lang],
+  );
 
   return { t, lang, setLang, languageCode: getLanguageCode(lang), dir: isRtlLanguage(lang) ? "rtl" : "ltr" };
 }

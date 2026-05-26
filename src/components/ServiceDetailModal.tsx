@@ -1,9 +1,10 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { X, ExternalLink, Mail, CreditCard, Wallet, PiggyBank, Globe, MapPin, Shield, Activity, Home, HeartHandshake, Award } from "lucide-react";
-import { FinanceService, getServiceName, getServiceDescription } from "@/data/services";
+import { FinanceService, getServiceName } from "@/data/services";
 import { logoUrl } from "@/data/banks";
 import { openServiceAction } from "@/lib/serviceRedirect";
+import { useTranslation } from "@/lib/i18n";
 
 const SERVICE_ICONS: Record<string, any> = {
   Mail,
@@ -29,38 +30,9 @@ interface ServiceDetailModalProps {
   onClose: () => void;
 }
 
-const LOCALIZED: Record<string, {
-  trustNote: string;
-  categoryPostOffice: string;
-  categoryInsurance: string;
-  close: string;
-  officialActions: string;
-}> = {
-  english: {
-    trustNote: "Bank Hub redirects only to official service websites. No credentials are stored.",
-    categoryPostOffice: "Post Office",
-    categoryInsurance: "Insurance",
-    close: "Close",
-    officialActions: "Official Actions"
-  },
-  hindi: {
-    trustNote: "आपको केवल आधिकारिक सेवा वेबसाइटों पर भेजा जाएगा। Bank Hub कोई क्रेडेंशियल सेव नहीं करता।",
-    categoryPostOffice: "डाकघर",
-    categoryInsurance: "बीमा",
-    close: "बंद करें",
-    officialActions: "आधिकारिक सेवाएं"
-  },
-  telugu: {
-    trustNote: "మీరు అధికారిక సేవా వెబ్సైట్లకే పంపబడతారు. Bank Hub ఎలాంటి క్రెడెన్షియల్స్ను సేవ్ చేయదు.",
-    categoryPostOffice: "పోస్టాఫీస్",
-    categoryInsurance: "ఇన్సూరెన్స్",
-    close: "మూసివేయి",
-    officialActions: "అధికారిక సేవలు"
-  }
-};
-
 export function ServiceDetailModal({ service, lang, onClose }: ServiceDetailModalProps) {
   const [logoErrored, setLogoErrored] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     setLogoErrored(false);
@@ -76,13 +48,10 @@ export function ServiceDetailModal({ service, lang, onClose }: ServiceDetailModa
 
   if (!service) return null;
 
-  const currentLang = lang === "hindi" || lang === "telugu" ? lang : "english";
-  const t = LOCALIZED[currentLang] || LOCALIZED.english;
-  
   const serviceName = getServiceName(service, lang);
-  const serviceDescription = getServiceDescription(service, lang);
+  const serviceDescription = t("officialServiceDescription");
   const Icon = SERVICE_ICONS[service.iconName] || Mail;
-  const categoryLabel = isPostOfficeService(service) ? t.categoryPostOffice : t.categoryInsurance;
+  const categoryLabel = t(isPostOfficeService(service) ? "categoryPostOffice" : "categoryInsurance");
   const serviceLogoSrc = service.logo ? service.logo : (service.logoDomain ? logoUrl(service.logoDomain) : "");
 
   return (
@@ -139,7 +108,7 @@ export function ServiceDetailModal({ service, lang, onClose }: ServiceDetailModa
             <button
               onClick={onClose}
               className="p-2 rounded-full bg-muted/40 hover:bg-muted text-foreground transition-colors shrink-0 outline-none focus:ring-2 focus:ring-ring/30"
-              aria-label={t.close}
+              aria-label={t("close")}
             >
               <X className="w-5 h-5" />
             </button>
@@ -153,18 +122,18 @@ export function ServiceDetailModal({ service, lang, onClose }: ServiceDetailModa
           {/* Localized Trust Note */}
           <div className="mt-4 rounded-2xl bg-slate-50 border border-slate-200 px-4 py-3 shrink-0">
             <p className="text-[11.5px] font-semibold text-slate-700 leading-relaxed">
-              {t.trustNote}
+              {t("trustNote")}
             </p>
           </div>
 
           {/* Action Buttons List */}
           <div className="mt-5 flex-1">
             <h4 className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted-foreground mb-3">
-              {t.officialActions}
+              {t("officialActions")}
             </h4>
             <div className="grid grid-cols-1 gap-2.5">
               {service.actions?.map((action) => {
-                const actionLabel = action.label[currentLang] || action.label.english;
+                const actionLabel = t("openOfficialLink");
                 return (
                   <button
                     key={action.id}

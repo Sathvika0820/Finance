@@ -17,7 +17,7 @@ import { SafetyShieldModal } from "@/components/SafetyShieldModal";
 import { FinancialInclusionModal } from "@/components/FinancialInclusionModal";
 import { CompareBankingModal } from "@/components/CompareBankingModal";
 import { ShieldCheck, ArrowLeftRight } from "lucide-react";
-import { OfficialLinkButton, UNVERIFIED_LABEL } from "@/components/OfficialLinkButton";
+import { OfficialLinkButton } from "@/components/OfficialLinkButton";
 import { SearchBar } from "@/components/SearchBar";
 
 export const Route = createFileRoute("/dashboard")({
@@ -88,13 +88,13 @@ function SelectedBankTile({ bank, openBankSafely, speakVoice, t, lang }: { bank:
           openBankSafely(bank, "selected_bank", e);
         }} 
         className={`flex flex-col items-center gap-2 w-full pt-1 ${isVerified ? "cursor-pointer" : "cursor-not-allowed opacity-60"}`} 
-        aria-label={isVerified ? `Open ${displayName}` : "Official link not verified yet."}
+        aria-label={isVerified ? t("openItem", { item: displayName }) : t("officialLinkNotVerifiedYet")}
       >
         <BankLogo bank={bank} size="md" />
         <div className="text-center mt-1">
           <p className="font-bold text-[12px] text-foreground leading-tight line-clamp-1">{displayName}</p>
           <p className="text-[9px] font-semibold text-muted-foreground mt-0.5 leading-tight">
-            {isVerified ? t(getCatKey(bank.category)) : "Official link not verified yet."}
+            {isVerified ? t(getCatKey(bank.category)) : t("officialLinkNotVerifiedYet")}
           </p>
         </div>
       </button>
@@ -105,7 +105,7 @@ function SelectedBankTile({ bank, openBankSafely, speakVoice, t, lang }: { bank:
           speakVoice("bankRemoved", { bank });
           toggle(bank.id);
         }}
-        aria-label="Remove from favorites"
+        aria-label={t("removeFromFavorites")}
         className="absolute top-2.5 right-2.5 rounded-full p-1 hover:bg-rose-50 transition-colors"
       >
         <Heart className="w-4 h-4 fill-red-500 text-red-500" />
@@ -136,7 +136,7 @@ function PopularBankRow({ bank, openBankSafely, t, lang }: { bank: Bank, openBan
         <div className="text-left min-w-0">
           <p className="font-bold text-[12px] text-foreground truncate">{displayName}</p>
           <p className="text-[10px] font-semibold text-muted-foreground mt-0.5 leading-tight">
-            {isVerified ? t(getCatKey(bank.category)) : "Official link not verified yet."}
+            {isVerified ? t(getCatKey(bank.category)) : t("officialLinkNotVerifiedYet")}
           </p>
         </div>
       </div>
@@ -196,7 +196,7 @@ const AddBankSearchPanel = memo(function AddBankSearchPanel({
                 <p className={`text-[10px] font-semibold mt-0.5 leading-tight ${
                   isBankVerified ? "text-muted-foreground" : "text-amber-600/90"
                 }`}>
-                  {isBankVerified ? t(getCatKey(bank.category)) : "Official link not verified yet."}
+                  {isBankVerified ? t(getCatKey(bank.category)) : t("officialLinkNotVerifiedYet")}
                 </p>
               </div>
               <button
@@ -211,7 +211,7 @@ const AddBankSearchPanel = memo(function AddBankSearchPanel({
                 className={`p-2 -mr-1 rounded-lg transition-colors focus:outline-none shrink-0 ${
                   isBankVerified ? "cursor-pointer" : "cursor-not-allowed opacity-40"
                 }`}
-                title={isBankVerified ? undefined : "Official link not verified yet."}
+                title={isBankVerified ? undefined : t("officialLinkNotVerifiedYet")}
               >
                 <Heart className={`w-4 h-4 ${fav ? "fill-red-500 text-red-500" : "text-border/80"}`} />
               </button>
@@ -401,13 +401,14 @@ interface ServiceCardProps {
   onToggleFav: () => void;
   onOpen: (e: any) => void;
   lang: string;
+  t: (key: string, values?: Record<string, string | number>) => string;
 }
 
-function ServiceCard({ service, isFav, onToggleFav, onOpen, lang }: ServiceCardProps) {
+function ServiceCard({ service, isFav, onToggleFav, onOpen, lang, t }: ServiceCardProps) {
   const [logoErrored, setLogoErrored] = useState(false);
   const Icon = SERVICE_ICONS[service.iconName] || Mail;
   const serviceName = getServiceName(service, lang);
-  const serviceDescription = getServiceDescription(service, lang);
+  const serviceDescription = t("officialServiceDescription");
   const serviceLogoSrc = service.logo ? service.logo : (service.logoDomain ? logoUrl(service.logoDomain) : "");
   const officialItem = {
     name: serviceName,
@@ -429,7 +430,7 @@ function ServiceCard({ service, isFav, onToggleFav, onOpen, lang }: ServiceCardP
           onOpen(e);
         }
       }}
-      aria-label={`Open ${serviceName}`}
+      aria-label={t("openItem", { item: serviceName })}
       className={`${SURFACE_CARD_INTERACTIVE} p-2 sm:p-2.5 flex items-center justify-between gap-2 relative group min-w-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring/30`}
     >
       <div className="flex items-center gap-2 flex-1 min-w-0 text-left cursor-pointer focus:outline-none">
@@ -467,7 +468,7 @@ function ServiceCard({ service, isFav, onToggleFav, onOpen, lang }: ServiceCardP
             onToggleFav();
           }}
           className="p-0.5 rounded-full hover:bg-rose-50/80 transition-colors focus:outline-none"
-          aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
+          aria-label={t(isFav ? "removeFromFavorites" : "addToFavorites")}
         >
           <Heart className={`w-4 h-4 ${isFav ? "fill-red-500 text-red-500" : "text-muted-foreground/30 hover:text-red-400"}`} />
         </button>
@@ -522,6 +523,7 @@ interface ServiceGroupProps {
   toggleServiceFav: (id: string) => void;
   onServiceSelect: (service: FinanceService, event?: any) => void;
   lang: string;
+  t: (key: string, values?: Record<string, string | number>) => string;
 }
 
 function ServiceGroup({
@@ -541,6 +543,7 @@ function ServiceGroup({
   toggleServiceFav,
   onServiceSelect,
   lang,
+  t,
 }: ServiceGroupProps) {
   const filteredServices = useMemo(
     () => services.filter((service) => serviceMatchesQuery(service, query, lang)),
@@ -613,6 +616,7 @@ function ServiceGroup({
                       onToggleFav={() => toggleServiceFav(service.id)}
                       onOpen={(e) => onServiceSelect(service, e)}
                       lang={lang}
+                      t={t}
                     />
                   ))
                 )}
@@ -647,17 +651,10 @@ function ServiceDetailModal({ service, lang, onClose }: { service: FinanceServic
 
   if (!service) return null;
 
-  const localizedServiceStrings = SERVICE_STRINGS[lang] || SERVICE_STRINGS.english;
-  const strings = {
-    ...localizedServiceStrings,
-    officialActions: t("officialActions"),
-    closeServiceDetails: t("closeServiceDetails"),
-    modalTrustNote: t("trustNote"),
-  };
   const serviceName = getServiceName(service, lang);
-  const serviceDescription = getServiceDescription(service, lang);
+  const serviceDescription = t("officialServiceDescription");
   const Icon = SERVICE_ICONS[service.iconName] || Mail;
-  const categoryLabel = isPostOfficeService(service) ? strings.categoryPostOffice : strings.categoryInsurance;
+  const categoryLabel = t(isPostOfficeService(service) ? "categoryPostOffice" : "categoryInsurance");
   const serviceLogoSrc = service.logo ? service.logo : (service.logoDomain ? logoUrl(service.logoDomain) : "");
 
   return (
@@ -695,7 +692,7 @@ function ServiceDetailModal({ service, lang, onClose }: { service: FinanceServic
                 <p className="inline-flex mt-2 px-2.5 py-1 rounded-full bg-muted text-[11px] font-bold text-muted-foreground">{categoryLabel}</p>
               </div>
             </div>
-            <button onClick={onClose} className="p-2 rounded-full hover:bg-muted transition-colors shrink-0" aria-label={strings.closeServiceDetails}>
+            <button onClick={onClose} className="p-2 rounded-full hover:bg-muted transition-colors shrink-0" aria-label={t("closeServiceDetails")}>
               <X className="w-5 h-5 text-foreground" />
             </button>
           </div>
@@ -703,17 +700,15 @@ function ServiceDetailModal({ service, lang, onClose }: { service: FinanceServic
           <p className="text-[13px] font-medium text-muted-foreground leading-relaxed mt-4">{serviceDescription}</p>
 
           <div className="mt-4 rounded-2xl bg-slate-50/90 border border-slate-200 px-4 py-3">
-            <p className="text-[12px] font-medium text-slate-700 leading-relaxed">{strings.modalTrustNote}</p>
+            <p className="text-[12px] font-medium text-slate-700 leading-relaxed">{t("trustNote")}</p>
           </div>
 
           <div className="mt-5">
-            <h4 className="text-[12px] uppercase tracking-[0.08em] font-bold text-muted-foreground mb-3">{strings.officialActions}</h4>
+            <h4 className="text-[12px] uppercase tracking-[0.08em] font-bold text-muted-foreground mb-3">{t("officialActions")}</h4>
             <div className="grid grid-cols-1 gap-2.5">
               {service.actions.map((action) => {
                 const isActionVerified = action.url && action.url.trim() !== "";
-                const actionLabel = isActionVerified
-                  ? (action.label[lang as keyof typeof action.label] || action.label.english)
-                  : "Official link not verified yet.";
+                const actionLabel = isActionVerified ? t("openOfficialLink") : t("officialLinkNotVerifiedYet");
                 return (
                   <button
                     key={action.id}
@@ -731,7 +726,7 @@ function ServiceDetailModal({ service, lang, onClose }: { service: FinanceServic
                         ? "bg-foreground text-background active:scale-[0.99] cursor-pointer shadow-soft"
                         : "bg-muted text-muted-foreground/60 cursor-not-allowed opacity-75 active:scale-100"
                     }`}
-                    title={isActionVerified ? undefined : "Official link not verified yet."}
+                    title={isActionVerified ? undefined : t("officialLinkNotVerifiedYet")}
                   >
                     <span className="text-left leading-snug">{actionLabel}</span>
                     {isActionVerified && <ExternalLink className="w-4 h-4 shrink-0" />}
@@ -918,14 +913,14 @@ function Dashboard() {
                   setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
                 }}
                 className={`p-1.5 rounded-md transition-colors ${sortDirection === 'desc' ? 'bg-slate-100 text-slate-900' : 'text-muted-foreground/60 hover:bg-slate-100'}`}
-                title={sortDirection === 'asc' ? "Sort A-Z" : "Sort Z-A"}
+                title={t(sortDirection === "asc" ? "sortAZ" : "sortZA")}
               >
                 <ArrowDownUp className={`w-4 h-4 stroke-[2.5] transition-transform ${sortDirection === 'desc' ? 'rotate-180' : ''}`} />
               </button>
               <button
                 onClick={() => setIsAdding((a) => !a)}
                 className="p-1.5 rounded-md text-muted-foreground transition-colors hover:bg-muted/40"
-                aria-label={isAdding ? "Collapse add banks" : "Expand add banks"}
+                aria-label={t(isAdding ? "collapseAddBanks" : "expandAddBanks")}
               >
                 <ChevronDown className={`w-4 h-4 transition-transform ${isAdding ? "rotate-180" : ""}`} />
               </button>
@@ -1037,7 +1032,7 @@ function Dashboard() {
                                   ? "hover:bg-muted/30 active:scale-95 cursor-pointer" 
                                   : "cursor-not-allowed opacity-40"
                               }`}
-                              title={isBankVerified ? undefined : "Official link not verified yet."}
+                              title={isBankVerified ? undefined : t("officialLinkNotVerifiedYet")}
                             >
                               <BankLogo bank={b} size="sm" />
                               <p className="text-[8px] font-bold text-foreground text-center line-clamp-2 leading-tight">
@@ -1045,7 +1040,7 @@ function Dashboard() {
                               </p>
                               {!isBankVerified && (
                                 <span className="text-[6px] font-bold text-amber-600 bg-amber-50 px-1 py-0.5 rounded border border-amber-200 mt-0.5 leading-none">
-                                  Unverified
+                                  {t("unverified")}
                                 </span>
                               )}
                             </button>
@@ -1085,6 +1080,7 @@ function Dashboard() {
             toggleServiceFav={toggleServiceFav}
             onServiceSelect={openServiceDetails}
             lang={lang}
+            t={t}
           />
 
           <ServiceGroup
@@ -1104,6 +1100,7 @@ function Dashboard() {
             toggleServiceFav={toggleServiceFav}
             onServiceSelect={openServiceDetails}
             lang={lang}
+            t={t}
           />
         </div>
       </section>

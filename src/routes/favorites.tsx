@@ -1,12 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Trash2, ExternalLink } from "lucide-react";
-import { BANKS } from "@/data/banks";
+import { BANKS, getBankDisplayName } from "@/data/banks";
 import { BankLogo } from "@/components/BankLogo";
-import { OfficialLinkButton, UNVERIFIED_LABEL } from "@/components/OfficialLinkButton";
+import { OfficialLinkButton } from "@/components/OfficialLinkButton";
 import { useFavorites, pushRecent } from "@/lib/favorites";
 import { speakVoice } from "@/lib/voice";
 import { AppShell } from "@/components/AppShell";
+import { useTranslation } from "@/lib/i18n";
 
 export const Route = createFileRoute("/favorites")({
   head: () => ({
@@ -24,14 +25,15 @@ export const Route = createFileRoute("/favorites")({
 
 function FavoritesPage() {
   const { ids, remove } = useFavorites();
+  const { t, lang } = useTranslation();
   const favs = ids.map((id) => BANKS.find((b) => b.id === id)).filter(Boolean);
 
   return (
     <div className="space-y-5">
       <header>
-        <h1 className="text-3xl font-bold">Favorites</h1>
+        <h1 className="text-3xl font-bold">{t("favorites")}</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Your saved banks, ready in one tap.
+          {t("favoritesSubtitle")}
         </p>
       </header>
 
@@ -40,15 +42,15 @@ function FavoritesPage() {
           <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center">
             <Heart className="w-7 h-7 text-muted-foreground" />
           </div>
-          <h2 className="font-semibold mt-4">No favorites yet</h2>
+          <h2 className="font-semibold mt-4">{t("noFavoritesYet")}</h2>
           <p className="text-sm text-muted-foreground mt-1 max-w-[16rem]">
-            Tap the heart on any bank to save it here for quick access.
+            {t("noFavoritesDescription")}
           </p>
           <Link
             to="/banks"
             className="mt-6 fintech-button rounded-full px-5 py-2.5 text-sm font-medium"
           >
-            Browse banks
+            {t("browseBanks")}
           </Link>
         </div>
       ) : (
@@ -68,9 +70,9 @@ function FavoritesPage() {
                   <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
                     <BankLogo bank={b} />
                     <div className="min-w-0">
-                      <p className="font-semibold truncate text-[15px]">{b.name}</p>
+                      <p className="font-semibold truncate text-[15px]">{getBankDisplayName(b, lang)}</p>
                       <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
-                        <ExternalLink className="w-3 h-3" /> {b.verified ? b.category : UNVERIFIED_LABEL}
+                        <ExternalLink className="w-3 h-3" /> {b.verified ? t(categoryKey(b.category)) : t("officialLinkNotVerifiedYet")}
                       </p>
                     </div>
                   </div>
@@ -90,7 +92,7 @@ function FavoritesPage() {
                       speakVoice("bankRemoved", { bank: b });
                       remove(b.id);
                     }}
-                    aria-label="Remove favorite"
+                    aria-label={t("removeFromFavorites")}
                     className="p-2 rounded-xl hover:bg-muted text-muted-foreground"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -103,4 +105,15 @@ function FavoritesPage() {
       )}
     </div>
   );
+}
+
+function categoryKey(category: string) {
+  return {
+    "Public Sector": "publicSector",
+    "Private Sector": "privateSector",
+    "Small Finance": "smallFinance",
+    "Payments": "payments",
+    "Regional Rural": "regionalRural",
+    "Co-operative": "cooperative",
+  }[category] || category;
 }

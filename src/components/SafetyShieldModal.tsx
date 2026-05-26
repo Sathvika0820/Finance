@@ -272,6 +272,15 @@ export function SafetyShieldModal({
   const [checkerResult, setCheckerResult] = useState<CheckerInputType | null>(null);
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const checkerRef = useRef<HTMLTextAreaElement>(null);
+  const localizedSafetySteps = [
+    t("cyberFraudWarning"),
+    t("bankHubOfficialRedirectTrust"),
+    t("callImmediatelyIfMoneyLost"),
+  ];
+  const getScamCopy = (_scam: ScamCategory) => ({
+    title: t("bankingSafetyShield"),
+    description: t("cyberFraudWarning"),
+  });
 
   if (!isOpen) return null;
 
@@ -390,8 +399,8 @@ export function SafetyShieldModal({
                             <Icon className={`w-4 h-4 ${scam.color}`} />
                           </div>
                           <div className="min-w-0">
-                            <p className="font-bold text-[13px] text-foreground leading-tight">{scam.title}</p>
-                            <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{scam.description}</p>
+                            <p className="font-bold text-[13px] text-foreground leading-tight">{getScamCopy(scam).title}</p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{getScamCopy(scam).description}</p>
                           </div>
                         </div>
                         <ChevronDown
@@ -411,7 +420,7 @@ export function SafetyShieldModal({
                               {/* Scam type selected label */}
                               <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${scam.bg} ${scam.color}`}>
                                 <Icon className="w-3 h-3" />
-                                <span className="text-[11px] font-bold">{scam.title} {t("selected")}</span>
+                                <span className="text-[11px] font-bold">{getScamCopy(scam).title} {t("selected")}</span>
                               </div>
 
                               {/* Immediate safety steps */}
@@ -420,7 +429,7 @@ export function SafetyShieldModal({
                                   {t("immediateSafetySteps")}
                                 </p>
                                 <ul className="space-y-2">
-                                  {scam.steps.map((step, i) => (
+                                  {localizedSafetySteps.map((step, i) => (
                                     <li key={i} className="flex items-start gap-2.5">
                                       <span className="w-5 h-5 rounded-full bg-green-100 text-green-700 text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">
                                         {i + 1}
@@ -521,10 +530,10 @@ export function SafetyShieldModal({
                         <>
                           <p className="font-bold text-[13px] flex items-center gap-2 mb-3">
                             <AlertTriangle className="w-4 h-4" />
-                            {CHECKER_GUIDANCE[checkerResult].title}
+                            {t("suspiciousCheckerTitle")}
                           </p>
                           <ul className="space-y-2 mb-4">
-                            {CHECKER_GUIDANCE[checkerResult].steps.map((tip, i) => (
+                            {localizedSafetySteps.map((tip, i) => (
                               <li key={i} className="flex items-start gap-2 text-[12px] font-medium">
                                 <span className="mt-0.5">•</span>
                                 {tip}
@@ -544,9 +553,9 @@ export function SafetyShieldModal({
                       ) : (
                         <div className="text-center">
                           <ShieldCheck className="w-8 h-8 text-green-600 mx-auto mb-2 fill-green-100" />
-                          <p className="font-bold text-[13px] text-green-800 mb-1">No obvious scam keywords detected</p>
+                          <p className="font-bold text-[13px] text-green-800 mb-1">{t("checkSafetyGuidance")}</p>
                           <p className="text-[12px] text-green-700 leading-snug">
-                            Still, never share OTP, PIN, CVV or passwords with anyone. When in doubt, contact your bank directly.
+                            {t("cyberFraudWarning")}
                           </p>
                         </div>
                       )}
@@ -563,7 +572,7 @@ export function SafetyShieldModal({
               </p>
               <div className="space-y-2">
                 {[
-                  { entry: getOfficialLinkEntry("cyberSafety", "cyber-complaint"), badge: "File Complaint" },
+                  { entry: getOfficialLinkEntry("cyberSafety", "cyber-complaint"), badge: t("fileCyberComplaint") },
                   { entry: getOfficialLinkEntry("regulators", "rbi"), badge: "RBI" },
                   { entry: getOfficialLinkEntry("regulators", "rbi-sachet"), badge: "Sachet" },
                   { entry: getOfficialLinkEntry("cyberSafety", "cert-in"), badge: "CERT-In" },
@@ -578,7 +587,7 @@ export function SafetyShieldModal({
                       onClick={(e) => {
                         openVerifiedExternalLink(link.entry, e);
                       }}
-                      aria-label={`Open ${link.entry!.name}`}
+                      aria-label={`${t("open")} ${link.entry!.name}`}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-muted/60 border border-border/50 text-foreground text-[10px] font-bold rounded-lg active:scale-95 transition-transform"
                     >
                       {link.badge}

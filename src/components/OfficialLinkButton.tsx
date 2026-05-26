@@ -1,6 +1,7 @@
 import { ExternalLink, ShieldCheck } from "lucide-react";
 import type { MouseEvent } from "react";
 import { isVerifiedOfficialUrl } from "@/data/officialLinks";
+import { useTranslation } from "@/lib/i18n";
 
 type OfficialLinkButtonProps = {
   item: {
@@ -16,17 +17,18 @@ type OfficialLinkButtonProps = {
   onVerifiedClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
 };
 
-const UNVERIFIED_LABEL = "Official link not verified yet.";
-
 export function OfficialLinkButton({
   item,
-  label = "Official Website",
-  unverifiedLabel = UNVERIFIED_LABEL,
+  label,
+  unverifiedLabel,
   compact = false,
   iconOnly = false,
   className = "",
   onVerifiedClick,
 }: OfficialLinkButtonProps) {
+  const { t } = useTranslation();
+  const verifiedLabel = label || t("openOfficialLink");
+  const disabledLabel = unverifiedLabel || t("officialLinkNotVerifiedYet");
   const url = item.verified && isVerifiedOfficialUrl(item.officialWebsite) ? item.officialWebsite : "";
 
   if (!url) {
@@ -38,12 +40,12 @@ export function OfficialLinkButton({
       <button
         type="button"
         disabled
-        title={unverifiedLabel}
-        aria-label={unverifiedLabel}
+        title={disabledLabel}
+        aria-label={disabledLabel}
         className={disabledClass}
       >
         <ShieldCheck className="w-3.5 h-3.5" />
-        {!iconOnly && <span>{unverifiedLabel}</span>}
+        {!iconOnly && <span>{disabledLabel}</span>}
       </button>
     );
   }
@@ -58,19 +60,17 @@ export function OfficialLinkButton({
       target="_blank"
       rel="noopener noreferrer"
       onClick={onVerifiedClick}
-      aria-label={`Open ${item.name} official website`}
+      aria-label={t("openOfficialWebsite", { item: item.name })}
       className={btnClass}
     >
       {iconOnly ? (
         <ExternalLink className="w-4 h-4 text-muted-foreground" />
       ) : (
         <>
-          <span>{compact ? "Open" : label}</span>
+          <span>{compact ? t("open") : verifiedLabel}</span>
           <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
         </>
       )}
     </a>
   );
 }
-
-export { UNVERIFIED_LABEL };

@@ -40,10 +40,20 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
   const bankDisplayName = bank ? getBankDisplayName(bank, lang) : entry.bankName;
 
   // Localized getters
-  const l = (obj: Record<string, any>) => obj[lang] || obj["english"] || "";
-  const lArr = (obj: Record<string, string[]>) => obj[lang] || obj["english"] || [];
+  const l = (obj: Record<string, any>) => obj[lang] || (lang === "english" ? obj.english : "") || t("checkOfficialWebsite");
+  const lArr = (obj: Record<string, string[]>) => obj[lang] || (lang === "english" ? obj.english : []) || [];
 
-  const loanTypeLabel = l(entry.loanTypeLabel);
+  const loanLabelKeys: Record<string, string> = {
+    personal_loan: "personalLoan",
+    home_loan: "homeLoan",
+    education_loan: "educationLoan",
+    vehicle_loan: "vehicleLoan",
+    gold_loan: "goldLoan",
+    business_loan: "businessLoan",
+    agriculture_loan: "agricultureLoan",
+    msme_loan: "msmeLoan",
+  };
+  const loanTypeLabel = t(loanLabelKeys[entry.loanType] || "loans");
   const interestRateDisplay = l(entry.interestRateDisplay);
   const processingFee = l(entry.processingFeeByLang);
   const repaymentPeriod = l(entry.repaymentPeriodByLang);
@@ -58,14 +68,7 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
     !!officialLoanUrl && processingFee && !/check official website/i.test(processingFee);
   const hasVerifiedRepaymentPeriod =
     !!officialLoanUrl && repaymentPeriod && !/check official website/i.test(repaymentPeriod);
-  const displayDocuments = [
-    "Identity proof",
-    "Address proof",
-    "Income proof",
-    "Bank statements",
-    "Employment proof or business proof",
-    ...documents,
-  ].filter((doc, index, list) => {
+  const displayDocuments = documents.filter((doc, index, list) => {
     const normalized = doc.toLowerCase().replace(/\s+/g, " ").trim();
     return list.findIndex((item) => item.toLowerCase().replace(/\s+/g, " ").trim() === normalized) === index;
   });
@@ -164,8 +167,8 @@ export const LoanInfoModal: React.FC<LoanInfoModalProps> = ({
                 <h4 className="text-[13px] font-bold text-foreground">{t("allAboutLoan")}</h4>
               </div>
               <p className="text-[12px] font-semibold text-muted-foreground leading-relaxed">
-                This loan product from {bankDisplayName} provides finance options tailored specifically for {loanTypeLabel.toLowerCase()} requirements.
-                {hasVerifiedProcessingFee ? ` Standard processing fee: ${processingFee}.` : ` ${t("checkOfficialWebsite")}.`}
+                {t("loanOverview", { bank: bankDisplayName, loan: loanTypeLabel })}
+                {hasVerifiedProcessingFee ? ` ${t("processingFee")}: ${processingFee}.` : ` ${t("checkOfficialWebsite")}.`}
               </p>
             </div>
 

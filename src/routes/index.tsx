@@ -87,7 +87,7 @@ function Splash() {
       {/* ── Footer ── */}
       <div className="flex flex-col items-center gap-5 pb-[max(env(safe-area-inset-bottom,20px),20px)] mb-2">
         <p className="splash-animate splash-delay-5 text-xs text-white/50 tracking-wide">
-          Built by Osmania University{" "}
+          {t("builtBy")}{" "}
           <span className="text-emerald-200/85 font-medium">(OTBI)</span>
         </p>
 

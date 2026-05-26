@@ -33,14 +33,19 @@ export const Route = createFileRoute("/banks/$bankId")({
       </div>
     );
   },
-  errorComponent: ({ error, reset }) => (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center">
-      <p>{error.message}</p>
-      <button onClick={reset} className="text-sm underline">Try again</button>
-    </div>
-  ),
+  errorComponent: ({ reset }) => <BankDetailError reset={reset} />,
   component: BankDetail,
 });
+
+function BankDetailError({ reset }: { reset: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center">
+      <p>{t("pageLoadErrorDescription")}</p>
+      <button onClick={reset} className="text-sm underline">{t("tryAgain")}</button>
+    </div>
+  );
+}
 
 function getCatKey(cat: string) {
   const map: Record<string, string> = {
@@ -74,7 +79,7 @@ function BankDetail() {
           </Link>
           <button
             onClick={() => toggle(bank.id)}
-            aria-label="Favorite"
+            aria-label={t(fav ? "removeFromFavorites" : "addToFavorites")}
             className="p-2.5 rounded-xl bg-white/10 backdrop-blur"
           >
             <Heart className={`w-5 h-5 ${fav ? "fill-white" : ""}`} />
@@ -96,7 +101,7 @@ function BankDetail() {
 
       <div className="-mt-12 mx-5 space-y-4 relative">
         <div className="fintech-card rounded-[22px] p-5">
-          <p className="text-sm text-foreground/80 leading-relaxed">{bank.description}</p>
+          <p className="text-sm text-foreground/80 leading-relaxed">{t("bankInformation")}</p>
         </div>
 
         <div className="grid grid-cols-1 gap-3">
@@ -120,7 +125,7 @@ function BankDetail() {
                 <Smartphone className="w-5 h-5" />
                 <span className="font-semibold text-sm">{t("openBankingApp")}</span>
               </span>
-              <span className="text-xs font-bold text-muted-foreground">Open</span>
+              <span className="text-xs font-bold text-muted-foreground">{t("open")}</span>
             </a>
           )}
         </div>
@@ -128,12 +133,12 @@ function BankDetail() {
         <section className="fintech-card rounded-[22px] p-5">
           <h2 className="font-semibold mb-3">{t("servicesOffered")}</h2>
           <ul className="space-y-2">
-            {bank.services.map((s: string) => (
-              <li key={s} className="flex items-center gap-3 text-sm text-foreground/80">
+            {[t("checkOfficialDetails")].map((service) => (
+              <li key={service} className="flex items-center gap-3 text-sm text-foreground/80">
                 <span className="w-6 h-6 rounded-full bg-foreground/10 flex items-center justify-center">
                   <Check className="w-3.5 h-3.5" />
                 </span>
-                {s}
+                {service}
               </li>
             ))}
           </ul>

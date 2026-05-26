@@ -14,7 +14,7 @@ import {
 } from "@/data/aiKnowledgeBase";
 import { BANKS, getBankDisplayName } from "@/data/banks";
 import { SERVICES_DATA } from "@/data/services";
-import { getSortedLoanComparison } from "@/data/loanData";
+import { getLoanComparisonTypeFromQuery, getSortedLoanComparison } from "@/data/loanData";
 import { isVerifiedOfficialUrl } from "@/data/officialLinks";
 import {
   LANGUAGE_OPTIONS,
@@ -22,7 +22,7 @@ import {
   useTranslation,
   type AppLanguage,
 } from "@/lib/i18n";
-import { containsSensitiveBankingData, SENSITIVE_DATA_WARNING } from "@/lib/security";
+import { containsSensitiveBankingData } from "@/lib/security";
 
 // Speech Recognition & Synthesis types
 type SpeechRecognitionEvent = {
@@ -130,7 +130,7 @@ const LOCALIZED_TEXTS = {
     stopSpeaking: "మాట్లాడటం ఆపు",
   },
   tamil: {
-    welcome: "வணக்கம்! நான் உங்கள் பேங்க்ஹப் AI உதவியாளர். வங்கி சேவைகள், கடன்கள், அரசு திட்டங்கள் या மோசடி பாதுகாப்பு குறித்து உங்களுக்கு நான் எவ்வாறு உதவ முடியும்?",
+    welcome: "வணக்கம்! நான் உங்கள் பேங்க்ஹப் AI உதவியாளர். வங்கி சேவைகள், கடன்கள், அரசு திட்டங்கள் அல்லது மோசடி பாதுகாப்பு குறித்து உங்களுக்கு நான் எவ்வாறு உதவ முடியும்?",
     safetyWarning: "உங்கள் பாதுகாப்புக்காக, OTP, PIN, CVV, கார்டு எண்கள் அல்லது வங்கி கடவுச்சொற்களை BankHub-இல் பகிர வேண்டாம்.",
     fallback: "அதிகாரப்பூர்வ ஆதாரங்களில் இருந்து இதை என்னால் சரிபார்க்க முடியவில்லை. தயவுசெய்து அதிகாரப்பூர்வ வங்கி/அரசு இணையதளத்தைப் பார்க்கவும்.",
     micUnsupported: "இந்த உலாவியில் குரல் உள்ளீடு ஆதரிக்கப்படவில்லை. தயவுசெய்து தட்டச்சு செய்யவும்.",
@@ -178,7 +178,7 @@ const LOCALIZED_TEXTS = {
     stopSpeaking: "ଶବ୍ଦ ବନ୍ଦ କରନ୍ତୁ",
   },
   urdu: {
-    welcome: "ہیلو! میں آپ کا بینک ہب اے آئی اسسٹنٹ ہوں۔ آج میں بینکنگ سروسز، لون (قرضہ)، سرکاری اسکیموں، یا آن لائن فراڈ سے بچاؤ کے بارے में آپ کی کیا مدد کر سکتا ہوں؟",
+    welcome: "ہیلو! میں آپ کا بینک ہب اے آئی اسسٹنٹ ہوں۔ آج میں بینکنگ خدمات، قرض، سرکاری اسکیموں یا آن لائن فراڈ سے بچاؤ کے بارے میں آپ کی کیا مدد کر سکتا ہوں؟",
     safetyWarning: "آپ کی حفاظت کے لیے، بینک ہب میں OTP، PIN، CVV، کارڈ نمبر یا بینکنگ پاس ورڈ شیئر نہ کریں۔",
     fallback: "میں سرکاری ذرائع سے اس کی تصدیق نہیں کر سکا۔ براہ کرم متعلقہ آفیشل بینک/سرکاری ویب سائٹ دیکھیں۔",
     micUnsupported: "اس براؤزر میں وائس ان پٹ کی سہولت دستیاب نہیں ہے۔ براہ کرم ٹائپ کریں۔",
@@ -303,6 +303,38 @@ const SUGGESTIONS_DB: Partial<Record<Language, { text: string; topic: string }[]
     { text: "پوسٹ آفس بچت اسکیمیں دکھائیں", topic: "post_office_savings" },
     { text: "کون سے انشورنس اختیارات دستیاب ہیں؟", topic: "insurance_options" },
     { text: "بینک ہب میں کون سے بینک دستیاب ہیں؟", topic: "available_banks" }
+  ],
+  marathi: [
+    { text: "गृह कर्जांची तुलना करा", topic: "home_loan" },
+    { text: "शैक्षणिक कर्जांची तुलना करा", topic: "education_loan" },
+    { text: "कोणत्या बँका उपलब्ध आहेत?", topic: "available_banks" },
+    { text: "विद्यार्थी योजना दाखवा", topic: "student_schemes" },
+    { text: "ऑनलाइन फसवणुकीची तक्रार करा", topic: "scam_report" },
+    { text: "टपाल बचत योजना दाखवा", topic: "post_office_savings" }
+  ],
+  bengali: [
+    { text: "গৃহঋণ তুলনা করুন", topic: "home_loan" },
+    { text: "শিক্ষাঋণ তুলনা করুন", topic: "education_loan" },
+    { text: "কোন কোন ব্যাঙ্ক উপলব্ধ?", topic: "available_banks" },
+    { text: "ছাত্রদের প্রকল্প দেখান", topic: "student_schemes" },
+    { text: "অনলাইন জালিয়াতির অভিযোগ করুন", topic: "scam_report" },
+    { text: "ডাকঘর সঞ্চয় প্রকল্প দেখান", topic: "post_office_savings" }
+  ],
+  gujarati: [
+    { text: "ગૃહ લોનની તુલના કરો", topic: "home_loan" },
+    { text: "શૈક્ષણિક લોનની તુલના કરો", topic: "education_loan" },
+    { text: "કઈ બેંકો ઉપલબ્ધ છે?", topic: "available_banks" },
+    { text: "વિદ્યાર્થી યોજનાઓ બતાવો", topic: "student_schemes" },
+    { text: "ઑનલાઇન છેતરપિંડીની ફરિયાદ કરો", topic: "scam_report" },
+    { text: "ટપાલ બચત યોજનાઓ બતાવો", topic: "post_office_savings" }
+  ],
+  punjabi: [
+    { text: "ਘਰ ਦੇ ਕਰਜ਼ਿਆਂ ਦੀ ਤੁਲਨਾ ਕਰੋ", topic: "home_loan" },
+    { text: "ਸਿੱਖਿਆ ਕਰਜ਼ਿਆਂ ਦੀ ਤੁਲਨਾ ਕਰੋ", topic: "education_loan" },
+    { text: "ਕਿਹੜੇ ਬੈਂਕ ਉਪਲਬਧ ਹਨ?", topic: "available_banks" },
+    { text: "ਵਿਦਿਆਰਥੀ ਸਕੀਮਾਂ ਵੇਖਾਓ", topic: "student_schemes" },
+    { text: "ਆਨਲਾਈਨ ਧੋਖਾਧੜੀ ਦੀ ਸ਼ਿਕਾਇਤ ਕਰੋ", topic: "scam_report" },
+    { text: "ਡਾਕ ਬਚਤ ਸਕੀਮਾਂ ਵੇਖਾਓ", topic: "post_office_savings" }
   ]
 };
 
@@ -314,15 +346,6 @@ const QUICK_ACTION_TOPICS = [
   "scam_report",
   "post_office_savings",
 ];
-
-const QUICK_ACTION_LABELS: Record<string, string> = {
-  home_loan: "Compare home loans",
-  education_loan: "Compare education loans",
-  available_banks: "Which banks are available?",
-  student_schemes: "Show student schemes",
-  scam_report: "Report online fraud",
-  post_office_savings: "Post office schemes",
-};
 
 const LOCALIZED_COMPARISON_TEXTS: Partial<Record<Language, {
   comparisonHeader: string;
@@ -424,7 +447,6 @@ const INTENT_TO_LOAN_TYPE: Record<string, string> = {
   goldLoan: "gold_loan",
   agriLoan: "agriculture_loan",
   vehicleLoan: "vehicle_loan",
-  womenEntrepreneurLoan: "women_entrepreneur_loan",
   msmeLoan: "msme_loan",
   businessLoan: "business_loan"
 };
@@ -456,10 +478,10 @@ const generateLoanComparisonText = (
     
     const rateDisplay = item.numericRate === null
       ? `*${texts.checkOfficial}*`
-      : (item.interestRateDisplay[lang] || item.interestRateDisplay["english"] || `${item.interestRate}% p.a.`);
+      : (item.interestRateDisplay[lang] || item.interestRateDisplay["english"] || item.interestRateText);
       
-    const feeDisplay = item.processingFee[lang] || item.processingFee["english"] || "";
-    const tenureDisplay = item.repaymentPeriod[lang] || item.repaymentPeriod["english"] || "";
+    const feeDisplay = item.processingFeeByLang[lang] || item.processingFeeByLang["english"] || "";
+    const tenureDisplay = item.repaymentPeriodByLang[lang] || item.repaymentPeriodByLang["english"] || "";
 
     markdown += `${emojiNum} **${bankName}**\n`;
     markdown += `   • 📈 **${texts.interestRate}**: ${rateDisplay}\n`;
@@ -548,8 +570,8 @@ export function AiAssistant() {
     return value[lang] || value["english"] || "";
   };
 
-  const exactSensitiveWarning = SENSITIVE_DATA_WARNING;
-  const exactFallback = LOCALIZED_TEXTS.english.fallback;
+  const exactSensitiveWarning = LOCALIZED_TEXTS[activeLang].safetyWarning;
+  const exactFallback = LOCALIZED_TEXTS[activeLang].fallback;
 
   const isHttpsOfficialUrl = (url?: string) => isVerifiedOfficialUrl(url);
 
@@ -629,23 +651,13 @@ export function AiAssistant() {
     if (/\b(personal|unsecured)\b/.test(lower)) return "personal_loan";
     if (/\b(gold|jewel|jewellery|jewelry)\b/.test(lower)) return "gold_loan";
     if (/\b(vehicle|car|auto|two\s*wheeler|bike)\b/.test(lower)) return "vehicle_loan";
+    if (/\b(msme|sme|micro\s+small|micro,\s*small)\b/.test(lower)) return "msme_loan";
+    if (/\b(business|enterprise|commercial)\b/.test(lower)) return "business_loan";
+    if (/\b(agriculture|agricultural|farmer|crop|kisan)\b/.test(lower)) return "agriculture_loan";
     return "";
   };
 
-  const isLoanComparisonRequest = (message: string) => {
-    const lower = message.toLowerCase();
-    return /\b(compare|comparison|lowest|least|cheapest|best\s*rate|interest\s*rate|rate\s*of\s*interest|roi)\b/.test(lower)
-      && /\b(loan|home|housing|education|student|personal|gold|vehicle|car|auto|bike)\b/.test(lower);
-  };
-
-  const buildLoanComparisonReply = (message: string): Pick<Message, "text" | "actionUrl" | "actionLabel"> => {
-    const loanId = getLoanIdFromMessage(message);
-    if (!loanId) {
-      return {
-        text: "I do not have verified official interest rate data for this yet. Please check the official bank website."
-      };
-    }
-
+  const buildLoanComparisonReply = (loanId: string): Pick<Message, "text" | "actionUrl" | "actionLabel"> => {
     const comparisonEntries = getSortedLoanComparison(loanId);
 
     if (comparisonEntries.length === 0) {
@@ -660,7 +672,7 @@ export function AiAssistant() {
       const bank = BANK_BY_ID.get(entry.bankId);
       const bankName = bank ? getBankDisplayName(bank, activeLang) : entry.bankName;
       const rate = entry.numericRate !== null
-        ? (entry.interestRateDisplay[activeLang] || entry.interestRateDisplay.english || `${entry.interestRate}% p.a.`)
+        ? (entry.interestRateDisplay[activeLang] || entry.interestRateDisplay.english || entry.interestRateText)
         : "Check official website";
 
       return `${index + 1}. ${bankName} — ${rate}`;
@@ -687,8 +699,22 @@ export function AiAssistant() {
       };
     }
 
-    if (isLoanComparisonRequest(message)) {
-      return buildLoanComparisonReply(message);
+    if (activeLang !== "english") {
+      const localizedIntent = detectVerifiedIntent(message);
+      if (localizedIntent === "fraud") {
+        return {
+          text: `${LOCALIZED_TEXTS[activeLang].safetyWarning}\n\n${t("cyberFraudWarning")}`,
+          actionUrl: VERIFIED_CYBER_SAFETY.complaintPortal,
+          actionLabel: t("openOfficialPortal"),
+        };
+      }
+
+      return { text: exactFallback };
+    }
+
+    const comparisonLoanType = getLoanComparisonTypeFromQuery(message);
+    if (comparisonLoanType) {
+      return buildLoanComparisonReply(comparisonLoanType);
     }
 
     const intent = detectVerifiedIntent(message);
@@ -1014,13 +1040,13 @@ export function AiAssistant() {
       const warningMsg: Message = {
         id: `bot-sensitive-${Date.now()}`,
         sender: "bot",
-        text: SENSITIVE_DATA_WARNING,
+        text: exactSensitiveWarning,
         isWarning: true,
         timestamp: new Date(),
       };
 
       setMessages(prev => [...prev, warningMsg]);
-      speakText(SENSITIVE_DATA_WARNING, activeLang);
+      speakText(exactSensitiveWarning, activeLang);
       return;
     }
 
@@ -1076,10 +1102,6 @@ export function AiAssistant() {
 
   // Suggestion chips parser trigger
   const handleSuggestionClick = (topic: string) => {
-    if (QUICK_ACTION_LABELS[topic]) {
-      handleSendMessage(QUICK_ACTION_LABELS[topic]);
-      return;
-    }
     const list = SUGGESTIONS_DB[activeLang] || SUGGESTIONS_DB.english;
     const suggestionObj = list.find(s => s.topic === topic);
     const text = suggestionObj ? suggestionObj.text : "";
@@ -1207,8 +1229,8 @@ export function AiAssistant() {
             type="button"
             onClick={() => setIsOpen(false)}
             className="p-2 rounded-full border border-slate-200 bg-slate-50 text-slate-600 transition-all hover:bg-slate-100 active:scale-90"
-            aria-label="Minimize assistant"
-            title="Minimize"
+            aria-label={t("minimizeAssistant")}
+            title={t("minimizeAssistant")}
           >
             <Minimize2 className="w-4 h-4" />
           </button>
@@ -1372,10 +1394,10 @@ export function AiAssistant() {
       {/* ── Quick Action Suggestion Chips ── */}
       <div className="px-4 py-2.5 border-t border-slate-200/70 bg-white/80 flex gap-2 overflow-x-auto no-scrollbar">
         {QUICK_ACTION_TOPICS.map((topic, idx) => {
-          const suggestion = {
-            topic,
-            text: QUICK_ACTION_LABELS[topic],
-          };
+          const suggestion = (SUGGESTIONS_DB[activeLang] || SUGGESTIONS_DB.english).find(
+            (item) => item.topic === topic,
+          );
+          if (!suggestion) return null;
           return (
           <button
             key={idx}
@@ -1446,7 +1468,7 @@ export function AiAssistant() {
                 ? "bg-slate-950 text-white hover:bg-slate-800 active:scale-95 shadow-md"
                 : "text-muted-foreground/30 pointer-events-none"
             }`}
-            aria-label="Send query button"
+            aria-label={t("sendQuery")}
           >
             <Send className="w-4 h-4" />
           </button>

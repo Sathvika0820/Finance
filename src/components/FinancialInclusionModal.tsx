@@ -15,7 +15,7 @@ import {
 interface FinancialInclusionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  t: (key: string) => string;
+  t: (key: string, values?: Record<string, string | number>) => string;
   speakVoice: (eventKey: string, payload?: any) => void;
 }
 
@@ -35,7 +35,7 @@ function SchemeCard({
   onInfo,
 }: {
   scheme: FinancialInclusionScheme;
-  t: (key: string) => string;
+  t: (key: string, values?: Record<string, string | number>) => string;
   onInfo: (scheme: FinancialInclusionScheme) => void;
 }) {
   const officialEntry = getOfficialLinkEntry("governmentSchemes", scheme.id);
@@ -46,20 +46,15 @@ function SchemeCard({
           <h4 className="min-w-0 text-[13px] font-bold leading-snug text-foreground">
             {scheme.name}
           </h4>
-          {scheme.badge && (
-            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[8px] font-bold uppercase text-emerald-700">
-              {scheme.badge}
-            </span>
-          )}
         </div>
-        <p className="mt-0.5 text-[10px] font-semibold text-muted-foreground">{scheme.subcategory}</p>
+        <p className="mt-0.5 text-[10px] font-semibold text-muted-foreground">{t("officialSchemeDescription")}</p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <button
           type="button"
           onClick={() => onInfo(scheme)}
           className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-slate-50 text-slate-700 transition-colors hover:bg-slate-100"
-          aria-label={`View ${scheme.name} information`}
+          aria-label={t("viewBankDetails", { bank: scheme.name })}
         >
           <Info className="h-4 w-4" />
         </button>
@@ -84,7 +79,7 @@ function SchemeInfoModal({
   onClose,
 }: {
   scheme: FinancialInclusionScheme | null;
-  t: (key: string) => string;
+  t: (key: string, values?: Record<string, string | number>) => string;
   onClose: () => void;
 }) {
   if (!scheme) return null;
@@ -94,7 +89,7 @@ function SchemeInfoModal({
       <div className="w-full max-w-md rounded-t-[24px] border border-border/70 bg-white p-5 shadow-2xl sm:rounded-[24px]">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase text-slate-500">{scheme.subcategory}</p>
+            <p className="text-[11px] font-bold uppercase text-slate-500">{t("information")}</p>
             <h3 className="mt-1 text-[17px] font-bold leading-tight text-foreground">{scheme.name}</h3>
           </div>
           <button
@@ -109,21 +104,21 @@ function SchemeInfoModal({
 
         <div className="mt-4 space-y-3">
           <section className="rounded-[16px] bg-slate-50 p-3">
-            <h4 className="text-[11px] font-bold uppercase text-slate-600">Information</h4>
-            <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{scheme.shortDescription}</p>
+            <h4 className="text-[11px] font-bold uppercase text-slate-600">{t("information")}</h4>
+            <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{t("officialSchemeDescription")}</p>
           </section>
           <section className="rounded-[16px] bg-slate-50 p-3">
             <h4 className="text-[11px] font-bold uppercase text-slate-600">{t("eligibility")}</h4>
-            <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{scheme.eligibility}</p>
+            <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{t("checkOfficialDetails")}</p>
           </section>
           <section className="rounded-[16px] bg-slate-50 p-3">
             <h4 className="text-[11px] font-bold uppercase text-slate-600">{t("benefits")}</h4>
-            <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{scheme.benefits}</p>
+            <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{t("checkOfficialDetails")}</p>
           </section>
           {scheme.importantNotes && (
             <section className="rounded-[16px] border border-amber-200 bg-amber-50 p-3">
-              <h4 className="text-[11px] font-bold uppercase text-amber-800">Important Notes</h4>
-              <p className="mt-1 text-[12px] font-medium leading-relaxed text-amber-900/80">{scheme.importantNotes}</p>
+              <h4 className="text-[11px] font-bold uppercase text-amber-800">{t("importantNotes")}</h4>
+              <p className="mt-1 text-[12px] font-medium leading-relaxed text-amber-900/80">{t("checkOfficialDetails")}</p>
             </section>
           )}
         </div>
@@ -141,7 +136,7 @@ function CategoryCard({
   category: FinancialInclusionCategory;
   selected: boolean;
   onClick: () => void;
-  t: (key: string) => string;
+  t: (key: string, values?: Record<string, string | number>) => string;
 }) {
   const Icon = categoryIconMap[category.id];
   const translate = (key: string, fallback: string) => {
@@ -149,7 +144,7 @@ function CategoryCard({
     return value === key ? fallback : value;
   };
   const categoryName = translate(`financialCategory.${category.id}.name`, category.name);
-  const categoryDescription = translate(`financialCategory.${category.id}.description`, category.description);
+  const categoryDescription = t("officialSchemeDescription");
 
   return (
     <button
@@ -285,10 +280,7 @@ export function FinancialInclusionModal({ isOpen, onClose, t, speakVoice }: Fina
                     })()}
                   </h3>
                   <p className="mt-1 text-[12px] font-semibold leading-relaxed text-muted-foreground">
-                    {(() => {
-                      const value = t(`financialCategory.${selectedCategory.id}.description`);
-                      return value === `financialCategory.${selectedCategory.id}.description` ? selectedCategory.description : value;
-                    })()}
+                    {t("officialSchemeDescription")}
                   </p>
                 </section>
 
@@ -315,7 +307,7 @@ export function FinancialInclusionModal({ isOpen, onClose, t, speakVoice }: Fina
                             : "border-border/70 bg-white text-muted-foreground hover:bg-slate-50"
                         }`}
                       >
-                        {subcategory}
+                        {subcategory === "All" ? t("all") : t("selectedCategory")}
                       </button>
                     );
                   })}

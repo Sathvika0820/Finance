@@ -35,7 +35,7 @@ export function SettingsModal({ isOpen, onClose }: Props) {
               <button
                 onClick={onClose}
                 className="tap-target p-2 rounded-full hover:bg-muted transition-colors"
-                aria-label="Close settings"
+                aria-label={t("closeSettings")}
               >
                 <X className="w-5 h-5 text-foreground" />
               </button>

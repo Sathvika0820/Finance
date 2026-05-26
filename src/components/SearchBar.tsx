@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Search, X } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { useTranslation } from "@/lib/i18n";
 
 interface Props {
   value: string;
@@ -8,7 +9,8 @@ interface Props {
   placeholder?: string;
 }
 
-export function SearchBar({ value, onChange, placeholder = "Search banks…" }: Props) {
+export function SearchBar({ value, onChange, placeholder }: Props) {
+  const { t } = useTranslation();
   const composing = useRef(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -44,7 +46,7 @@ export function SearchBar({ value, onChange, placeholder = "Search banks…" }: 
         onChange={handleChange}
         onCompositionStart={handleCompositionStart}
         onCompositionEnd={handleCompositionEnd}
-        placeholder={placeholder}
+        placeholder={placeholder || t("searchBanks")}
         className="w-full glass shadow-soft rounded-2xl pl-12 pr-12 py-4 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-ring/40 transition"
       />
       <button
@@ -53,7 +55,7 @@ export function SearchBar({ value, onChange, placeholder = "Search banks…" }: 
         className={`absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full hover:bg-muted text-muted-foreground transition ${
           value ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
-        aria-label="Clear search"
+        aria-label={t("clearSearch")}
       >
         <X className="w-4 h-4" />
       </button>
