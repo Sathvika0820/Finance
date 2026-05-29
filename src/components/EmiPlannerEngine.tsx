@@ -162,7 +162,7 @@ export function EmiPlannerEngine() {
                         <span className="text-[10px] uppercase font-extrabold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded ml-2">Auto</span>
                       </>
                     ) : (
-                      <span className="text-amber-600 text-[13px] font-semibold">{t("rateUnavailable") || "Interest rate unavailable for selected bank."}</span>
+                      <span className="text-amber-600 text-[13px] font-semibold">{t("rateUnavailable") || "Interest rate mapping missing for selected bank and loan type."}</span>
                     )}
                   </div>
                 </div>

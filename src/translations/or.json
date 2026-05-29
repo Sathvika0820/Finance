@@ -141,5 +141,5 @@
   "copy": "Copy",
   "copied": "Copied",
   "selectBank": "Select Bank",
-  "rateUnavailable": "Interest rate unavailable for selected bank."
+  "rateUnavailable": "Interest rate mapping missing for selected bank and loan type."
 }
