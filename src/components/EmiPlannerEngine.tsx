@@ -5,45 +5,59 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recha
 import { CompareBankingModal } from "@/components/CompareBankingModal";
 import { useTranslation } from "@/lib/i18n";
 import { useVoiceAssistant } from "@/lib/voice";
+import { BANKS, getBankDisplayName } from "@/data/banks";
+import { getSortedLoanComparison, LoanComparisonLoanType } from "@/data/loanData";
 
-const LOAN_TYPES = [
-  { id: "home", label: "Home Loan", defaultRate: 8.5, defaultTenure: 20 },
-  { id: "personal", label: "Personal Loan", defaultRate: 12.5, defaultTenure: 5 },
-  { id: "education", label: "Education Loan", defaultRate: 9.5, defaultTenure: 7 },
-  { id: "vehicle", label: "Vehicle Loan", defaultRate: 8.8, defaultTenure: 5 },
-  { id: "gold", label: "Gold Loan", defaultRate: 10.0, defaultTenure: 1 },
-  { id: "business", label: "Business Loan", defaultRate: 14.0, defaultTenure: 10 },
-  { id: "msme", label: "MSME Loan", defaultRate: 11.0, defaultTenure: 5 },
+const LOAN_TYPES: { id: LoanComparisonLoanType; label: string; defaultTenure: number }[] = [
+  { id: "home_loan", label: "Home Loan", defaultTenure: 20 },
+  { id: "personal_loan", label: "Personal Loan", defaultTenure: 5 },
+  { id: "education_loan", label: "Education Loan", defaultTenure: 7 },
+  { id: "vehicle_loan", label: "Vehicle Loan", defaultTenure: 5 },
+  { id: "gold_loan", label: "Gold Loan", defaultTenure: 1 },
+  { id: "business_loan", label: "Business Loan", defaultTenure: 10 },
+  { id: "msme_loan", label: "MSME Loan", defaultTenure: 5 },
 ];
 
 export function EmiPlannerEngine() {
   const { t, lang } = useTranslation();
   const { speakVoice } = useVoiceAssistant();
 
+  const [selectedBankId, setSelectedBankId] = useState(BANKS[0].id);
   const [selectedType, setSelectedType] = useState(LOAN_TYPES[0]);
   const [amount, setAmount] = useState(5000000);
-  const [rate, setRate] = useState(selectedType.defaultRate);
   const [tenureYears, setTenureYears] = useState(selectedType.defaultTenure);
   
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [hasCalculated, setHasCalculated] = useState(false);
 
+  const handleBankChange = (bankId: string) => {
+    setSelectedBankId(bankId);
+    setHasCalculated(false);
+  };
+
   const handleTypeChange = (typeId: string) => {
     const type = LOAN_TYPES.find(t => t.id === typeId) || LOAN_TYPES[0];
     setSelectedType(type);
-    setRate(type.defaultRate);
     setTenureYears(type.defaultTenure);
     setHasCalculated(false);
   };
 
+  const autoRate = useMemo(() => {
+    const comparisons = getSortedLoanComparison(selectedType.id);
+    const bankLoan = comparisons.find(l => l.bankId === selectedBankId);
+    return bankLoan?.numericRate ?? null;
+  }, [selectedBankId, selectedType.id]);
+
   const results = useMemo(() => {
     const P = amount;
-    const R = rate / 12 / 100;
+    const rate = autoRate;
     const N = tenureYears * 12;
 
-    if (P <= 0 || tenureYears <= 0) {
+    if (P <= 0 || tenureYears <= 0 || rate === null) {
       return { emi: 0, totalInterest: 0, totalAmount: 0 };
     }
+
+    const R = rate / 12 / 100;
 
     if (R === 0) {
       return {
@@ -62,7 +76,7 @@ export function EmiPlannerEngine() {
       totalInterest: Math.round(totalInterest),
       totalAmount: Math.round(totalAmount),
     };
-  }, [amount, rate, tenureYears]);
+  }, [amount, autoRate, tenureYears]);
 
   const chartData = [
     { name: "Principal Amount", value: amount, color: "#94a3b8" }, // slate-400
@@ -109,6 +123,22 @@ export function EmiPlannerEngine() {
               <h2 className="text-lg font-bold text-foreground mb-6">{t("loanDetails") || "Loan Details"}</h2>
               
               <div className="space-y-6">
+                
+                {/* Bank Selection */}
+                <div>
+                  <label className="block text-[13px] font-bold text-muted-foreground mb-2 uppercase tracking-wider">{t("selectBank") || "Select Bank"}</label>
+                  <select
+                    className="w-full bg-slate-50 border border-border/60 text-foreground text-[14px] rounded-xl px-4 py-3 font-semibold focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 transition-all"
+                    value={selectedBankId}
+                    onChange={(e) => handleBankChange(e.target.value)}
+                  >
+                    {BANKS.map((bank) => (
+                      <option key={bank.id} value={bank.id}>{getBankDisplayName(bank, lang)}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Loan Type */}
                 <div>
                   <label className="block text-[13px] font-bold text-muted-foreground mb-2 uppercase tracking-wider">{t("loanType") || "Loan Type"}</label>
                   <select
@@ -122,6 +152,22 @@ export function EmiPlannerEngine() {
                   </select>
                 </div>
 
+                {/* Auto Interest Rate Display */}
+                <div>
+                  <label className="block text-[13px] font-bold text-muted-foreground mb-2 uppercase tracking-wider">{t("interestRate") || "Interest Rate (%)"}</label>
+                  <div className="w-full bg-slate-100 border border-slate-200 text-slate-700 text-[14px] rounded-xl px-4 py-3 font-bold transition-all flex items-center justify-between">
+                    {autoRate !== null ? (
+                      <>
+                        <span>{autoRate.toFixed(2)}%</span>
+                        <span className="text-[10px] uppercase font-extrabold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded ml-2">Auto</span>
+                      </>
+                    ) : (
+                      <span className="text-amber-600 text-[13px] font-semibold">{t("rateUnavailable") || "Interest rate unavailable for selected bank."}</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Loan Amount */}
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <label className="block text-[13px] font-bold text-muted-foreground uppercase tracking-wider">{t("loanAmount") || "Loan Amount"}</label>
@@ -145,25 +191,7 @@ export function EmiPlannerEngine() {
                   </div>
                 </div>
 
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="block text-[13px] font-bold text-muted-foreground uppercase tracking-wider">{t("interestRate") || "Interest Rate (%)"}</label>
-                    <span className="text-[15px] font-extrabold text-foreground">{rate.toFixed(1)}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="1"
-                    max="30"
-                    step="0.1"
-                    value={rate}
-                    onChange={(e) => {
-                      setRate(Number(e.target.value));
-                      setHasCalculated(false);
-                    }}
-                    className="w-full accent-slate-900 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
-                  />
-                </div>
-
+                {/* Loan Tenure */}
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <label className="block text-[13px] font-bold text-muted-foreground uppercase tracking-wider">{t("loanTenureYears") || "Loan Tenure (Years)"}</label>
@@ -185,8 +213,15 @@ export function EmiPlannerEngine() {
               </div>
 
               <button
-                onClick={() => setHasCalculated(true)}
-                className="w-full mt-8 bg-slate-900 hover:bg-slate-800 text-white rounded-[14px] py-3.5 font-bold text-[14px] transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-2"
+                onClick={() => {
+                  if (autoRate !== null) setHasCalculated(true);
+                }}
+                disabled={autoRate === null}
+                className={`w-full mt-8 rounded-[14px] py-3.5 font-bold text-[14px] transition-all flex items-center justify-center gap-2 ${
+                  autoRate !== null 
+                    ? "bg-slate-900 hover:bg-slate-800 text-white active:scale-[0.98] shadow-sm cursor-pointer" 
+                    : "bg-slate-200 text-slate-400 cursor-not-allowed opacity-70"
+                }`}
               >
                 <Calculator className="w-4 h-4" />
                 {t("calculateEmi") || "Calculate EMI"}
@@ -196,7 +231,7 @@ export function EmiPlannerEngine() {
 
           {/* Results Section */}
           <div className="flex flex-col">
-            <div className={`bg-transparent flex flex-col h-full transition-all duration-500 ${hasCalculated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8 pointer-events-none absolute lg:relative w-full"}`}>
+            <div className={`bg-transparent flex flex-col h-full transition-all duration-500 ${hasCalculated && autoRate !== null ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8 pointer-events-none absolute lg:relative w-full"}`}>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 {/* Monthly EMI Card */}

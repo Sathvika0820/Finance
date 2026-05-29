@@ -135,5 +135,7 @@
   "downloadPdf": "Download PDF",
   "print": "Print",
   "copy": "Copy",
-  "copied": "Copied"
+  "copied": "Copied",
+  "selectBank": "Select Bank",
+  "rateUnavailable": "Interest rate unavailable for selected bank."
 }
