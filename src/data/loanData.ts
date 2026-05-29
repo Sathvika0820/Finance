@@ -127,6 +127,32 @@ export const VERIFIED_LOAN_COMPARISONS: MaintainedLoanComparisonItem[] = [
     },
   ),
   officialItem(
+    "hdfc",
+    "HDFC Bank",
+    "Private Sector",
+    "home_loan",
+    "https://www.hdfcbank.com/personal/borrow/popular-loans/home-loan",
+    {
+      interestRateText: "8.50% - 9.40% p.a.",
+      numericRate: 8.50,
+      processingFee: "Up to 0.50% of the loan amount or INR 3000, whichever is higher",
+      repaymentPeriod: "Up to 30 years",
+    },
+  ),
+  officialItem(
+    "icici",
+    "ICICI Bank",
+    "Private Sector",
+    "home_loan",
+    "https://www.icicibank.com/personal-banking/loans/home-loan",
+    {
+      interestRateText: "8.75% p.a. onwards",
+      numericRate: 8.75,
+      processingFee: "0.5% - 2.00% of loan amount",
+      repaymentPeriod: "Up to 30 years",
+    },
+  ),
+  officialItem(
     "sbi",
     "State Bank of India",
     "Public Sector",
@@ -136,6 +162,28 @@ export const VERIFIED_LOAN_COMPARISONS: MaintainedLoanComparisonItem[] = [
       interestRateText: "10.05% - 15.05% p.a.",
       numericRate: 10.05,
       lastUpdated: "2025-08-28",
+    },
+  ),
+  officialItem(
+    "hdfc",
+    "HDFC Bank",
+    "Private Sector",
+    "personal_loan",
+    "https://www.hdfcbank.com/personal/borrow/popular-loans/personal-loan",
+    {
+      interestRateText: "10.50% - 24.00% p.a.",
+      numericRate: 10.50,
+    },
+  ),
+  officialItem(
+    "icici",
+    "ICICI Bank",
+    "Private Sector",
+    "personal_loan",
+    "https://www.icicibank.com/personal-banking/loans/personal-loan",
+    {
+      interestRateText: "10.65% - 16.00% p.a.",
+      numericRate: 10.65,
     },
   ),
   officialItem(
