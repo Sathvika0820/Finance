@@ -13,7 +13,11 @@ import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as BanksRouteImport } from './routes/banks'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PremiumSafetyShieldRouteImport } from './routes/premium/safety-shield'
+import { Route as PremiumLetterGeneratorRouteImport } from './routes/premium/letter-generator'
+import { Route as PremiumEmiPlannerRouteImport } from './routes/premium/emi-planner'
 import { Route as BanksBankIdRouteImport } from './routes/banks.$bankId'
+import { Route as BankIfscRouteImport } from './routes/bank.$ifsc'
 
 const FavoritesRoute = FavoritesRouteImport.update({
   id: '/favorites',
@@ -35,10 +39,30 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PremiumSafetyShieldRoute = PremiumSafetyShieldRouteImport.update({
+  id: '/premium/safety-shield',
+  path: '/premium/safety-shield',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PremiumLetterGeneratorRoute = PremiumLetterGeneratorRouteImport.update({
+  id: '/premium/letter-generator',
+  path: '/premium/letter-generator',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PremiumEmiPlannerRoute = PremiumEmiPlannerRouteImport.update({
+  id: '/premium/emi-planner',
+  path: '/premium/emi-planner',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BanksBankIdRoute = BanksBankIdRouteImport.update({
   id: '/$bankId',
   path: '/$bankId',
   getParentRoute: () => BanksRoute,
+} as any)
+const BankIfscRoute = BankIfscRouteImport.update({
+  id: '/bank/$ifsc',
+  path: '/bank/$ifsc',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -46,14 +70,22 @@ export interface FileRoutesByFullPath {
   '/banks': typeof BanksRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/favorites': typeof FavoritesRoute
+  '/bank/$ifsc': typeof BankIfscRoute
   '/banks/$bankId': typeof BanksBankIdRoute
+  '/premium/emi-planner': typeof PremiumEmiPlannerRoute
+  '/premium/letter-generator': typeof PremiumLetterGeneratorRoute
+  '/premium/safety-shield': typeof PremiumSafetyShieldRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/banks': typeof BanksRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/favorites': typeof FavoritesRoute
+  '/bank/$ifsc': typeof BankIfscRoute
   '/banks/$bankId': typeof BanksBankIdRoute
+  '/premium/emi-planner': typeof PremiumEmiPlannerRoute
+  '/premium/letter-generator': typeof PremiumLetterGeneratorRoute
+  '/premium/safety-shield': typeof PremiumSafetyShieldRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -61,20 +93,46 @@ export interface FileRoutesById {
   '/banks': typeof BanksRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/favorites': typeof FavoritesRoute
+  '/bank/$ifsc': typeof BankIfscRoute
   '/banks/$bankId': typeof BanksBankIdRoute
+  '/premium/emi-planner': typeof PremiumEmiPlannerRoute
+  '/premium/letter-generator': typeof PremiumLetterGeneratorRoute
+  '/premium/safety-shield': typeof PremiumSafetyShieldRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/banks' | '/dashboard' | '/favorites' | '/banks/$bankId'
+  fullPaths:
+    | '/'
+    | '/banks'
+    | '/dashboard'
+    | '/favorites'
+    | '/bank/$ifsc'
+    | '/banks/$bankId'
+    | '/premium/emi-planner'
+    | '/premium/letter-generator'
+    | '/premium/safety-shield'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/banks' | '/dashboard' | '/favorites' | '/banks/$bankId'
+  to:
+    | '/'
+    | '/banks'
+    | '/dashboard'
+    | '/favorites'
+    | '/bank/$ifsc'
+    | '/banks/$bankId'
+    | '/premium/emi-planner'
+    | '/premium/letter-generator'
+    | '/premium/safety-shield'
   id:
     | '__root__'
     | '/'
     | '/banks'
     | '/dashboard'
     | '/favorites'
+    | '/bank/$ifsc'
     | '/banks/$bankId'
+    | '/premium/emi-planner'
+    | '/premium/letter-generator'
+    | '/premium/safety-shield'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -82,6 +140,10 @@ export interface RootRouteChildren {
   BanksRoute: typeof BanksRouteWithChildren
   DashboardRoute: typeof DashboardRoute
   FavoritesRoute: typeof FavoritesRoute
+  BankIfscRoute: typeof BankIfscRoute
+  PremiumEmiPlannerRoute: typeof PremiumEmiPlannerRoute
+  PremiumLetterGeneratorRoute: typeof PremiumLetterGeneratorRoute
+  PremiumSafetyShieldRoute: typeof PremiumSafetyShieldRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -114,12 +176,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/premium/safety-shield': {
+      id: '/premium/safety-shield'
+      path: '/premium/safety-shield'
+      fullPath: '/premium/safety-shield'
+      preLoaderRoute: typeof PremiumSafetyShieldRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/premium/letter-generator': {
+      id: '/premium/letter-generator'
+      path: '/premium/letter-generator'
+      fullPath: '/premium/letter-generator'
+      preLoaderRoute: typeof PremiumLetterGeneratorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/premium/emi-planner': {
+      id: '/premium/emi-planner'
+      path: '/premium/emi-planner'
+      fullPath: '/premium/emi-planner'
+      preLoaderRoute: typeof PremiumEmiPlannerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/banks/$bankId': {
       id: '/banks/$bankId'
       path: '/$bankId'
       fullPath: '/banks/$bankId'
       preLoaderRoute: typeof BanksBankIdRouteImport
       parentRoute: typeof BanksRoute
+    }
+    '/bank/$ifsc': {
+      id: '/bank/$ifsc'
+      path: '/bank/$ifsc'
+      fullPath: '/bank/$ifsc'
+      preLoaderRoute: typeof BankIfscRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -139,6 +229,10 @@ const rootRouteChildren: RootRouteChildren = {
   BanksRoute: BanksRouteWithChildren,
   DashboardRoute: DashboardRoute,
   FavoritesRoute: FavoritesRoute,
+  BankIfscRoute: BankIfscRoute,
+  PremiumEmiPlannerRoute: PremiumEmiPlannerRoute,
+  PremiumLetterGeneratorRoute: PremiumLetterGeneratorRoute,
+  PremiumSafetyShieldRoute: PremiumSafetyShieldRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

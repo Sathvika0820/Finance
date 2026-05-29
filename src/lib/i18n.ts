@@ -295,6 +295,20 @@ const english = {
   tapDocumentsReady: "Tap documents you have ready",
   importantWarnings: "Important Warnings",
   applyAtOfficialBank: "Apply at Official {bank}",
+  safeSummary: "This text appears safe, but always remain vigilant.",
+  safeRecommendation: "Ensure you only enter details on official banking platforms.",
+  highRiskSummary: "High Risk detected! Do not click any links or share information.",
+  highRiskRecommendation: "This looks like a phishing attempt or scam. Do not share OTP, PIN, CVV, or passwords.",
+  suspiciousSummary: "Suspicious elements detected. Proceed with extreme caution.",
+  suspiciousRecommendation: "Verify the sender and do not click shortened URLs.",
+  suspiciousPhoneSummary: "Unknown phone numbers should not be trusted with banking information.",
+  suspiciousPhoneRecommendation: "Never call back or share OTPs with unverified callers.",
+  generalHighRisk: "General High Risk Scam",
+  fakeKycScam: "Fake KYC Scam",
+  fakeLoanScam: "Fake Loan Scam",
+  otpScam: "OTP / Password Scam",
+  suspiciousMessage: "Suspicious Message",
+  suspiciousPhone: "Suspicious Phone Number",
 };
 
 type TranslationKey = keyof typeof english;

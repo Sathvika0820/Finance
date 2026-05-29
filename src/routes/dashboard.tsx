@@ -16,7 +16,7 @@ import { LANGUAGE_OPTIONS, useTranslation } from "@/lib/i18n";
 import { SafetyShieldModal } from "@/components/SafetyShieldModal";
 import { FinancialInclusionModal } from "@/components/FinancialInclusionModal";
 import { CompareBankingModal } from "@/components/CompareBankingModal";
-import { ShieldCheck, ArrowLeftRight } from "lucide-react";
+import { ShieldCheck, ArrowLeftRight, FileText, Calculator } from "lucide-react";
 import { OfficialLinkButton } from "@/components/OfficialLinkButton";
 import { SearchBar } from "@/components/SearchBar";
 
@@ -71,8 +71,9 @@ const BANKS_BY_CATEGORY = CATEGORIES.reduce<Record<string, Bank[]>>((groups, cat
 }, {});
 
 import { getOfficialLink } from "@/data/officialLinks";
+import { BankActionModal } from "@/components/BankActionModal";
 
-function SelectedBankTile({ bank, openBankSafely, speakVoice, t, lang }: { bank: Bank, openBankSafely: (b: Bank, source?: string, event?: any) => void, speakVoice: any, t: any, lang: any }) {
+function SelectedBankTile({ bank, openBankModal, speakVoice, t, lang }: { bank: Bank, openBankModal: (b: Bank, source?: string, event?: any) => void, speakVoice: any, t: any, lang: any }) {
   const { toggle } = useFavorites();
   const displayName = getBankDisplayName(bank, lang);
   const officialUrl = getOfficialLink("banks", bank.id);
@@ -85,7 +86,7 @@ function SelectedBankTile({ bank, openBankSafely, speakVoice, t, lang }: { bank:
         onClick={(e) => {
           if (!isVerified) return;
           pushRecent(bank.id);
-          openBankSafely(bank, "selected_bank", e);
+          openBankModal(bank, "selected_bank", e);
         }} 
         className={`flex flex-col items-center gap-2 w-full pt-1 ${isVerified ? "cursor-pointer" : "cursor-not-allowed opacity-60"}`} 
         aria-label={isVerified ? t("openItem", { item: displayName }) : t("officialLinkNotVerifiedYet")}
@@ -114,7 +115,7 @@ function SelectedBankTile({ bank, openBankSafely, speakVoice, t, lang }: { bank:
   );
 }
 
-function PopularBankRow({ bank, openBankSafely, t, lang }: { bank: Bank, openBankSafely: (b: Bank, source?: string, event?: any) => void, t: any, lang: any }) {
+function PopularBankRow({ bank, openBankModal, t, lang }: { bank: Bank, openBankModal: (b: Bank, source?: string, event?: any) => void, t: any, lang: any }) {
   const displayName = getBankDisplayName(bank, lang);
   const officialUrl = getOfficialLink("banks", bank.id);
   const isVerified = !!officialUrl;
@@ -125,7 +126,7 @@ function PopularBankRow({ bank, openBankSafely, t, lang }: { bank: Bank, openBan
       onClick={(e) => {
         if (!isVerified) return;
         pushRecent(bank.id);
-        openBankSafely(bank, "popular_bank", e);
+        openBankModal(bank, "popular_bank", e);
       }}
       className={`w-full flex items-center justify-between p-3 active:bg-muted/50 hover:bg-slate-50/70 transition-colors ${
         isVerified ? "cursor-pointer" : "cursor-not-allowed opacity-60"
@@ -769,6 +770,7 @@ function Dashboard() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeServiceCategory, setActiveServiceCategory] = useState<ServiceGroupKey | null>(null);
   const [selectedService, setSelectedService] = useState<FinanceService | null>(null);
+  const [actionBank, setActionBank] = useState<Bank | null>(null);
   const [serviceQueries, setServiceQueries] = useState<Record<ServiceGroupKey, string>>({
     post_office: "",
     insurance: "",
@@ -845,6 +847,12 @@ function Dashboard() {
     }
   }, [lang, speakVoice]);
 
+  const openBankModal = useCallback((bank: Bank, source?: string, event?: any) => {
+    event?.stopPropagation?.();
+    event?.preventDefault?.();
+    setActionBank(bank);
+  }, []);
+
   return (
     <div className="space-y-8 pb-6 pt-2">
       <header className={`${SURFACE_CARD} -mt-2 px-4 py-5 sm:p-6 relative`}>
@@ -888,7 +896,7 @@ function Dashboard() {
         {favBanks.length > 0 ? (
           <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-5 px-5 pb-2">
             {favBanks.map((b) => b && (
-              <SelectedBankTile key={b.id} bank={b} openBankSafely={openBankSafely} speakVoice={speakVoice} t={t} lang={lang} />
+              <SelectedBankTile key={b.id} bank={b} openBankModal={openBankModal} speakVoice={speakVoice} t={t} lang={lang} />
             ))}
           </div>
         ) : (
@@ -960,7 +968,7 @@ function Dashboard() {
           </div>
         </div>
         <div className={`${SURFACE_CARD} p-1 divide-y divide-border/40`}>
-          {popular.map((b) => b && <PopularBankRow key={b.id} bank={b} openBankSafely={openBankSafely} t={t} lang={lang} />)}
+          {popular.map((b) => b && <PopularBankRow key={b.id} bank={b} openBankModal={openBankModal} t={t} lang={lang} />)}
         </div>
       </section>
 
@@ -1025,7 +1033,7 @@ function Dashboard() {
                                   return;
                                 }
                                 pushRecent(b.id);
-                                openBankSafely(b, "category_bank", e);
+                                openBankModal(b, "category_bank", e);
                               }}
                               className={`flex flex-col items-center justify-start gap-1.5 p-1 focus:outline-none rounded-xl transition-all ${
                                 isBankVerified 
@@ -1111,6 +1119,7 @@ function Dashboard() {
         <p className="text-[12px] text-muted-foreground font-medium mb-4">{t("bankingToolsSubtitle")}</p>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
           <div className={`${SURFACE_CARD_INTERACTIVE} p-4 flex flex-col gap-3 sm:col-span-2`}>
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-[12px] bg-emerald-50 flex items-center justify-center shrink-0">
@@ -1129,26 +1138,6 @@ function Dashboard() {
             </button>
           </div>
 
-          <div className={`${SURFACE_CARD_INTERACTIVE} p-4 flex flex-col gap-3`}>
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-[12px] bg-emerald-50 flex items-center justify-center shrink-0">
-                <ShieldCheck className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <h4 className="font-bold text-[14px] text-foreground">{t("bankingSafetyShield")}</h4>
-                <p className="text-[12px] font-medium text-muted-foreground mt-0.5">{t("protectFromFraud")}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                speakVoice("showingSafety");
-                setIsSafetyOpen(true);
-              }}
-              className={`w-full mt-1 py-2.5 text-[13px] ${PRIMARY_ACTION}`}
-            >
-              {t("explore")}
-            </button>
-          </div>
 
           <div className={`${SURFACE_CARD_INTERACTIVE} p-4 flex flex-col gap-3`}>
             <div className="flex items-start gap-3">
@@ -1190,6 +1179,85 @@ function Dashboard() {
             >
               {t("explore")}
             </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Premium Features */}
+      <section className="mt-8">
+        <div className="flex items-center gap-2 mb-4">
+          <Award className="w-6 h-6 text-amber-500" />
+          <div>
+            <h3 className="font-bold text-[16px] text-slate-900 leading-tight">Premium Features</h3>
+            <p className="text-[12px] text-slate-500 font-medium">Advanced automation & security tools</p>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* AI Banking Letter Generator Pro */}
+          <div className={`bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200/60 p-4 rounded-[18px] flex flex-col gap-3 relative overflow-hidden group`}>
+            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
+              <FileText className="w-16 h-16 text-indigo-500" />
+            </div>
+            <div className="flex items-start gap-3 relative z-10">
+              <div className="w-10 h-10 rounded-[12px] bg-white shadow-sm flex items-center justify-center shrink-0">
+                <FileText className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="font-bold text-[14px] text-indigo-900">Letter Generator <span className="inline-block px-2 py-0.5 ml-1 bg-indigo-500 text-white text-[9px] font-bold uppercase rounded-full tracking-wider align-middle">PRO</span></h4>
+                <p className="text-[12px] font-medium text-indigo-700/80 mt-0.5">Generate professional banking request letters instantly</p>
+              </div>
+            </div>
+            <Link
+              to="/premium/letter-generator"
+              className="w-full mt-1 py-2.5 text-[13px] text-center block bg-indigo-600 hover:bg-indigo-700 text-white rounded-[12px] font-bold active:scale-[0.98] transition-all relative z-10"
+            >
+              Access Tool
+            </Link>
+          </div>
+
+          {/* EMI Planner & Loan Simulator Pro */}
+          <div className={`bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200/60 p-4 rounded-[18px] flex flex-col gap-3 relative overflow-hidden group`}>
+            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
+              <Calculator className="w-16 h-16 text-emerald-500" />
+            </div>
+            <div className="flex items-start gap-3 relative z-10">
+              <div className="w-10 h-10 rounded-[12px] bg-white shadow-sm flex items-center justify-center shrink-0">
+                <Calculator className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="font-bold text-[14px] text-emerald-900">EMI Planner <span className="inline-block px-2 py-0.5 ml-1 bg-emerald-500 text-white text-[9px] font-bold uppercase rounded-full tracking-wider align-middle">PRO</span></h4>
+                <p className="text-[12px] font-medium text-emerald-700/80 mt-0.5">Simulate loan costs and compare across banks</p>
+              </div>
+            </div>
+            <Link
+              to="/premium/emi-planner"
+              className="w-full mt-1 py-2.5 text-[13px] text-center block bg-emerald-600 hover:bg-emerald-700 text-white rounded-[12px] font-bold active:scale-[0.98] transition-all relative z-10"
+            >
+              Access Tool
+            </Link>
+          </div>
+
+          {/* Premium Banking Shield */}
+          <div className={`bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200/60 p-4 rounded-[18px] flex flex-col gap-3 relative overflow-hidden group sm:col-span-2`}>
+            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
+              <ShieldCheck className="w-16 h-16 text-purple-500" />
+            </div>
+            <div className="flex items-start gap-3 relative z-10">
+              <div className="w-10 h-10 rounded-[12px] bg-white shadow-sm flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <h4 className="font-bold text-[14px] text-purple-900">Banking Shield <span className="inline-block px-2 py-0.5 ml-1 bg-purple-500 text-white text-[9px] font-bold uppercase rounded-full tracking-wider align-middle">PRO</span></h4>
+                <p className="text-[12px] font-medium text-purple-700/80 mt-0.5">Advanced SMS & Scam URL Analyzer</p>
+              </div>
+            </div>
+            <Link
+              to="/premium/safety-shield"
+              className="w-full mt-1 py-2.5 text-[13px] text-center block bg-purple-600 hover:bg-purple-700 text-white rounded-[12px] font-bold active:scale-[0.98] transition-all relative z-10"
+            >
+              Access Tool
+            </Link>
           </div>
         </div>
       </section>
@@ -1323,8 +1391,15 @@ function Dashboard() {
       </AnimatePresence>
       <SafetyShieldModal isOpen={isSafetyOpen} onClose={() => setIsSafetyOpen(false)} t={t} lang={lang} speakVoice={speakVoice} />
       <FinancialInclusionModal isOpen={isFinancialHelpOpen} onClose={() => setIsFinancialHelpOpen(false)} t={t} speakVoice={speakVoice} />
-      <CompareBankingModal isOpen={isCompareOpen} onClose={() => setIsCompareOpen(false)} t={t} lang={lang} openBankSafely={openBankSafely} speakVoice={speakVoice} />
+      <CompareBankingModal isOpen={isCompareOpen} onClose={() => setIsCompareOpen(false)} t={t} lang={lang} openBankSafely={openBankModal} speakVoice={speakVoice} />
       <ServiceDetailModal service={selectedService} lang={lang} onClose={() => setSelectedService(null)} />
+      
+      {actionBank && (
+        <BankActionModal 
+          bank={actionBank} 
+          onClose={() => setActionBank(null)} 
+        />
+      )}
     </div>
   );
 }

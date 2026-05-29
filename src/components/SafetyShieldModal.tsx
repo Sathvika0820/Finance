@@ -194,72 +194,7 @@ const ACTIVE_SCAM_CATEGORIES: ScamCategory[] = CYBER_SCAM_CATEGORIES.map((scam) 
   icon: SCAM_ICON_MAP[scam.icon],
 }));
 
-/* ─── Checker keywords ─── */
-const SUSPICIOUS_KEYWORDS = [
-  "otp", "pin", "cvv", "password", "verify", "kyc", "urgent", "suspended",
-  "blocked", "reward", "lottery", "prize", "win", "claim", "click here",
-  "bit.ly", "tinyurl", "free", "refund", "cashback", "loan approved",
-  "account deactivated", "credit card blocked",
-];
-
-type CheckerInputType = "url" | "phone" | "message";
-
-const CHECKER_GUIDANCE: Record<CheckerInputType, { title: string; tone: string; steps: string[] }> = {
-  url: {
-    title: "Suspicious website or link guidance",
-    tone: "bg-red-50 border-red-200 text-red-800",
-    steps: [
-      "Do not click suspicious links.",
-      "Do not enter OTP, PIN, CVV, or password.",
-      "Verify only through official bank website/app.",
-      "If money is lost, call 1930 immediately.",
-    ],
-  },
-  message: {
-    title: "Suspicious SMS or message guidance",
-    tone: "bg-amber-50 border-amber-200 text-amber-900",
-    steps: [
-      "Do not trust urgent KYC/OTP messages.",
-      "Do not click links from SMS.",
-      "Do not share OTP or UPI PIN.",
-      "Contact bank only through official website/app.",
-    ],
-  },
-  phone: {
-    title: "Suspicious phone number or caller guidance",
-    tone: "bg-rose-50 border-rose-200 text-rose-800",
-    steps: [
-      "Do not share OTP, PIN, CVV, or banking password.",
-      "Do not install apps suggested by unknown callers.",
-      "Verify customer care number from official bank website.",
-    ],
-  },
-};
-
-function getCheckerInputType(text: string): CheckerInputType {
-  const trimmed = text.trim();
-  const lower = trimmed.toLowerCase();
-  const compactPhone = trimmed.replace(/[\s()+-]/g, "");
-
-  if (/^(https?:\/\/|www\.)\S+/i.test(trimmed) || /\b[a-z0-9.-]+\.[a-z]{2,}\b/i.test(trimmed)) {
-    return "url";
-  }
-
-  if (/^\d{7,15}$/.test(compactPhone)) {
-    return "phone";
-  }
-
-  if (SUSPICIOUS_KEYWORDS.some((kw) => lower.includes(kw))) {
-    return "message";
-  }
-
-  return "message";
-}
-
-function analyzeInput(text: string): CheckerInputType | null {
-  if (!text.trim()) return null;
-  return getCheckerInputType(text);
-}
+import { analyzeSafetyInput, SafetyAnalysisResult } from "@/services/safetyAnalyzer";
 
 /* ─── Main Component ─── */
 export function SafetyShieldModal({
@@ -269,7 +204,7 @@ export function SafetyShieldModal({
 }: SafetyShieldModalProps) {
   const [selectedScam, setSelectedScam] = useState<ScamCategory | null>(null);
   const [checkerText, setCheckerText] = useState("");
-  const [checkerResult, setCheckerResult] = useState<CheckerInputType | null>(null);
+  const [checkerResult, setCheckerResult] = useState<SafetyAnalysisResult | null>(null);
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const checkerRef = useRef<HTMLTextAreaElement>(null);
   const localizedSafetySteps = [
@@ -286,7 +221,7 @@ export function SafetyShieldModal({
 
   const handleCheck = () => {
     if (!checkerText.trim()) return;
-    setCheckerResult(analyzeInput(checkerText));
+    setCheckerResult(analyzeSafetyInput(checkerText));
   };
 
   const handleScamSelect = (scam: ScamCategory) => {
@@ -524,38 +459,49 @@ export function SafetyShieldModal({
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 8 }}
-                      className={`rounded-[14px] p-4 border ${CHECKER_GUIDANCE[checkerResult].tone}`}
+                      className={`rounded-[14px] p-4 border ${
+                        checkerResult.riskLevel === "Safe" 
+                          ? "bg-green-50 border-green-200 text-green-900" 
+                          : checkerResult.riskLevel === "Suspicious"
+                          ? "bg-amber-50 border-amber-200 text-amber-900"
+                          : "bg-red-50 border-red-200 text-red-900"
+                      }`}
                     >
-                      {true ? (
+                      {checkerResult.riskLevel !== "Safe" ? (
                         <>
-                          <p className="font-bold text-[13px] flex items-center gap-2 mb-3">
-                            <AlertTriangle className="w-4 h-4" />
-                            {t("suspiciousCheckerTitle")}
+                          <p className={`font-bold text-[14px] flex items-center gap-2 mb-2 ${checkerResult.riskLevel === "High Risk" ? "text-red-700" : "text-amber-700"}`}>
+                            <AlertTriangle className="w-5 h-5" />
+                            {checkerResult.riskLevel} - {checkerResult.scamTypeKey ? t(checkerResult.scamTypeKey) : t("suspiciousMessage")}
                           </p>
-                          <ul className="space-y-2 mb-4">
-                            {localizedSafetySteps.map((tip, i) => (
-                              <li key={i} className="flex items-start gap-2 text-[12px] font-medium">
-                                <span className="mt-0.5">•</span>
-                                {tip}
-                              </li>
-                            ))}
-                          </ul>
-                          <div className="rounded-[12px] bg-white/70 border border-current/10 p-3 mb-3">
-                            <p className="text-[10px] font-bold uppercase tracking-wider opacity-75">{t("cyberFraudHelpline")}</p>
-                            <p className="text-[24px] font-black leading-tight">{HELPLINE_NUMBER}</p>
+                          <p className="text-[13px] font-medium mb-3 opacity-90">{t(checkerResult.summaryKey)}</p>
+                          <div className="bg-white/60 rounded-xl p-3 mb-4 text-[12px] font-medium shadow-sm">
+                            <span className="font-bold opacity-75 uppercase tracking-wider text-[10px] block mb-1">Recommendation</span>
+                            {t(checkerResult.recommendationKey)}
                           </div>
-                          <OfficialLinkButton
-                            item={CYBER_COMPLAINT_PORTAL}
-                            label={t("fileCyberComplaint")}
-                            className="w-full py-2.5 bg-foreground text-background rounded-[10px] text-[12px] shadow-none"
-                          />
+                          
+                          {checkerResult.riskLevel === "High Risk" && (
+                            <>
+                              <div className="rounded-[12px] bg-white/80 border border-red-100 p-3 mb-3 shadow-sm">
+                                <p className="text-[10px] font-bold text-red-600 uppercase tracking-wider">{t("cyberFraudHelpline")}</p>
+                                <p className="text-[24px] font-black text-red-700 leading-tight">{HELPLINE_NUMBER}</p>
+                              </div>
+                              <OfficialLinkButton
+                                item={CYBER_COMPLAINT_PORTAL}
+                                label={t("fileCyberComplaint")}
+                                className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-[10px] text-[12px] shadow-none"
+                              />
+                            </>
+                          )}
                         </>
                       ) : (
-                        <div className="text-center">
-                          <ShieldCheck className="w-8 h-8 text-green-600 mx-auto mb-2 fill-green-100" />
-                          <p className="font-bold text-[13px] text-green-800 mb-1">{t("checkSafetyGuidance")}</p>
-                          <p className="text-[12px] text-green-700 leading-snug">
-                            {t("cyberFraudWarning")}
+                        <div className="text-center py-2">
+                          <ShieldCheck className="w-10 h-10 text-green-600 mx-auto mb-3 fill-green-100" />
+                          <p className="font-bold text-[15px] text-green-800 mb-2">{t("checkSafetyGuidance")}</p>
+                          <p className="text-[13px] text-green-700 leading-snug font-medium mb-2">
+                            {t(checkerResult.summaryKey)}
+                          </p>
+                          <p className="text-[12px] text-green-600/80 leading-snug">
+                            {t(checkerResult.recommendationKey)}
                           </p>
                         </div>
                       )}
