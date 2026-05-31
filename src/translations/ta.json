@@ -149,5 +149,9 @@
   "loanType": "Loan Type",
   "generateLetterDesc": "Generate professional banking request letters instantly.",
   "editLetter": "Edit Letter",
-  "saveChanges": "Save Changes"
+  "saveChanges": "Save Changes",
+  "financialCategory.citizen.name": "Government & Citizen Services",
+  "findNearbyMeeSeva": "Find Nearby MeeSeva Center",
+  "selectStateMeeSeva": "Please select your state to access the appropriate MeeSeva portal.",
+  "openOfficialPortal": "Open Official Portal"
 }

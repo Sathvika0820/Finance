@@ -5,6 +5,7 @@ export type FinancialInclusionCategoryId =
   | "self-employed"
   | "women"
   | "senior-citizen"
+  | "citizen"
   | "others";
 
 export interface FinancialInclusionCategory {
@@ -30,6 +31,11 @@ export interface FinancialInclusionScheme {
   tags: string[];
   keywords: string[];
   badge?: "Most Popular" | "Recommended" | "Recently Added";
+  customAction?: {
+    labelKey: string;
+    onClickUrl: string;
+    icon?: string;
+  };
 }
 
 export const FINANCIAL_INCLUSION_CATEGORIES: FinancialInclusionCategory[] = [
@@ -64,6 +70,11 @@ export const FINANCIAL_INCLUSION_CATEGORIES: FinancialInclusionCategory[] = [
     description: "Savings, pensions, and health insurance awareness.",
   },
   {
+    id: "citizen",
+    name: "Government & Citizen Services",
+    description: "Access government certificates, identity services, revenue services, and citizen assistance.",
+  },
+  {
     id: "others",
     name: "Others",
     description: "Identity, documents, DBT, insurance, and scheme discovery.",
@@ -83,6 +94,7 @@ function scheme(
   verified = true,
   badge?: FinancialInclusionScheme["badge"],
   importantNotes?: string,
+  customAction?: FinancialInclusionScheme["customAction"]
 ): FinancialInclusionScheme {
   const subcategory = inferSubcategory(category, id, type, keywords);
   const tags = [category, subcategory, type, name, ...keywords];
@@ -103,6 +115,7 @@ function scheme(
     tags,
     keywords: tags,
     badge,
+    customAction,
   };
 }
 
@@ -163,9 +176,17 @@ function inferSubcategory(
     return "Elderly Financial Support";
   }
 
-  if (/aadhaar|pan|digilocker|document/.test(text)) return "Identity & Documents";
+  if (category === "citizen") {
+    if (/meeseva|csc/.test(text)) return "Citizen Assistance";
+    if (/aadhaar|pan|voter|ration|document|identity/.test(text)) return "Identity & Documents";
+    if (/certificate|income|caste|residence|birth|death/.test(text)) return "Certificates";
+    if (/land|record|bhoomi|dharani/.test(text)) return "Land Records";
+    if (/digital|umang|digilocker/.test(text)) return "Digital Services";
+    if (/dbt|transfer|subsidy/.test(text)) return "DBT Services";
+    return "Government Services";
+  }
+
   if (/jan dhan|banking|insurance|pension/.test(text)) return "Banking Inclusion";
-  if (/digital|umang|abha|sanchar|csc/.test(text)) return "Digital Services";
   if (/scheme|myscheme|dbt/.test(text)) return "Scheme Discovery";
   return "Government Services";
 }
@@ -254,17 +275,35 @@ export const FINANCIAL_INCLUSION_SCHEMES: FinancialInclusionScheme[] = [
   scheme("reverse-mortgage-awareness", "senior-citizen", "Reverse Mortgage Awareness", "Elderly Financial Support", "Official RBI public awareness route for safe banking and regulated financial products.", "Senior citizens exploring regulated bank-linked financial products.", "Use official regulator information before considering reverse mortgage or similar products.", "https://rbi.org.in", ["reverse mortgage", "rbi"], true, undefined, "Check terms only with regulated banks and official RBI or bank sources."),
 
   scheme("jan-dhan-yojana", "others", "Jan Dhan Yojana", "Financial Inclusion", "Official PMJDY portal for basic banking access.", "Eligible citizens seeking basic banking access.", "Information on basic savings accounts, RuPay card, insurance, and inclusion services.", "https://pmjdy.gov.in", ["pmjdy"]),
-  scheme("digilocker", "others", "DigiLocker", "Digital Documents", "Official Digital India document wallet.", "Citizens needing issued digital documents and certificates.", "Store, access, and share official digital documents securely.", "https://www.digilocker.gov.in", ["documents"]),
-  scheme("aadhaar-services", "others", "Aadhaar Services", "Identity Services", "Official UIDAI portal for Aadhaar services.", "Residents using Aadhaar enrollment, update, or download services.", "Access official Aadhaar information and resident services.", "https://uidai.gov.in", ["uidai"]),
-  scheme("umang", "others", "UMANG", "Government Services", "Official unified platform for government services.", "Citizens looking for services through one official app or web platform.", "Access multiple government services from one official platform.", "https://web.umang.gov.in", ["services"]),
-  scheme("dbt-schemes", "others", "DBT Schemes", "Direct Benefit Transfer", "Official DBT Bharat portal.", "Citizens eligible for DBT-linked schemes as per scheme rules.", "Understand official benefit transfer information.", "https://dbtbharat.gov.in", ["benefit transfer"]),
+  
+  // New and moved Citizen Schemes
+  scheme("meeseva", "citizen", "MeeSeva Services", "Citizen Assistance", "Access government certificates, identity services, revenue services, and citizen assistance through official MeeSeva channels.", "All citizens looking for government service delivery.", "Single window for citizen services and certificates.", "", ["meeseva", "csc"], true, "Recommended", "Please select your state to access the appropriate MeeSeva portal.", {
+    labelKey: "findNearbyMeeSeva",
+    onClickUrl: "https://www.google.com/maps/search/Nearby+MeeSeva+Centers"
+  }),
+  scheme("digilocker", "citizen", "DigiLocker", "Digital Documents", "Official Digital India document wallet.", "Citizens needing issued digital documents and certificates.", "Store, access, and share official digital documents securely.", "https://www.digilocker.gov.in", ["documents"]),
+  scheme("aadhaar-services", "citizen", "Aadhaar Services", "Identity Services", "Official UIDAI portal for Aadhaar services.", "Residents using Aadhaar enrollment, update, or download services.", "Access official Aadhaar information and resident services.", "https://uidai.gov.in", ["uidai"]),
+  scheme("maadhaar", "citizen", "mAadhaar", "Identity Services", "Official UIDAI mobile Aadhaar service information.", "Residents using official Aadhaar mobile services.", "Access official mobile Aadhaar service information and links.", "https://uidai.gov.in", ["aadhaar", "mobile"]),
+  scheme("pan-services", "citizen", "PAN Services", "Identity & Documents", "Official NSDL/UTIITSL or Income Tax portal for PAN applications and updates.", "Individuals and entities required to have a Permanent Account Number.", "Apply for a new PAN, correct details, or link PAN with Aadhaar.", "https://www.incometax.gov.in/iec/foportal/", ["pan card", "nsdl", "utiitsl"]),
+  scheme("voter-id-services", "citizen", "Voter ID Services", "Identity & Documents", "Official Election Commission of India portal for Voter ID.", "Eligible citizens above 18 years of age.", "Apply for a new Voter ID, correct details, or search electoral roll.", "https://voters.eci.gov.in/", ["epic", "election", "voter id"]),
+  scheme("ration-card-services", "citizen", "Ration Card Services", "Identity & Documents", "Official National Food Security Portal or state civil supplies portal.", "Eligible households under NFSA or state schemes.", "Apply for a new ration card or manage details through the One Nation One Ration Card system.", "https://nfsa.gov.in/", ["nfsa", "food security", "ration"]),
+  scheme("umang", "citizen", "UMANG", "Government Services", "Official unified platform for government services.", "Citizens looking for services through one official app or web platform.", "Access multiple government services from one official platform.", "https://web.umang.gov.in", ["services"]),
+  scheme("dbt-schemes", "citizen", "DBT Services", "Direct Benefit Transfer", "Official DBT Bharat portal.", "Citizens eligible for DBT-linked schemes as per scheme rules.", "Understand official benefit transfer information.", "https://dbtbharat.gov.in", ["benefit transfer"]),
+  scheme("income-certificate", "citizen", "Income Certificate", "Certificates", "Official portal to apply for an Income Certificate.", "Citizens requiring proof of income for scholarships or schemes.", "Provides certified proof of annual income.", "", ["income proof", "certificate"]),
+  scheme("caste-certificate", "citizen", "Caste Certificate", "Certificates", "Official portal to apply for a Caste/Community Certificate.", "Citizens belonging to reserved categories needing proof for benefits.", "Provides certified proof of community/caste.", "", ["community certificate", "reservation"]),
+  scheme("residence-certificate", "citizen", "Residence Certificate", "Certificates", "Official portal to apply for Domicile or Residence Certificate.", "Citizens needing proof of residence for local benefits or admissions.", "Provides certified proof of state/district residence.", "", ["domicile", "nativity"]),
+  scheme("birth-certificate", "citizen", "Birth Certificate", "Certificates", "Official portal or municipal service for Birth Certificate.", "Parents or individuals registering a birth.", "Provides official proof of birth and age.", "https://crsorgi.gov.in/", ["birth registration"]),
+  scheme("death-certificate", "citizen", "Death Certificate", "Certificates", "Official portal or municipal service for Death Certificate.", "Relatives registering a death.", "Provides official proof of death for legal and financial settlements.", "https://crsorgi.gov.in/", ["death registration"]),
+  scheme("land-records", "citizen", "Land Records", "Land Records", "Official state portals for land records (e.g., Bhoomi, Dharani, Bhulekh).", "Landowners needing official land documents.", "View EC, pattadar passbooks, and property records digitally.", "", ["bhoomi", "dharani", "bhulekh", "ec"]),
+  scheme("government-certificates", "citizen", "Government Certificates", "Certificates", "General gateway to apply for state and central certificates.", "Citizens requiring various official certificates.", "Single window for certificate applications.", "", ["certificates"]),
+
+  // Remaining Others
   scheme("insurance-schemes", "others", "Insurance Schemes", "Insurance", "Official Jan Suraksha portal for government-linked insurance.", "Eligible bank account holders as per PMJJBY/PMSBY rules.", "Access official life and accident insurance scheme information.", "https://jansuraksha.gov.in", ["pmjjby", "pmsby"]),
   scheme("pension-schemes", "others", "Pension Schemes", "Pension", "Official PFRDA portal for pension scheme information.", "Citizens and subscribers eligible under pension scheme rules.", "Official pension scheme and retirement planning resources.", "https://www.pfrda.org.in", ["nps", "apy"]),
   scheme("myscheme", "others", "myScheme", "Scheme Discovery", "Official government platform for discovering citizen schemes.", "Citizens looking for schemes based on profile and eligibility.", "Find government schemes through an official guided platform.", "https://www.myscheme.gov.in", ["scheme finder"]),
   scheme("india-gov", "others", "National Portal of India", "Citizen Services", "Official national portal for government information and services.", "Citizens seeking official government information and service links.", "Access official central and state government service information.", "https://www.india.gov.in", ["citizen"]),
   scheme("abha", "others", "ABHA Health Account", "Digital Health", "Official Ayushman Bharat Digital Mission ABHA service.", "Citizens who want a digital health account as per ABDM rules.", "Create or manage official digital health identity services.", "https://abha.abdm.gov.in", ["health id"]),
   scheme("sanchar-saathi", "others", "Sanchar Saathi", "Telecom Safety", "Official citizen-centric telecom safety portal.", "Citizens checking mobile connections or reporting lost/stolen devices.", "Access official telecom safety and mobile connection services.", "https://sancharsaathi.gov.in", ["telecom"]),
-  scheme("maadhaar", "others", "mAadhaar", "Identity Services", "Official UIDAI mobile Aadhaar service information.", "Residents using official Aadhaar mobile services.", "Access official mobile Aadhaar service information and links.", "https://uidai.gov.in", ["aadhaar", "mobile"]),
   scheme("instant-epan", "others", "Instant e-PAN", "Identity & Documents", "Official Income Tax e-Filing service for instant e-PAN.", "Eligible individuals with Aadhaar and linked mobile as per Income Tax portal rules.", "Generate or download e-PAN through the official e-Filing portal.", "https://www.incometax.gov.in/iec/foportal/help/all-topics/e-filing-services/instant-e-pan/instant-UM", ["pan", "epan"]),
   scheme("csc-services", "others", "Common Service Centres", "Government Services", "Official CSC portal for assisted digital government and citizen services.", "Citizens using CSC access points and eligible village-level entrepreneurs.", "Find official CSC service and access information.", "https://www.csc.gov.in", ["csc", "digital services"]),
   scheme("digital-india", "others", "Digital India", "Digital Services", "Official Digital India programme portal.", "Citizens and institutions using official digital governance initiatives.", "Discover official Digital India services and program information.", "https://www.digitalindia.gov.in", ["digital india"]),

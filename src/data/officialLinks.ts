@@ -225,6 +225,17 @@ const governmentSchemeLinks = {
   "instant-epan": ["Income Tax e-Filing", "https://www.incometax.gov.in/iec/foportal/help/all-topics/e-filing-services/instant-e-pan/instant-UM"],
   "csc-services": ["Common Service Centres", "https://www.csc.gov.in"],
   "digital-india": ["Digital India", "https://www.digitalindia.gov.in"],
+  "pan-services": ["Income Tax e-Filing", "https://www.incometax.gov.in/iec/foportal/"],
+  "voter-id-services": ["Voter Portal", "https://voters.eci.gov.in/"],
+  "ration-card-services": ["NFSA Portal", "https://nfsa.gov.in/"],
+  "birth-certificate": ["Civil Registration System", "https://crsorgi.gov.in/"],
+  "death-certificate": ["Civil Registration System", "https://crsorgi.gov.in/"],
+  "income-certificate": ["State Portals", "https://india.gov.in/topics/certificates"],
+  "caste-certificate": ["State Portals", "https://india.gov.in/topics/certificates"],
+  "residence-certificate": ["State Portals", "https://india.gov.in/topics/certificates"],
+  "land-records": ["State Portals", "https://india.gov.in/topics/housing"],
+  "government-certificates": ["State Portals", "https://india.gov.in/topics/certificates"],
+  "meeseva": ["MeeSeva", "https://india.gov.in/topics/certificates"], // Fallback link since it requires state portal
 } as const;
 
 const cyberSafetyLinks = {

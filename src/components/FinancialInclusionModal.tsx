@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, GraduationCap, Info, Landmark, SearchCheck, Users, UserRound, Wheat, X } from "lucide-react";
+import { ArrowLeft, GraduationCap, Info, Landmark, SearchCheck, Users, UserRound, Wheat, X, FileText, ExternalLink, MapPin } from "lucide-react";
 import { useMemo, useState } from "react";
 import { OfficialLinkButton } from "@/components/OfficialLinkButton";
 import { SearchInput } from "@/components/SearchInput";
@@ -26,6 +26,7 @@ const categoryIconMap: Record<FinancialInclusionCategoryId, typeof Users> = {
   "self-employed": Landmark,
   women: Users,
   "senior-citizen": UserRound,
+  citizen: FileText,
   others: SearchCheck,
 };
 
@@ -118,9 +119,33 @@ function SchemeInfoModal({
           {scheme.importantNotes && (
             <section className="rounded-[16px] border border-amber-200 bg-amber-50 p-3">
               <h4 className="text-[11px] font-bold uppercase text-amber-800">{t("importantNotes")}</h4>
-              <p className="mt-1 text-[12px] font-medium leading-relaxed text-amber-900/80">{t("checkOfficialDetails")}</p>
+              <p className="mt-1 text-[12px] font-medium leading-relaxed text-amber-900/80">{scheme.importantNotes === "Please select your state to access the appropriate MeeSeva portal." ? t("selectStateMeeSeva") || scheme.importantNotes : t("checkOfficialDetails")}</p>
             </section>
           )}
+          <div className="pt-2 flex flex-col gap-2">
+            <a 
+              href={scheme.officialWebsite || "#"} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className={`w-full rounded-[14px] py-3 text-[13px] font-bold transition-all shadow-sm flex items-center justify-center gap-2 ${
+                scheme.officialWebsite ? "bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.98]" : "bg-slate-100 text-slate-400 pointer-events-none"
+              }`}
+            >
+              <ExternalLink className="h-4 w-4" />
+              {t("openOfficialPortal") || "Open Official Portal"}
+            </a>
+            {scheme.customAction && (
+              <a
+                href={scheme.customAction.onClickUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full rounded-[14px] py-3 text-[13px] font-bold transition-all shadow-sm flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 active:scale-[0.98]"
+              >
+                <MapPin className="h-4 w-4" />
+                {t(scheme.customAction.labelKey) || "Find Nearby Center"}
+              </a>
+            )}
+          </div>
         </div>
       </div>
     </div>
