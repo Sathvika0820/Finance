@@ -17,7 +17,7 @@ import { getOfficialLinkEntry } from "@/data/officialLinks";
 import { openVerifiedExternalLink } from "@/lib/security";
 import { useTranslation } from "@/lib/i18n";
 import { useVoiceAssistant } from "@/lib/voice";
-import { analyzeSafetyInput, SafetyAnalysisResult } from "@/services/safetyAnalyzer";
+import { analyzeScamInput, ScamAnalysisResult } from "@/services/scamAnalyzer";
 import { AppShell } from '@/components/AppShell';
 
 const HELPLINE_NUMBER = CYBER_FRAUD_HELPLINE;
@@ -62,7 +62,7 @@ function PremiumSafetyShield() {
   const { speakVoice } = useVoiceAssistant();
   const [selectedScam, setSelectedScam] = useState<ScamCategory | null>(null);
   const [checkerText, setCheckerText] = useState("");
-  const [checkerResult, setCheckerResult] = useState<SafetyAnalysisResult | null>(null);
+  const [checkerResult, setCheckerResult] = useState<ScamAnalysisResult | null>(null);
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const checkerRef = useRef<HTMLTextAreaElement>(null);
 
@@ -79,7 +79,7 @@ function PremiumSafetyShield() {
 
   const handleCheck = () => {
     if (!checkerText.trim()) return;
-    setCheckerResult(analyzeSafetyInput(checkerText));
+    setCheckerResult(analyzeScamInput(checkerText));
   };
 
   const handleScamSelect = (scam: ScamCategory) => {
@@ -148,24 +148,31 @@ function PremiumSafetyShield() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 8 }}
                     className={`rounded-[14px] p-5 mt-4 border ${
-                      checkerResult.riskLevel === "Safe" 
+                      checkerResult.threatLevel === "SAFE" 
                         ? "bg-emerald-50 border-emerald-200 text-emerald-900" 
-                        : checkerResult.riskLevel === "Suspicious"
+                        : checkerResult.threatLevel === "CAUTION"
                         ? "bg-amber-50 border-amber-200 text-amber-900"
                         : "bg-rose-50 border-rose-200 text-rose-900"
                     }`}
                   >
                     <div className="flex items-start gap-3">
-                      {checkerResult.riskLevel !== "Safe" ? <AlertTriangle className="w-6 h-6 shrink-0 mt-0.5" /> : <ShieldCheck className="w-6 h-6 shrink-0 mt-0.5" />}
-                      <div>
-                        <p className={`font-black text-[16px] mb-1 uppercase tracking-wider`}>
-                          {checkerResult.riskLevel}
-                        </p>
-                        <p className="text-[14px] font-medium mb-3 opacity-90">{t(checkerResult.summaryKey)}</p>
+                      {checkerResult.threatLevel !== "SAFE" ? <AlertTriangle className="w-6 h-6 shrink-0 mt-0.5" /> : <ShieldCheck className="w-6 h-6 shrink-0 mt-0.5" />}
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className={`font-black text-[16px] uppercase tracking-wider`}>
+                            {checkerResult.threatLevel}
+                          </p>
+                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                            checkerResult.confidence >= 90 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                          }`}>
+                            {checkerResult.confidence}% Confidence
+                          </span>
+                        </div>
+                        <p className="text-[14px] font-medium mb-3 opacity-90">{checkerResult.reason}</p>
                         
                         <div className="bg-white/60 rounded-xl p-3 mb-2 text-[13px] font-medium shadow-sm">
                           <span className="font-bold opacity-75 uppercase tracking-wider text-[10px] block mb-1">AI Recommendation</span>
-                          {t(checkerResult.recommendationKey)}
+                          {checkerResult.recommendation}
                         </div>
                       </div>
                     </div>

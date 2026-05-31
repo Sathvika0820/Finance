@@ -194,7 +194,6 @@ const ACTIVE_SCAM_CATEGORIES: ScamCategory[] = CYBER_SCAM_CATEGORIES.map((scam) 
   icon: SCAM_ICON_MAP[scam.icon],
 }));
 
-import { analyzeSafetyInput, SafetyAnalysisResult } from "@/services/safetyAnalyzer";
 
 /* ─── Main Component ─── */
 export function SafetyShieldModal({
