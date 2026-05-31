@@ -228,14 +228,14 @@ const governmentSchemeLinks = {
   "pan-services": ["Income Tax e-Filing", "https://www.incometax.gov.in/iec/foportal/"],
   "voter-id-services": ["Voter Portal", "https://voters.eci.gov.in/"],
   "ration-card-services": ["NFSA Portal", "https://nfsa.gov.in/"],
-  "birth-certificate": ["Civil Registration System", "https://crsorgi.gov.in/"],
-  "death-certificate": ["Civil Registration System", "https://crsorgi.gov.in/"],
-  "income-certificate": ["State Portals", "https://india.gov.in/topics/certificates"],
-  "caste-certificate": ["State Portals", "https://india.gov.in/topics/certificates"],
-  "residence-certificate": ["State Portals", "https://india.gov.in/topics/certificates"],
-  "land-records": ["State Portals", "https://india.gov.in/topics/housing"],
-  "government-certificates": ["State Portals", "https://india.gov.in/topics/certificates"],
-  "meeseva": ["MeeSeva", "https://india.gov.in/topics/certificates"], // Fallback link since it requires state portal
+  "birth-certificate": ["Civil Registration System", "https://dc.crsorgi.gov.in/"],
+  "death-certificate": ["Civil Registration System", "https://dc.crsorgi.gov.in/"],
+  "income-certificate": ["State Portals", "https://services.india.gov.in/"],
+  "caste-certificate": ["State Portals", "https://services.india.gov.in/"],
+  "residence-certificate": ["State Portals", "https://services.india.gov.in/"],
+  "land-records": ["State Portals", "https://dolr.gov.in/"],
+  "government-certificates": ["State Portals", "https://services.india.gov.in/"],
+  "meeseva": ["MeeSeva", "https://services.india.gov.in/"], // Fallback link since it requires state portal
 } as const;
 
 const cyberSafetyLinks = {
