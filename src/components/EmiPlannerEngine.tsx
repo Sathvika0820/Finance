@@ -6,7 +6,8 @@ import { CompareBankingModal } from "@/components/CompareBankingModal";
 import { useTranslation } from "@/lib/i18n";
 import { useVoiceAssistant } from "@/lib/voice";
 import { BANKS, getBankDisplayName } from "@/data/banks";
-import { getSortedLoanComparison, LoanComparisonLoanType } from "@/data/loanData";
+import { getSortedLoanComparison, LoanComparisonLoanType, LOAN_COMPARISON_DATA } from "@/data/loanData";
+import { normalizeBankName, normalizeLoanTypeName } from "@/data/loanMappings";
 
 const LOAN_TYPES: { id: LoanComparisonLoanType; label: string; defaultTenure: number }[] = [
   { id: "home_loan", label: "Home Loan", defaultTenure: 20 },
@@ -44,10 +45,38 @@ export function EmiPlannerEngine() {
   };
 
   const autoRate = useMemo(() => {
-    const comparisons = getSortedLoanComparison(selectedType.id);
-    const bankLoan = comparisons.find(l => l.bankId === selectedBankId);
-    return bankLoan?.numericRate ?? null;
-  }, [selectedBankId, selectedType.id]);
+    const selectedBankObj = BANKS.find(b => b.id === selectedBankId);
+    const rawBankName = selectedBankObj ? selectedBankObj.name : selectedBankId;
+    const rawLoanType = selectedType.label;
+
+    const normalizedBank = normalizeBankName(selectedBankId).toLowerCase();
+    const normalizedType = normalizeLoanTypeName(selectedType.id).toLowerCase();
+    
+    // Attempt to match
+    const bankLoan = LOAN_COMPARISON_DATA.find(l => {
+      const lBankNorm = normalizeBankName(l.bankId).toLowerCase();
+      const lTypeNorm = normalizeLoanTypeName(l.loanType).toLowerCase();
+      const lBankNameLower = l.bankName.toLowerCase();
+      const lTypeLabelLower = l.loanTypeLabel.english.toLowerCase();
+      
+      const bankMatches = lBankNorm === normalizedBank || lBankNameLower === normalizedBank || lBankNorm === rawBankName.toLowerCase() || lBankNameLower === rawBankName.toLowerCase();
+      const typeMatches = lTypeNorm === normalizedType || lTypeLabelLower === normalizedType || lTypeNorm === rawLoanType.toLowerCase() || lTypeLabelLower === rawLoanType.toLowerCase();
+      
+      return bankMatches && typeMatches;
+    });
+
+    const rate = bankLoan?.numericRate ?? null;
+
+    console.log("=== EMI PLANNER MAPPING DEBUG ===");
+    console.log("Selected Bank:", rawBankName);
+    console.log("Selected Loan Type:", rawLoanType);
+    console.log("Matched Bank:", bankLoan ? bankLoan.bankName : "NONE");
+    console.log("Matched Loan Type:", bankLoan ? bankLoan.loanTypeLabel.english : "NONE");
+    console.log("Interest Rate:", rate);
+    console.log("=================================");
+
+    return rate;
+  }, [selectedBankId, selectedType]);
 
   const results = useMemo(() => {
     const P = amount;
@@ -180,7 +209,7 @@ export function EmiPlannerEngine() {
                         <span className="text-[10px] uppercase font-extrabold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded ml-2">Auto</span>
                       </>
                     ) : (
-                      <span className="text-amber-600 text-[13px] font-semibold">{t("rateMappingMissing", { bankName: selectedBankName, loanType: selectedType.label }) || `Interest rate mapping missing: ${selectedBankName} + ${selectedType.label}`}</span>
+                      <span className="text-amber-600 text-[13px] font-semibold">{t("rateUnavailable") || "No interest-rate data found for this bank and loan type."}</span>
                     )}
                   </div>
                 </div>
