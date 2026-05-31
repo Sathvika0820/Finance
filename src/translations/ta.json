@@ -146,5 +146,8 @@
   "estimatedAffordableLoan": "Estimated Affordable Loan",
   "rateMappingMissing": "Interest rate mapping missing: {bankName} + {loanType}",
   "loanDetails": "Loan Details",
-  "loanType": "Loan Type"
+  "loanType": "Loan Type",
+  "generateLetterDesc": "Generate professional banking request letters instantly.",
+  "editLetter": "Edit Letter",
+  "saveChanges": "Save Changes"
 }

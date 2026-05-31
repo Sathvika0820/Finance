@@ -1,6 +1,6 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Copy, Printer, CheckCircle2, ChevronDown, FileText, Download } from "lucide-react";
+import { ArrowLeft, Copy, Printer, CheckCircle2, ChevronDown, FileText, Download, Edit3, Save } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 
 const LETTER_TYPES = [
@@ -27,6 +27,8 @@ export function LetterGeneratorEngine() {
   const [selectedType, setSelectedType] = useState(LETTER_TYPES[0]);
   const [isCopied, setIsCopied] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedLetter, setEditedLetter] = useState("");
   const printRef = useRef<HTMLDivElement>(null);
 
   const generatedLetter = useMemo(() => {
@@ -51,8 +53,14 @@ Yours Faithfully,
 ${customerName || "[Customer Name]"}`;
   }, [bankName, branchName, customerName, accountNumber, selectedType]);
 
+  const handleGenerate = () => {
+    setEditedLetter(generatedLetter);
+    setShowPreview(true);
+    setIsEditing(false);
+  };
+
   const handleCopy = () => {
-    navigator.clipboard.writeText(generatedLetter);
+    navigator.clipboard.writeText(editedLetter || generatedLetter);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
   };
@@ -60,6 +68,8 @@ ${customerName || "[Customer Name]"}`;
   const handlePrint = () => {
     const printContent = printRef.current;
     if (printContent) {
+      // In a real application, you might use a library like react-to-print or jsPDF
+      // For this implementation, we use the browser print functionality
       const originalContents = document.body.innerHTML;
       document.body.innerHTML = printContent.innerHTML;
       window.print();
@@ -68,8 +78,12 @@ ${customerName || "[Customer Name]"}`;
     }
   };
 
-  const handleGenerate = () => {
-    setShowPreview(true);
+  const toggleEdit = () => {
+    if (isEditing) {
+      setIsEditing(false);
+    } else {
+      setIsEditing(true);
+    }
   };
 
   return (
@@ -86,7 +100,7 @@ ${customerName || "[Customer Name]"}`;
           </div>
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">{t("letterGeneratorPro") || "Letter Generator Pro"}</h1>
-            <p className="text-muted-foreground mt-1 text-sm sm:text-base font-medium">{t("generateLetterDesc") || "Generate professional banking request letters instantly"}</p>
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base font-medium">{t("generateLetterDesc") || "Generate professional banking request letters instantly."}</p>
           </div>
         </div>
 
@@ -181,6 +195,15 @@ ${customerName || "[Customer Name]"}`;
                 <h2 className="text-[15px] font-extrabold text-foreground">{t("livePreview") || "Live Preview"}</h2>
                 <div className="flex flex-wrap gap-2">
                   <button
+                    onClick={toggleEdit}
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold text-[12px] transition-colors ${
+                      isEditing ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    }`}
+                  >
+                    {isEditing ? <Save className="w-3.5 h-3.5" /> : <Edit3 className="w-3.5 h-3.5" />}
+                    {isEditing ? t("saveChanges") || "Save Changes" : t("editLetter") || "Edit Letter"}
+                  </button>
+                  <button
                     onClick={handleCopy}
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-[12px] transition-colors"
                   >
@@ -208,12 +231,20 @@ ${customerName || "[Customer Name]"}`;
               <div className="p-4 sm:p-8 bg-slate-100 overflow-y-auto flex-1 flex justify-center items-start min-h-[600px]">
                 <div 
                   ref={printRef}
-                  className="bg-white p-8 sm:p-12 w-full max-w-[21cm] shadow-sm border border-slate-200 text-left"
+                  className="bg-white p-8 sm:p-12 w-full max-w-[21cm] shadow-sm border border-slate-200 text-left relative"
                   style={{ minHeight: "29.7cm" }}
                 >
-                  <div className="font-serif text-[15px] sm:text-[16px] text-slate-900 leading-[1.8] whitespace-pre-line text-justify">
-                    {generatedLetter}
-                  </div>
+                  {isEditing ? (
+                    <textarea
+                      value={editedLetter}
+                      onChange={(e) => setEditedLetter(e.target.value)}
+                      className="font-serif text-[15px] sm:text-[16px] text-slate-900 leading-[1.8] w-full min-h-[25cm] resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500/20 rounded-md p-2 -m-2 bg-slate-50 border border-slate-200"
+                    />
+                  ) : (
+                    <div className="font-serif text-[15px] sm:text-[16px] text-slate-900 leading-[1.8] whitespace-pre-line text-justify">
+                      {editedLetter || generatedLetter}
+                    </div>
+                  )}
                 </div>
               </div>
 
