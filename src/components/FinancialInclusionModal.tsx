@@ -83,7 +83,25 @@ function SchemeInfoModal({
   t: (key: string, values?: Record<string, string | number>) => string;
   onClose: () => void;
 }) {
+  const [meesevaState, setMeesevaState] = useState("");
+
+  const MEESEVA_STATES = [
+    { id: "ap", name: "Andhra Pradesh", url: "https://ap.meeseva.gov.in/", query: "Nearby MeeSeva Center" },
+    { id: "ts", name: "Telangana", url: "https://ts.meeseva.telangana.gov.in/", query: "Nearby MeeSeva Center" },
+    { id: "ka", name: "Karnataka", url: "https://sevasindhu.karnataka.gov.in/", query: "Nearby Seva Sindhu Center" },
+    { id: "tn", name: "Tamil Nadu", url: "https://www.tnesevai.tn.gov.in/", query: "Nearby e-Sevai Center" },
+    { id: "kl", name: "Kerala", url: "https://edistrict.kerala.gov.in/", query: "Nearby eDistrict Center" },
+    { id: "other", name: "Others", url: "https://services.india.gov.in", query: "Nearby Citizen Service Center" },
+  ];
+
   if (!scheme) return null;
+
+  const isMeeseva = scheme.id === "meeseva";
+  const selectedStateObj = isMeeseva ? MEESEVA_STATES.find(s => s.id === meesevaState) : null;
+  const officialUrl = isMeeseva ? (selectedStateObj?.url || "") : (scheme.officialWebsite || "#");
+  const isUrlValid = isMeeseva ? !!selectedStateObj : !!scheme.officialWebsite;
+  const mapQuery = isMeeseva ? (selectedStateObj?.query || "Nearby Citizen Service Center") : "Nearby Center";
+  const mapUrl = isMeeseva && scheme.customAction ? `https://www.google.com/maps/search/${encodeURIComponent(mapQuery)}` : scheme.customAction?.onClickUrl;
 
   return (
     <div className="fixed inset-0 z-[130] flex items-end justify-center bg-black/35 px-3 py-4 backdrop-blur-sm sm:items-center">
@@ -122,13 +140,29 @@ function SchemeInfoModal({
               <p className="mt-1 text-[12px] font-medium leading-relaxed text-amber-900/80">{scheme.importantNotes === "Please select your state to access the appropriate MeeSeva portal." ? t("selectStateMeeSeva") || scheme.importantNotes : t("checkOfficialDetails")}</p>
             </section>
           )}
+          {isMeeseva && (
+            <section className="rounded-[16px] bg-sky-50 border border-sky-200 p-3">
+              <h4 className="text-[11px] font-bold uppercase text-sky-800 mb-2">Select State</h4>
+              <select
+                value={meesevaState}
+                onChange={(e) => setMeesevaState(e.target.value)}
+                className="w-full rounded-[10px] border border-sky-300 bg-white px-3 py-2 text-[13px] font-semibold text-slate-700 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+              >
+                <option value="" disabled>-- Select your state --</option>
+                {MEESEVA_STATES.map((state) => (
+                  <option key={state.id} value={state.id}>{state.name}</option>
+                ))}
+              </select>
+            </section>
+          )}
+
           <div className="pt-2 flex flex-col gap-2">
             <a 
-              href={scheme.officialWebsite || "#"} 
+              href={officialUrl} 
               target="_blank" 
               rel="noopener noreferrer"
               className={`w-full rounded-[14px] py-3 text-[13px] font-bold transition-all shadow-sm flex items-center justify-center gap-2 ${
-                scheme.officialWebsite ? "bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.98]" : "bg-slate-100 text-slate-400 pointer-events-none"
+                isUrlValid ? "bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.98]" : "bg-slate-100 text-slate-400 pointer-events-none"
               }`}
             >
               <ExternalLink className="h-4 w-4" />
@@ -136,7 +170,7 @@ function SchemeInfoModal({
             </a>
             {scheme.customAction && (
               <a
-                href={scheme.customAction.onClickUrl}
+                href={mapUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full rounded-[14px] py-3 text-[13px] font-bold transition-all shadow-sm flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 active:scale-[0.98]"
