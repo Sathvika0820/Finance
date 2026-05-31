@@ -112,7 +112,7 @@
   "copy": "Copy",
   "copied": "Copied",
   "selectBank": "Select Bank",
-  "rateUnavailable": "Interest rate mapping missing for selected bank and loan type.",
+  "rateUnavailable": "Interest rate currently unavailable for this loan.",
   "emiPlannerDesc": "Calculate EMIs, compare loan costs, and plan your finances smarter.",
   "monthlySalary": "Monthly Salary",
   "emiToSalaryRatio": "EMI-to-Salary Ratio",

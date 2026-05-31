@@ -196,16 +196,11 @@ export function EmiPlannerEngine() {
                       <span className="text-slate-400 font-semibold animate-pulse">Fetching rate...</span>
                     ) : autoRate !== null ? (
                       <>
-                        <div className="flex flex-col">
-                          <span>{autoRate.toFixed(2)}%</span>
-                          {!rateIsDynamic && (
-                            <span className="text-[10px] text-amber-600 font-semibold mt-0.5">Latest rate unavailable. Using last verified rate.</span>
-                          )}
-                        </div>
+                        <span>{autoRate.toFixed(2)}%</span>
                         <span className="text-[10px] uppercase font-extrabold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded ml-2">Auto</span>
                       </>
                     ) : (
-                      <span className="text-amber-600 text-[13px] font-semibold">{t("rateUnavailable") || "Latest rate unavailable. Using last verified rate."}</span>
+                      <span className="text-amber-600 text-[13px] font-semibold">{t("rateUnavailable") || "Interest rate currently unavailable for this loan."}</span>
                     )}
                   </div>
                 </div>
