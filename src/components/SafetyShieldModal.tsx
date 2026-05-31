@@ -203,10 +203,8 @@ export function SafetyShieldModal({
   t,
 }: SafetyShieldModalProps) {
   const [selectedScam, setSelectedScam] = useState<ScamCategory | null>(null);
-  const [checkerText, setCheckerText] = useState("");
-  const [checkerResult, setCheckerResult] = useState<SafetyAnalysisResult | null>(null);
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
-  const checkerRef = useRef<HTMLTextAreaElement>(null);
+
   const localizedSafetySteps = [
     t("cyberFraudWarning"),
     t("bankHubOfficialRedirectTrust"),
@@ -218,11 +216,6 @@ export function SafetyShieldModal({
   });
 
   if (!isOpen) return null;
-
-  const handleCheck = () => {
-    if (!checkerText.trim()) return;
-    setCheckerResult(analyzeSafetyInput(checkerText));
-  };
 
   const handleScamSelect = (scam: ScamCategory) => {
     setSelectedScam(scam);
@@ -413,103 +406,7 @@ export function SafetyShieldModal({
               </div>
             </div>
 
-            {/* ── Scam Checker ── */}
-            <div className="mx-4 mt-5 mb-2 bg-white border border-border/60 rounded-[20px] overflow-hidden shadow-sm">
-              <div className="p-4 border-b border-border/50">
-                <h3 className="font-bold text-[14px] text-foreground flex items-center gap-2">
-                  <Search className="w-4 h-4 text-slate-600" />
-                  {t("suspiciousCheckerTitle")}
-                </h3>
-                <p className="text-[12px] text-muted-foreground mt-0.5">
-                  {t("suspiciousCheckerDesc")}
-                </p>
-              </div>
 
-              <div className="p-4 space-y-3">
-                <textarea
-                  ref={checkerRef}
-                  value={checkerText}
-                  onChange={(e) => {
-                    setCheckerText(e.target.value);
-                    setCheckerResult(null);
-                  }}
-                  placeholder={t("suspiciousCheckerPlaceholder")}
-                  rows={3}
-                  className="w-full px-4 py-3 text-[13px] font-medium fintech-input rounded-[12px] resize-none outline-none transition-all placeholder:text-muted-foreground/60 placeholder:font-normal"
-                  aria-label={t("enterSuspiciousMessage")}
-                />
-
-                <button
-                  onClick={handleCheck}
-                  disabled={!checkerText.trim()}
-                  className="w-full py-2.5 fintech-button rounded-[12px] font-bold text-[13px] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all"
-                >
-                  {t("checkSafetyGuidance")}
-                </button>
-
-                {/* Disclaimer — always visible once checker is shown */}
-                <p className="text-[11px] text-muted-foreground text-center font-medium">
-                  {t("scamCheckerDisclaimer")}
-                </p>
-
-                {/* Result */}
-                <AnimatePresence>
-                  {checkerResult !== null && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 8 }}
-                      className={`rounded-[14px] p-4 border ${
-                        checkerResult.riskLevel === "Safe" 
-                          ? "bg-green-50 border-green-200 text-green-900" 
-                          : checkerResult.riskLevel === "Suspicious"
-                          ? "bg-amber-50 border-amber-200 text-amber-900"
-                          : "bg-red-50 border-red-200 text-red-900"
-                      }`}
-                    >
-                      {checkerResult.riskLevel !== "Safe" ? (
-                        <>
-                          <p className={`font-bold text-[14px] flex items-center gap-2 mb-2 ${checkerResult.riskLevel === "High Risk" ? "text-red-700" : "text-amber-700"}`}>
-                            <AlertTriangle className="w-5 h-5" />
-                            {checkerResult.riskLevel} - {checkerResult.scamTypeKey ? t(checkerResult.scamTypeKey) : t("suspiciousMessage")}
-                          </p>
-                          <p className="text-[13px] font-medium mb-3 opacity-90">{t(checkerResult.summaryKey)}</p>
-                          <div className="bg-white/60 rounded-xl p-3 mb-4 text-[12px] font-medium shadow-sm">
-                            <span className="font-bold opacity-75 uppercase tracking-wider text-[10px] block mb-1">Recommendation</span>
-                            {t(checkerResult.recommendationKey)}
-                          </div>
-                          
-                          {checkerResult.riskLevel === "High Risk" && (
-                            <>
-                              <div className="rounded-[12px] bg-white/80 border border-red-100 p-3 mb-3 shadow-sm">
-                                <p className="text-[10px] font-bold text-red-600 uppercase tracking-wider">{t("cyberFraudHelpline")}</p>
-                                <p className="text-[24px] font-black text-red-700 leading-tight">{HELPLINE_NUMBER}</p>
-                              </div>
-                              <OfficialLinkButton
-                                item={CYBER_COMPLAINT_PORTAL}
-                                label={t("fileCyberComplaint")}
-                                className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-[10px] text-[12px] shadow-none"
-                              />
-                            </>
-                          )}
-                        </>
-                      ) : (
-                        <div className="text-center py-2">
-                          <ShieldCheck className="w-10 h-10 text-green-600 mx-auto mb-3 fill-green-100" />
-                          <p className="font-bold text-[15px] text-green-800 mb-2">{t("checkSafetyGuidance")}</p>
-                          <p className="text-[13px] text-green-700 leading-snug font-medium mb-2">
-                            {t(checkerResult.summaryKey)}
-                          </p>
-                          <p className="text-[12px] text-green-600/80 leading-snug">
-                            {t(checkerResult.recommendationKey)}
-                          </p>
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
 
             {/* ── Official Sources ── */}
             <div className="mx-4 mt-4 mb-4">

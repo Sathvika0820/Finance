@@ -1120,7 +1120,7 @@ function Dashboard() {
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
-          <div className={`${SURFACE_CARD_INTERACTIVE} p-4 flex flex-col gap-3 sm:col-span-2`}>
+          <div className={`${SURFACE_CARD_INTERACTIVE} p-4 flex flex-col gap-3`}>
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-[12px] bg-emerald-50 flex items-center justify-center shrink-0">
                 <MapPin className="w-5 h-5 text-emerald-700" />
@@ -1174,6 +1174,27 @@ function Dashboard() {
               onClick={() => {
                 speakVoice("showingComparison");
                 setIsCompareOpen(true);
+              }}
+              className={`w-full mt-1 py-2.5 text-[13px] ${PRIMARY_ACTION}`}
+            >
+              {t("explore")}
+            </button>
+          </div>
+
+          <div className={`${SURFACE_CARD_INTERACTIVE} p-4 flex flex-col gap-3`}>
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-[12px] bg-red-50 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-5 h-5 text-red-700" />
+              </div>
+              <div>
+                <h4 className="font-bold text-[14px] text-foreground">Cyber Fraud & Safety</h4>
+                <p className="text-[12px] font-medium text-muted-foreground mt-0.5">Emergency helpline & threat intelligence</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                speakVoice("showingCyberSafety");
+                setIsSafetyOpen(true);
               }}
               className={`w-full mt-1 py-2.5 text-[13px] ${PRIMARY_ACTION}`}
             >
