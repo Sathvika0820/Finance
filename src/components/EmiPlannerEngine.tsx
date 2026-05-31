@@ -189,7 +189,20 @@ export function EmiPlannerEngine() {
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <label className="block text-[13px] font-bold text-muted-foreground uppercase tracking-wider">{t("monthlySalary") || "Monthly Salary"}</label>
-                    <span className="text-[15px] font-extrabold text-foreground">{formatCurrency(salary)}</span>
+                  </div>
+                  <div className="relative mb-3">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">₹</span>
+                    <input
+                      type="number"
+                      min="10000"
+                      value={salary || ''}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? 0 : Number(e.target.value);
+                        setSalary(val);
+                        setHasCalculated(false);
+                      }}
+                      className="w-full bg-slate-50 border border-border/60 text-foreground text-[16px] rounded-xl pl-8 pr-4 py-3 font-bold focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 transition-all"
+                    />
                   </div>
                   <input
                     type="range"
@@ -213,8 +226,34 @@ export function EmiPlannerEngine() {
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <label className="block text-[13px] font-bold text-muted-foreground uppercase tracking-wider">{t("loanAmount") || "Loan Amount"}</label>
-                    <span className="text-[15px] font-extrabold text-foreground">{formatCurrency(amount)}</span>
                   </div>
+                  <div className="relative mb-3">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">₹</span>
+                    <input
+                      type="number"
+                      min="10000"
+                      value={amount || ''}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? 0 : Number(e.target.value);
+                        setAmount(val);
+                        setHasCalculated(false);
+                      }}
+                      className="w-full bg-slate-50 border border-border/60 text-foreground text-[16px] rounded-xl pl-8 pr-4 py-3 font-bold focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 transition-all"
+                    />
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {[50000, 100000, 500000, 1000000, 2500000, 5000000].map(val => (
+                      <button 
+                        key={val}
+                        onClick={() => { setAmount(val); setHasCalculated(false); }}
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[12px] font-bold transition-colors active:scale-95"
+                      >
+                        ₹{val >= 100000 ? `${val/100000}L` : `${val/1000}K`}
+                      </button>
+                    ))}
+                  </div>
+
                   <input
                     type="range"
                     min="10000"
