@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Calculator, ArrowRightLeft, Coins } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
@@ -6,8 +6,8 @@ import { CompareBankingModal } from "@/components/CompareBankingModal";
 import { useTranslation } from "@/lib/i18n";
 import { useVoiceAssistant } from "@/lib/voice";
 import { BANKS, getBankDisplayName } from "@/data/banks";
-import { getSortedLoanComparison, LoanComparisonLoanType, LOAN_COMPARISON_DATA } from "@/data/loanData";
-import { normalizeBankName, normalizeLoanTypeName } from "@/data/loanMappings";
+import { getSortedLoanComparison, LoanComparisonLoanType } from "@/data/loanData";
+import { fetchDynamicLoanRate } from "@/services/loanRateService";
 
 const LOAN_TYPES: { id: LoanComparisonLoanType; label: string; defaultTenure: number }[] = [
   { id: "home_loan", label: "Home Loan", defaultTenure: 20 },
@@ -44,39 +44,28 @@ export function EmiPlannerEngine() {
     setHasCalculated(false);
   };
 
-  const autoRate = useMemo(() => {
-    const selectedBankObj = BANKS.find(b => b.id === selectedBankId);
-    const rawBankName = selectedBankObj ? selectedBankObj.name : selectedBankId;
-    const rawLoanType = selectedType.label;
+  const [autoRate, setAutoRate] = useState<number | null>(null);
+  const [isRateLoading, setIsRateLoading] = useState(false);
+  const [rateIsDynamic, setRateIsDynamic] = useState(true);
 
-    const normalizedBank = normalizeBankName(selectedBankId).toLowerCase();
-    const normalizedType = normalizeLoanTypeName(selectedType.id).toLowerCase();
-    
-    // Attempt to match
-    const bankLoan = LOAN_COMPARISON_DATA.find(l => {
-      const lBankNorm = normalizeBankName(l.bankId).toLowerCase();
-      const lTypeNorm = normalizeLoanTypeName(l.loanType).toLowerCase();
-      const lBankNameLower = l.bankName.toLowerCase();
-      const lTypeLabelLower = l.loanTypeLabel.english.toLowerCase();
-      
-      const bankMatches = lBankNorm === normalizedBank || lBankNameLower === normalizedBank || lBankNorm === rawBankName.toLowerCase() || lBankNameLower === rawBankName.toLowerCase();
-      const typeMatches = lTypeNorm === normalizedType || lTypeLabelLower === normalizedType || lTypeNorm === rawLoanType.toLowerCase() || lTypeLabelLower === rawLoanType.toLowerCase();
-      
-      return bankMatches && typeMatches;
-    });
+  useEffect(() => {
+    let isMounted = true;
+    setIsRateLoading(true);
+    setHasCalculated(false);
 
-    const rate = bankLoan?.numericRate ?? null;
+    fetchDynamicLoanRate(selectedBankId, selectedType.id)
+      .then(res => {
+        if (isMounted) {
+          setAutoRate(res.interestRate);
+          setRateIsDynamic(res.isDynamic);
+        }
+      })
+      .finally(() => {
+        if (isMounted) setIsRateLoading(false);
+      });
 
-    console.log("=== EMI PLANNER MAPPING DEBUG ===");
-    console.log("Selected Bank:", rawBankName);
-    console.log("Selected Loan Type:", rawLoanType);
-    console.log("Matched Bank:", bankLoan ? bankLoan.bankName : "NONE");
-    console.log("Matched Loan Type:", bankLoan ? bankLoan.loanTypeLabel.english : "NONE");
-    console.log("Interest Rate:", rate);
-    console.log("=================================");
-
-    return rate;
-  }, [selectedBankId, selectedType]);
+    return () => { isMounted = false; };
+  }, [selectedBankId, selectedType.id]);
 
   const results = useMemo(() => {
     const P = amount;
@@ -203,13 +192,20 @@ export function EmiPlannerEngine() {
                 <div>
                   <label className="block text-[13px] font-bold text-muted-foreground mb-2 uppercase tracking-wider">{t("interestRate") || "Interest Rate (%)"}</label>
                   <div className="w-full bg-slate-100 border border-slate-200 text-slate-700 text-[14px] rounded-xl px-4 py-3 font-bold transition-all flex items-center justify-between">
-                    {autoRate !== null ? (
+                    {isRateLoading ? (
+                      <span className="text-slate-400 font-semibold animate-pulse">Fetching rate...</span>
+                    ) : autoRate !== null ? (
                       <>
-                        <span>{autoRate.toFixed(2)}%</span>
+                        <div className="flex flex-col">
+                          <span>{autoRate.toFixed(2)}%</span>
+                          {!rateIsDynamic && (
+                            <span className="text-[10px] text-amber-600 font-semibold mt-0.5">Latest rate unavailable. Using last verified rate.</span>
+                          )}
+                        </div>
                         <span className="text-[10px] uppercase font-extrabold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded ml-2">Auto</span>
                       </>
                     ) : (
-                      <span className="text-amber-600 text-[13px] font-semibold">{t("rateUnavailable") || "No interest-rate data found for this bank and loan type."}</span>
+                      <span className="text-amber-600 text-[13px] font-semibold">{t("rateUnavailable") || "Latest rate unavailable. Using last verified rate."}</span>
                     )}
                   </div>
                 </div>

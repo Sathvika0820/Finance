@@ -1,4 +1,5 @@
 import { isVerifiedOfficialUrl } from "./officialLinks";
+import { getVerifiedLoanRateSync } from "@/services/loanRateService";
 
 export type LoanComparisonLoanType =
   | "home_loan"
@@ -323,12 +324,14 @@ export function getLoanComparisonTypeFromQuery(query: string): LoanComparisonLoa
 
 export const LOAN_COMPARISON_DATA: NormalizedLoanComparisonEntry[] = VERIFIED_LOAN_COMPARISONS.map(
   (entry) => {
+    const rateFromService = getVerifiedLoanRateSync(entry.bankId, entry.loanType);
+    const numericRate = rateFromService !== null ? rateFromService : (entry.verified ? entry.numericRate : null);
+    
     const officialLink = entry.verified ? entry.officialLoanPage : null;
-    const interestRateText =
-      entry.verified && entry.numericRate !== null
-        ? entry.interestRateText
-        : CHECK_OFFICIAL_WEBSITE;
-    const numericRate = entry.verified ? entry.numericRate : null;
+    const interestRateText = rateFromService !== null 
+      ? `${rateFromService.toFixed(2)}% p.a.` 
+      : (entry.verified && entry.numericRate !== null ? entry.interestRateText : CHECK_OFFICIAL_WEBSITE);
+      
     const processingFee = entry.verified ? entry.processingFee : null;
     const repaymentPeriod = entry.verified ? entry.repaymentPeriod || null : null;
     const text = { english: interestRateText };

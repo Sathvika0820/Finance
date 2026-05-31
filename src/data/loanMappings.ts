@@ -8,6 +8,12 @@ const BANK_ALIASES: Record<string, string> = {
   "hdfc": "HDFC Bank",
   "icici": "ICICI Bank",
   "axis": "Axis Bank",
+  "canara": "Canara Bank",
+  "union": "Union Bank of India",
+  "indianbank": "Indian Bank",
+  "idfc": "IDFC FIRST Bank",
+  "kotak": "Kotak Mahindra Bank",
+  "yes": "YES Bank"
 };
 
 const LOAN_TYPE_ALIASES: Record<string, string> = {
