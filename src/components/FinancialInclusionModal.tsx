@@ -106,15 +106,15 @@ function SchemeInfoModal({
         <div className="mt-4 space-y-3">
           <section className="rounded-[16px] bg-slate-50 p-3">
             <h4 className="text-[11px] font-bold uppercase text-slate-600">{t("information")}</h4>
-            <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{t("officialSchemeDescription")}</p>
+            <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{scheme.description}</p>
           </section>
           <section className="rounded-[16px] bg-slate-50 p-3">
             <h4 className="text-[11px] font-bold uppercase text-slate-600">{t("eligibility")}</h4>
-            <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{t("checkOfficialDetails")}</p>
+            <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{scheme.eligibility}</p>
           </section>
           <section className="rounded-[16px] bg-slate-50 p-3">
             <h4 className="text-[11px] font-bold uppercase text-slate-600">{t("benefits")}</h4>
-            <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{t("checkOfficialDetails")}</p>
+            <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{scheme.benefits}</p>
           </section>
           {scheme.importantNotes && (
             <section className="rounded-[16px] border border-amber-200 bg-amber-50 p-3">
@@ -332,7 +332,7 @@ export function FinancialInclusionModal({ isOpen, onClose, t, speakVoice }: Fina
                             : "border-border/70 bg-white text-muted-foreground hover:bg-slate-50"
                         }`}
                       >
-                        {subcategory === "All" ? t("all") : t("selectedCategory")}
+                        {subcategory === "All" ? t("all") : subcategory}
                       </button>
                     );
                   })}
