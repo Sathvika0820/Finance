@@ -24,6 +24,7 @@ export function EmiPlannerEngine() {
 
   const [selectedBankId, setSelectedBankId] = useState(BANKS[0].id);
   const [selectedType, setSelectedType] = useState(LOAN_TYPES[0]);
+  const [salary, setSalary] = useState(50000);
   const [amount, setAmount] = useState(5000000);
   const [tenureYears, setTenureYears] = useState(selectedType.defaultTenure);
   
@@ -54,20 +55,22 @@ export function EmiPlannerEngine() {
     const N = tenureYears * 12;
 
     if (P <= 0 || tenureYears <= 0 || rate === null) {
-      return { emi: 0, totalInterest: 0, totalAmount: 0 };
+      return { emi: 0, totalInterest: 0, totalAmount: 0, affordableLoan: 0 };
     }
 
     const R = rate / 12 / 100;
+    let emi = 0;
+    let affordableLoan = 0;
+    const maxEmi = salary * 0.40;
 
     if (R === 0) {
-      return {
-        emi: Math.round(P / N),
-        totalInterest: 0,
-        totalAmount: P
-      };
+      emi = Math.round(P / N);
+      affordableLoan = maxEmi * N;
+    } else {
+      emi = (P * R * Math.pow(1 + R, N)) / (Math.pow(1 + R, N) - 1);
+      affordableLoan = (maxEmi * (Math.pow(1 + R, N) - 1)) / (R * Math.pow(1 + R, N));
     }
-
-    const emi = (P * R * Math.pow(1 + R, N)) / (Math.pow(1 + R, N) - 1);
+    
     const totalAmount = emi * N;
     const totalInterest = totalAmount - P;
 
@@ -75,8 +78,9 @@ export function EmiPlannerEngine() {
       emi: Math.round(emi),
       totalInterest: Math.round(totalInterest),
       totalAmount: Math.round(totalAmount),
+      affordableLoan: Math.round(affordableLoan)
     };
-  }, [amount, autoRate, tenureYears]);
+  }, [amount, autoRate, tenureYears, salary]);
 
   const chartData = [
     { name: "Principal Amount", value: amount, color: "#94a3b8" }, // slate-400
@@ -86,6 +90,20 @@ export function EmiPlannerEngine() {
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
   };
+
+  const selectedBankName = getBankDisplayName(BANKS.find(b => b.id === selectedBankId), lang) || selectedBankId;
+
+  const emiRatio = salary > 0 ? (results.emi / salary) * 100 : 0;
+  let affordabilityStatus = t("comfortable") || "Comfortable";
+  let statusColor = "text-emerald-600 bg-emerald-50 border-emerald-200";
+  
+  if (emiRatio > 50) {
+    affordabilityStatus = t("highFinancialBurden") || "High Financial Burden";
+    statusColor = "text-rose-600 bg-rose-50 border-rose-200";
+  } else if (emiRatio >= 30) {
+    affordabilityStatus = t("manageable") || "Manageable";
+    statusColor = "text-amber-600 bg-amber-50 border-amber-200";
+  }
 
   return (
     <div className="min-h-screen bg-slate-50/50 pb-20 sm:pb-8 font-sans">
@@ -102,7 +120,7 @@ export function EmiPlannerEngine() {
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">{t("emiPlannerPro") || "EMI Planner Pro"}</h1>
-              <p className="text-muted-foreground mt-1 text-sm sm:text-base font-medium">{t("emiPlannerDesc") || "Simulate loan costs and compare actual bank rates"}</p>
+              <p className="text-muted-foreground mt-1 text-sm sm:text-base font-medium">{t("emiPlannerDesc") || "Calculate EMIs, compare loan costs, and plan your finances smarter."}</p>
             </div>
           </div>
           
@@ -162,8 +180,32 @@ export function EmiPlannerEngine() {
                         <span className="text-[10px] uppercase font-extrabold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded ml-2">Auto</span>
                       </>
                     ) : (
-                      <span className="text-amber-600 text-[13px] font-semibold">{t("rateUnavailable") || "Interest rate mapping missing for selected bank and loan type."}</span>
+                      <span className="text-amber-600 text-[13px] font-semibold">{t("rateMappingMissing", { bankName: selectedBankName, loanType: selectedType.label }) || `Interest rate mapping missing: ${selectedBankName} + ${selectedType.label}`}</span>
                     )}
+                  </div>
+                </div>
+
+                {/* Salary Input */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-[13px] font-bold text-muted-foreground uppercase tracking-wider">{t("monthlySalary") || "Monthly Salary"}</label>
+                    <span className="text-[15px] font-extrabold text-foreground">{formatCurrency(salary)}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="10000"
+                    max="1000000"
+                    step="5000"
+                    value={salary}
+                    onChange={(e) => {
+                      setSalary(Number(e.target.value));
+                      setHasCalculated(false);
+                    }}
+                    className="w-full accent-emerald-600 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <div className="flex justify-between mt-2">
+                    <span className="text-[11px] text-slate-400 font-bold">₹10K</span>
+                    <span className="text-[11px] text-slate-400 font-bold">₹10L</span>
                   </div>
                 </div>
 
@@ -239,10 +281,37 @@ export function EmiPlannerEngine() {
                   <div className="absolute top-0 right-0 p-6 opacity-5">
                     <Coins className="w-24 h-24 text-slate-900" />
                   </div>
-                  <p className="text-[12px] font-extrabold text-muted-foreground uppercase tracking-wider mb-2 relative z-10">{t("monthlyEmi") || "Monthly EMI"}</p>
-                  <h2 className="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight relative z-10">
-                    {formatCurrency(results.emi)}
-                  </h2>
+                  <div className="flex justify-between items-start z-10">
+                    <div>
+                      <p className="text-[12px] font-extrabold text-muted-foreground uppercase tracking-wider mb-2">{t("monthlyEmi") || "Monthly EMI"}</p>
+                      <h2 className="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
+                        {formatCurrency(results.emi)}
+                      </h2>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[12px] font-extrabold text-muted-foreground uppercase tracking-wider mb-2">{t("emiToSalaryRatio") || "EMI-to-Salary Ratio"}</p>
+                      <h2 className="text-2xl font-extrabold text-slate-700">
+                        {emiRatio.toFixed(1)}%
+                      </h2>
+                    </div>
+                  </div>
+                  
+                  <div className={`mt-6 px-4 py-3 rounded-xl border flex items-center justify-between z-10 ${statusColor}`}>
+                    <span className="font-bold text-sm">{t("affordabilityStatus") || "Affordability Status"}:</span>
+                    <span className="font-extrabold text-sm">{affordabilityStatus}</span>
+                  </div>
+                </div>
+                
+                {/* Max Recommended Loan Card */}
+                <div className="bg-slate-900 rounded-[20px] p-5 shadow-sm border border-slate-800 flex flex-col justify-center sm:col-span-2 text-white">
+                   <div className="flex justify-between items-center mb-3">
+                     <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">{t("recommendedMaxEmi") || "Recommended Maximum EMI"}</p>
+                     <span className="text-[15px] font-bold text-emerald-400">{formatCurrency(salary * 0.4)}</span>
+                   </div>
+                   <div className="flex justify-between items-center">
+                     <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">{t("estimatedAffordableLoan") || "Estimated Affordable Loan"}</p>
+                     <span className="text-[18px] font-extrabold text-white">{formatCurrency(results.affordableLoan)}</span>
+                   </div>
                 </div>
 
                 {/* Total Interest */}

@@ -142,5 +142,17 @@
   "copy": "Copy",
   "copied": "Copied",
   "selectBank": "Select Bank",
-  "rateUnavailable": "Interest rate mapping missing for selected bank and loan type."
+  "rateUnavailable": "Interest rate mapping missing for selected bank and loan type.",
+  "emiPlannerDesc": "Calculate EMIs, compare loan costs, and plan your finances smarter.",
+  "monthlySalary": "Monthly Salary",
+  "emiToSalaryRatio": "EMI-to-Salary Ratio",
+  "affordabilityStatus": "Affordability Status",
+  "comfortable": "Comfortable",
+  "manageable": "Manageable",
+  "highFinancialBurden": "High Financial Burden",
+  "recommendedMaxEmi": "Recommended Maximum EMI",
+  "estimatedAffordableLoan": "Estimated Affordable Loan",
+  "rateMappingMissing": "Interest rate mapping missing: {bankName} + {loanType}",
+  "loanDetails": "Loan Details",
+  "loanType": "Loan Type"
 }
