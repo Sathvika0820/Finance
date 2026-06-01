@@ -91,7 +91,7 @@ ${customerName || "[Customer Name]"}`;
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-8">
         <Link to="/dashboard" className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-800 mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm font-bold">Back to Dashboard</span>
+          <span className="text-sm font-bold">{t("backToDashboard")}</span>
         </Link>
         
         <div className="flex items-center gap-3 mb-8">
@@ -99,8 +99,8 @@ ${customerName || "[Customer Name]"}`;
             <FileText className="w-6 h-6 text-slate-700" />
           </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">{t("letterGeneratorPro") || "Letter Generator Pro"}</h1>
-            <p className="text-muted-foreground mt-1 text-sm sm:text-base font-medium">{t("generateLetterDesc") || "Generate professional banking request letters instantly."}</p>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">{t("letterGeneratorPro")}</h1>
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base font-medium">{t("generateLetterDesc")}</p>
           </div>
         </div>
 
@@ -109,11 +109,11 @@ ${customerName || "[Customer Name]"}`;
           {/* Form Panel (40%) */}
           <div className="lg:col-span-2 flex flex-col gap-4">
             <div className="bg-white rounded-[24px] p-6 sm:p-8 shadow-sm border border-border/40">
-              <h2 className="text-lg font-bold text-foreground mb-6">Letter Details</h2>
+              <h2 className="text-lg font-bold text-foreground mb-6">{t("letterDetails")}</h2>
               
               <div className="space-y-5">
                 <div>
-                  <label className="block text-[13px] font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">{t("letterType") || "Letter Type"}</label>
+                  <label className="block text-[13px] font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">{t("letterType")}</label>
                   <div className="relative">
                     <select
                       className="w-full appearance-none bg-slate-50 border border-border/60 text-foreground text-[14px] rounded-xl px-4 py-3 font-semibold focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 transition-all"
@@ -124,7 +124,9 @@ ${customerName || "[Customer Name]"}`;
                       }}
                     >
                       {LETTER_TYPES.map(type => (
-                        <option key={type.id} value={type.id}>{type.label}</option>
+                        <option key={type.id} value={type.id}>
+                          {t(`lt_${type.id}`)}
+                        </option>
                       ))}
                     </select>
                     <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -132,10 +134,10 @@ ${customerName || "[Customer Name]"}`;
                 </div>
 
                 <div>
-                  <label className="block text-[13px] font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">{t("bankName") || "Bank Name"}</label>
+                  <label className="block text-[13px] font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">{t("bankName")}</label>
                   <input
                     type="text"
-                    placeholder="e.g. State Bank of India"
+                    placeholder={t("egSbi")}
                     value={bankName}
                     onChange={(e) => setBankName(e.target.value)}
                     className="w-full bg-slate-50 border border-border/60 text-foreground text-[14px] rounded-xl px-4 py-3 font-semibold focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 transition-all placeholder:text-slate-400"
@@ -143,10 +145,10 @@ ${customerName || "[Customer Name]"}`;
                 </div>
 
                 <div>
-                  <label className="block text-[13px] font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">{t("branchName") || "Branch Name"}</label>
+                  <label className="block text-[13px] font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">{t("branchName")}</label>
                   <input
                     type="text"
-                    placeholder="e.g. MG Road Branch"
+                    placeholder={t("egMgRoad")}
                     value={branchName}
                     onChange={(e) => setBranchName(e.target.value)}
                     className="w-full bg-slate-50 border border-border/60 text-foreground text-[14px] rounded-xl px-4 py-3 font-semibold focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 transition-all placeholder:text-slate-400"
@@ -154,10 +156,10 @@ ${customerName || "[Customer Name]"}`;
                 </div>
 
                 <div>
-                  <label className="block text-[13px] font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">{t("yourFullName") || "Your Full Name"}</label>
+                  <label className="block text-[13px] font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">{t("customerName")}</label>
                   <input
                     type="text"
-                    placeholder="e.g. Rahul Sharma"
+                    placeholder={t("egRahul")}
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
                     className="w-full bg-slate-50 border border-border/60 text-foreground text-[14px] rounded-xl px-4 py-3 font-semibold focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 transition-all placeholder:text-slate-400"
@@ -165,10 +167,10 @@ ${customerName || "[Customer Name]"}`;
                 </div>
 
                 <div>
-                  <label className="block text-[13px] font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">{t("accountNumber") || "Account Number"}</label>
+                  <label className="block text-[13px] font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">{t("accountNumber")}</label>
                   <input
                     type="text"
-                    placeholder="e.g. 31245678901"
+                    placeholder="31245678901"
                     value={accountNumber}
                     onChange={(e) => setAccountNumber(e.target.value)}
                     className="w-full bg-slate-50 border border-border/60 text-foreground text-[14px] rounded-xl px-4 py-3 font-semibold focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 transition-all placeholder:text-slate-400"
@@ -181,7 +183,7 @@ ${customerName || "[Customer Name]"}`;
                 className="w-full mt-8 bg-slate-900 hover:bg-slate-800 text-white rounded-[14px] py-3.5 font-bold text-[14px] transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-2"
               >
                 <FileText className="w-4 h-4" />
-                {t("generateLetter") || "Generate Letter"}
+                {t("generateLetterBtn")}
               </button>
             </div>
           </div>
@@ -192,7 +194,7 @@ ${customerName || "[Customer Name]"}`;
               
               {/* Action Bar */}
               <div className="px-6 py-4 border-b border-border/40 flex items-center justify-between bg-slate-50/50 flex-wrap gap-4">
-                <h2 className="text-[15px] font-extrabold text-foreground">{t("livePreview") || "Live Preview"}</h2>
+                <h2 className="text-[15px] font-extrabold text-foreground">{t("letterPreview")}</h2>
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={toggleEdit}
@@ -201,28 +203,28 @@ ${customerName || "[Customer Name]"}`;
                     }`}
                   >
                     {isEditing ? <Save className="w-3.5 h-3.5" /> : <Edit3 className="w-3.5 h-3.5" />}
-                    {isEditing ? t("saveChanges") || "Save Changes" : t("editLetter") || "Edit Letter"}
+                    {isEditing ? t("saveChanges") : t("editLetter")}
                   </button>
                   <button
                     onClick={handleCopy}
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-[12px] transition-colors"
                   >
                     {isCopied ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                    {isCopied ? t("copied") || "Copied" : t("copy") || "Copy"}
+                    {isCopied ? t("copied") : t("copyToClipboard")}
                   </button>
                   <button
                     onClick={handlePrint}
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-[12px] transition-colors"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    {t("downloadPdf") || "Download PDF"}
+                    {t("printDownload")}
                   </button>
                   <button
                     onClick={handlePrint}
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 font-bold text-[12px] transition-colors"
                   >
                     <Printer className="w-3.5 h-3.5" />
-                    {t("print") || "Print"}
+                    {t("printDownload")}
                   </button>
                 </div>
               </div>

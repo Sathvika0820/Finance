@@ -595,7 +595,7 @@ export function AiAssistant() {
         bank.names.english,
         bank.names.hindi,
         bank.names.telugu
-      ].filter(Boolean).map(value => value.toLowerCase());
+      ].filter((v): v is string => Boolean(v)).map(value => value.toLowerCase());
 
       return bankNames.some(name => lower.includes(name));
     });
@@ -610,7 +610,7 @@ export function AiAssistant() {
         service.name.hindi,
         service.name.telugu,
         ...service.keywords
-      ].filter(Boolean).map(value => value.toLowerCase());
+      ].filter((v): v is string => Boolean(v)).map(value => value.toLowerCase());
 
       return serviceNames.some(name => lower.includes(name));
     });

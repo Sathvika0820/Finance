@@ -66,7 +66,7 @@ export default defineConfig({
     ? [
         nitro({
           rollupConfig: {
-            onwarn(warning, defaultHandler) {
+            onwarn(warning: any, defaultHandler: any) {
               if (shouldIgnoreKnownDependencyWarning(warning)) return;
               defaultHandler(warning);
             },
@@ -87,7 +87,7 @@ export default defineConfig({
     },
     build: {
       rollupOptions: {
-        onwarn(warning, defaultHandler) {
+        onwarn(warning: any, defaultHandler: any) {
           if (shouldIgnoreKnownDependencyWarning(warning)) return;
           defaultHandler(warning);
         },

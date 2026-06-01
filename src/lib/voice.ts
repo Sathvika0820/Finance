@@ -192,28 +192,28 @@ export function speakVoice(eventKey: string, payload: any = {}) {
   }
 
   if (eventKey === "openingService") {
-    text = {
+    text = ({
       english: `Opening ${serviceName} official website.`,
       hindi: `${serviceName} की आधिकारिक वेबसाइट खोली जा रही है।`,
       telugu: `${serviceName} అధికారిక వెబ్‌సైట్ తెరవబడుతోంది.`,
-    }[safeLanguage] || text;
+    } as Record<string, string>)[safeLanguage] || text;
   }
 
   if (eventKey === "showingServiceDetails") {
-    text = {
+    text = ({
       english: `Showing ${serviceName} services.`,
       hindi: `${serviceName} सेवाएं दिखाई जा रही हैं।`,
       telugu: `${serviceName} సేవలు చూపబడుతున్నాయి.`,
-    }[safeLanguage] || text;
+    } as Record<string, string>)[safeLanguage] || text;
   }
 
   if (eventKey === "openingServiceAction") {
     const actionName = payload.actionName || "";
-    text = {
+    text = ({
       english: `Opening ${actionName}.`,
       hindi: `${actionName} खोला जा रहा है।`,
       telugu: `${actionName} తెరవబడుతోంది.`,
-    }[safeLanguage] || text;
+    } as Record<string, string>)[safeLanguage] || text;
   }
 
   if (!text) {

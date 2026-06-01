@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Globe, Smartphone, ExternalLink, ShieldCheck } from "lucide-react";
-import { Bank } from "@/data/bankData";
+import { Bank, getBankDisplayName } from "@/data/banks";
 import { BankLogo } from "@/components/BankLogo";
 import { bankLinks } from "@/data/bankLinks";
 import { useTranslation } from "@/lib/i18n";
@@ -29,7 +29,7 @@ export function BankActionModal({ bank, onClose }: BankActionModalProps) {
   if (!bank) return null;
 
   const links = bankLinks[bank.id];
-  const displayName = bank.name[lang as keyof typeof bank.name] || bank.name.en;
+  const displayName = getBankDisplayName(bank, lang);
   const isMobile = isMobileDevice();
 
   const handleOpenWebsite = () => {

@@ -45,7 +45,7 @@ function SchemeCard({
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           <h4 className="min-w-0 text-[13px] font-bold leading-snug text-foreground">
-            {scheme.name}
+            {t(`scheme.${scheme.id}.name`) !== `scheme.${scheme.id}.name` ? t(`scheme.${scheme.id}.name`) : scheme.name}
           </h4>
         </div>
         <p className="mt-0.5 text-[10px] font-semibold text-muted-foreground">{t("officialSchemeDescription")}</p>
@@ -55,13 +55,13 @@ function SchemeCard({
           type="button"
           onClick={() => onInfo(scheme)}
           className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-slate-50 text-slate-700 transition-colors hover:bg-slate-100"
-          aria-label={t("viewBankDetails", { bank: scheme.name })}
+          aria-label={t("viewBankDetails", { bank: t(`scheme.${scheme.id}.name`) !== `scheme.${scheme.id}.name` ? t(`scheme.${scheme.id}.name`) : scheme.name })}
         >
           <Info className="h-4 w-4" />
         </button>
         <OfficialLinkButton
           item={{
-            name: scheme.name,
+            name: t(`scheme.${scheme.id}.name`) !== `scheme.${scheme.id}.name` ? t(`scheme.${scheme.id}.name`) : scheme.name,
             officialWebsite: officialEntry?.officialLink || "",
             verified: Boolean(officialEntry?.verified),
           }}
@@ -109,7 +109,7 @@ function SchemeInfoModal({
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase text-slate-500">{t("information")}</p>
-            <h3 className="mt-1 text-[17px] font-bold leading-tight text-foreground">{scheme.name}</h3>
+            <h3 className="mt-1 text-[17px] font-bold leading-tight text-foreground">{t(`scheme.${scheme.id}.name`) !== `scheme.${scheme.id}.name` ? t(`scheme.${scheme.id}.name`) : scheme.name}</h3>
           </div>
           <button
             type="button"
@@ -124,15 +124,15 @@ function SchemeInfoModal({
         <div className="mt-4 space-y-3">
           <section className="rounded-[16px] bg-slate-50 p-3">
             <h4 className="text-[11px] font-bold uppercase text-slate-600">{t("information")}</h4>
-            <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{scheme.description}</p>
+            <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{t(`scheme.${scheme.id}.description`) !== `scheme.${scheme.id}.description` ? t(`scheme.${scheme.id}.description`) : scheme.description}</p>
           </section>
           <section className="rounded-[16px] bg-slate-50 p-3">
             <h4 className="text-[11px] font-bold uppercase text-slate-600">{t("eligibility")}</h4>
-            <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{scheme.eligibility}</p>
+            <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{t(`scheme.${scheme.id}.eligibility`) !== `scheme.${scheme.id}.eligibility` ? t(`scheme.${scheme.id}.eligibility`) : scheme.eligibility}</p>
           </section>
           <section className="rounded-[16px] bg-slate-50 p-3">
             <h4 className="text-[11px] font-bold uppercase text-slate-600">{t("benefits")}</h4>
-            <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{scheme.benefits}</p>
+            <p className="mt-1 text-[12px] font-medium leading-relaxed text-muted-foreground">{t(`scheme.${scheme.id}.benefits`) !== `scheme.${scheme.id}.benefits` ? t(`scheme.${scheme.id}.benefits`) : scheme.benefits}</p>
           </section>
           {scheme.importantNotes && (
             <section className="rounded-[16px] border border-amber-200 bg-amber-50 p-3">

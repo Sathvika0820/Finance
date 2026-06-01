@@ -1,4 +1,6 @@
 import { getOfficialLink } from "./officialLinks";
+import { getLocalizedBankName } from "@/lib/bankTranslations";
+import { getLanguageCode, AppLanguage } from "@/lib/i18n";
 
 export type BankCategory =
   | "Public Sector"
@@ -160,9 +162,8 @@ export const BANKS: Bank[] = [
 
 export function getBankDisplayName(bank: Bank | undefined, language: string): string {
   if (!bank) return "";
-  const names = bank.names;
-  const langKey = language as keyof typeof names;
-  return names[langKey] || names.english || bank.name || "";
+  const langCode = getLanguageCode(language as AppLanguage);
+  return getLocalizedBankName(bank.id, langCode, bank.name);
 }
 
 export function normalizeBankSearchText(value: string): string {

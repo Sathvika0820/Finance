@@ -21,7 +21,7 @@ const SERVICE_ICONS: Record<string, any> = {
 };
 
 function isPostOfficeService(service: FinanceService) {
-  return service.category === "post_office" || service.category === "post_office_bank";
+  return service.category === "post_office";
 }
 
 interface ServiceDetailModalProps {
@@ -33,7 +33,6 @@ interface ServiceDetailModalProps {
 export function ServiceDetailModal({ service, lang, onClose }: ServiceDetailModalProps) {
   const [logoErrored, setLogoErrored] = useState(false);
   const { t } = useTranslation();
-
   useEffect(() => {
     setLogoErrored(false);
     if (!service || typeof window === "undefined") return;

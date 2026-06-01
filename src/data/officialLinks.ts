@@ -332,7 +332,8 @@ export function getOfficialLinkEntry(
   category: OfficialLinkCategory,
   id: string,
 ): OfficialLinkEntry | undefined {
-  const entry = OFFICIAL_LINK_REGISTRY[category]?.[id];
+  const registry = OFFICIAL_LINK_REGISTRY as any;
+  const entry = registry[category]?.[id];
   return entry?.verified && entry.officialLink.startsWith("https://") ? entry : undefined;
 }
 

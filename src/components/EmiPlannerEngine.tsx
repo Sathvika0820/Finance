@@ -128,7 +128,7 @@ export function EmiPlannerEngine() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-8">
         <Link to="/dashboard" className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-800 mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm font-bold">Back to Dashboard</span>
+          <span className="text-sm font-bold">{t("backToDashboard")}</span>
         </Link>
         
         <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
@@ -137,8 +137,8 @@ export function EmiPlannerEngine() {
               <Calculator className="w-6 h-6 text-slate-700" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">{t("emiPlannerPro") || "EMI Planner Pro"}</h1>
-              <p className="text-muted-foreground mt-1 text-sm sm:text-base font-medium">{t("emiPlannerDesc") || "Calculate EMIs, compare loan costs, and plan your finances smarter."}</p>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">{t("emiPlannerPro")}</h1>
+              <p className="text-muted-foreground mt-1 text-sm sm:text-base font-medium">{t("emiPlannerDesc")}</p>
             </div>
           </div>
           
@@ -147,7 +147,7 @@ export function EmiPlannerEngine() {
             className="flex items-center gap-2 px-4 py-2.5 bg-white border border-border/60 hover:bg-slate-50 text-slate-700 rounded-xl font-bold text-[13px] transition-all shadow-sm active:scale-[0.98]"
           >
             <ArrowRightLeft className="w-4 h-4" />
-            Compare {selectedType.label}s
+            {t("compareLoans")}
           </button>
         </div>
 
@@ -183,7 +183,15 @@ export function EmiPlannerEngine() {
                     onChange={(e) => handleTypeChange(e.target.value)}
                   >
                     {LOAN_TYPES.map(type => (
-                      <option key={type.id} value={type.id}>{type.label}</option>
+                      <option key={type.id} value={type.id}>
+                        {type.id === "home_loan" && t("homeLoan")}
+                        {type.id === "personal_loan" && t("personalLoan")}
+                        {type.id === "education_loan" && t("educationLoan")}
+                        {type.id === "vehicle_loan" && t("vehicleLoan")}
+                        {type.id === "gold_loan" && t("goldLoan")}
+                        {type.id === "business_loan" && t("businessLoan")}
+                        {type.id === "msme_loan" && t("msmeLoan")}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -193,11 +201,11 @@ export function EmiPlannerEngine() {
                   <label className="block text-[13px] font-bold text-muted-foreground mb-2 uppercase tracking-wider">{t("interestRate") || "Interest Rate (%)"}</label>
                   <div className="w-full bg-slate-100 border border-slate-200 text-slate-700 text-[14px] rounded-xl px-4 py-3 font-bold transition-all flex items-center justify-between">
                     {isRateLoading ? (
-                      <span className="text-slate-400 font-semibold animate-pulse">Fetching rate...</span>
+                      <span className="text-slate-400 font-semibold animate-pulse">{t("fetchingRate")}</span>
                     ) : autoRate !== null ? (
                       <>
                         <span>{autoRate.toFixed(2)}%</span>
-                        <span className="text-[10px] uppercase font-extrabold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded ml-2">Auto</span>
+                        <span className="text-[10px] uppercase font-extrabold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded ml-2">{t("auto")}</span>
                       </>
                     ) : (
                       <span className="text-amber-600 text-[13px] font-semibold">{t("rateUnavailable") || "Interest rate currently unavailable for this loan."}</span>

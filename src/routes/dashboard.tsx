@@ -345,7 +345,7 @@ function isPostOfficeService(service: FinanceService) {
 }
 
 function isInsuranceService(service: FinanceService) {
-  return service.category === "insurance" || service.category === "insurance_regulator";
+  return service.category === "insurance";
 }
 
 const SERVICE_STRINGS: Record<string, Record<string, string>> = {
@@ -1187,8 +1187,8 @@ function Dashboard() {
                 <ShieldCheck className="w-5 h-5 text-red-700" />
               </div>
               <div>
-                <h4 className="font-bold text-[14px] text-foreground">Cyber Fraud & Safety</h4>
-                <p className="text-[12px] font-medium text-muted-foreground mt-0.5">Emergency helpline & threat intelligence</p>
+                <h4 className="font-bold text-[14px] text-foreground">{t("cyberFraudSafety")}</h4>
+                <p className="text-[12px] font-medium text-muted-foreground mt-0.5">{t("emergencyHelpline")}</p>
               </div>
             </div>
             <button
@@ -1209,8 +1209,8 @@ function Dashboard() {
         <div className="flex items-center gap-2 mb-4">
           <Award className="w-6 h-6 text-amber-500" />
           <div>
-            <h3 className="font-bold text-[16px] text-slate-900 leading-tight">Premium Features</h3>
-            <p className="text-[12px] text-slate-500 font-medium">Advanced automation & security tools</p>
+            <h3 className="font-bold text-[16px] text-slate-900 leading-tight">{t("premiumFeatures")}</h3>
+            <p className="text-[12px] text-slate-500 font-medium">{t("advancedAutomation")}</p>
           </div>
         </div>
         
@@ -1225,15 +1225,15 @@ function Dashboard() {
                 <FileText className="w-5 h-5 text-indigo-600" />
               </div>
               <div className="min-w-0">
-                <h4 className="font-bold text-[14px] text-indigo-900">Letter Generator <span className="inline-block px-2 py-0.5 ml-1 bg-indigo-500 text-white text-[9px] font-bold uppercase rounded-full tracking-wider align-middle">PRO</span></h4>
-                <p className="text-[12px] font-medium text-indigo-700/80 mt-0.5">Generate professional banking request letters instantly</p>
+                <h4 className="font-bold text-[14px] text-indigo-900">{t("letterGenerator")} <span className="inline-block px-2 py-0.5 ml-1 bg-indigo-500 text-white text-[9px] font-bold uppercase rounded-full tracking-wider align-middle">{t("pro")}</span></h4>
+                <p className="text-[12px] font-medium text-indigo-700/80 mt-0.5">{t("generateLettersInstantly")}</p>
               </div>
             </div>
             <Link
               to="/premium/letter-generator"
               className="w-full mt-1 py-2.5 text-[13px] text-center block bg-indigo-600 hover:bg-indigo-700 text-white rounded-[12px] font-bold active:scale-[0.98] transition-all relative z-10"
             >
-              Access Tool
+              {t("accessTool")}
             </Link>
           </div>
 
@@ -1247,15 +1247,15 @@ function Dashboard() {
                 <Calculator className="w-5 h-5 text-emerald-600" />
               </div>
               <div className="min-w-0">
-                <h4 className="font-bold text-[14px] text-emerald-900">EMI Planner <span className="inline-block px-2 py-0.5 ml-1 bg-emerald-500 text-white text-[9px] font-bold uppercase rounded-full tracking-wider align-middle">PRO</span></h4>
-                <p className="text-[12px] font-medium text-emerald-700/80 mt-0.5">Simulate loan costs and compare across banks</p>
+                <h4 className="font-bold text-[14px] text-emerald-900">{t("emiPlanner")} <span className="inline-block px-2 py-0.5 ml-1 bg-emerald-500 text-white text-[9px] font-bold uppercase rounded-full tracking-wider align-middle">{t("pro")}</span></h4>
+                <p className="text-[12px] font-medium text-emerald-700/80 mt-0.5">{t("simulateLoanCosts")}</p>
               </div>
             </div>
             <Link
               to="/premium/emi-planner"
               className="w-full mt-1 py-2.5 text-[13px] text-center block bg-emerald-600 hover:bg-emerald-700 text-white rounded-[12px] font-bold active:scale-[0.98] transition-all relative z-10"
             >
-              Access Tool
+              {t("accessTool")}
             </Link>
           </div>
 
@@ -1269,15 +1269,15 @@ function Dashboard() {
                 <ShieldCheck className="w-5 h-5 text-purple-600" />
               </div>
               <div>
-                <h4 className="font-bold text-[14px] text-purple-900">Banking Shield <span className="inline-block px-2 py-0.5 ml-1 bg-purple-500 text-white text-[9px] font-bold uppercase rounded-full tracking-wider align-middle">PRO</span></h4>
-                <p className="text-[12px] font-medium text-purple-700/80 mt-0.5">Advanced SMS & Scam URL Analyzer</p>
+                <h4 className="font-bold text-[14px] text-purple-900">{t("bankingShield")} <span className="inline-block px-2 py-0.5 ml-1 bg-purple-500 text-white text-[9px] font-bold uppercase rounded-full tracking-wider align-middle">{t("pro")}</span></h4>
+                <p className="text-[12px] font-medium text-purple-700/80 mt-0.5">{t("advancedSmsAnalyzer")}</p>
               </div>
             </div>
             <Link
               to="/premium/safety-shield"
               className="w-full mt-1 py-2.5 text-[13px] text-center block bg-purple-600 hover:bg-purple-700 text-white rounded-[12px] font-bold active:scale-[0.98] transition-all relative z-10"
             >
-              Access Tool
+              {t("accessTool")}
             </Link>
           </div>
         </div>

@@ -96,9 +96,9 @@ function PremiumSafetyShield() {
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-sm font-bold text-purple-900 leading-tight">Banking Shield Pro</h1>
+            <h1 className="text-sm font-bold text-purple-900 leading-tight">{t("bankingShieldPro")}</h1>
             <p className="text-[10px] text-purple-600 font-bold uppercase tracking-wider flex items-center gap-1">
-              <Award className="w-3 h-3" /> Premium Protection
+              <Award className="w-3 h-3" /> {t("premiumProtection")}
             </p>
           </div>
         </div>
@@ -114,8 +114,8 @@ function PremiumSafetyShield() {
                 <ShieldCheck className="w-5 h-5 text-purple-700" />
               </div>
               <div>
-                <h3 className="font-bold text-[16px] text-slate-900 leading-tight">Advanced Scam Analyzer</h3>
-                <p className="text-[12px] text-slate-500 font-medium">Paste suspicious SMS, URLs, or emails to scan for threats</p>
+                <h3 className="font-bold text-[16px] text-slate-900 leading-tight">{t("advancedScamAnalyzer")}</h3>
+                <p className="text-[12px] text-slate-500 font-medium">{t("pasteSuspiciousText")}</p>
               </div>
             </div>
 
@@ -127,7 +127,7 @@ function PremiumSafetyShield() {
                   setCheckerText(e.target.value);
                   setCheckerResult(null);
                 }}
-                placeholder="Paste the suspicious message or link here..."
+                placeholder={t("pasteMessageHere")}
                 rows={3}
                 className="w-full px-4 py-3 text-[13px] font-medium bg-slate-50 border border-slate-200 rounded-[12px] resize-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all"
               />
@@ -138,7 +138,7 @@ function PremiumSafetyShield() {
                 className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-[12px] font-bold text-[14px] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all flex items-center justify-center gap-2"
               >
                 <Search className="w-4 h-4" />
-                Analyze Threat Level
+                {t("analyzeThreatLevel")}
               </button>
 
               <AnimatePresence>
@@ -165,13 +165,13 @@ function PremiumSafetyShield() {
                           <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
                             checkerResult.confidence >= 90 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
                           }`}>
-                            {checkerResult.confidence}% Confidence
+                            {checkerResult.confidence}% {t("confidence")}
                           </span>
                         </div>
                         <p className="text-[14px] font-medium mb-3 opacity-90">{checkerResult.reason}</p>
                         
                         <div className="bg-white/60 rounded-xl p-3 mb-2 text-[13px] font-medium shadow-sm">
-                          <span className="font-bold opacity-75 uppercase tracking-wider text-[10px] block mb-1">AI Recommendation</span>
+                          <span className="font-bold opacity-75 uppercase tracking-wider text-[10px] block mb-1">{t("aiRecommendation")}</span>
                           {checkerResult.recommendation}
                         </div>
                       </div>
