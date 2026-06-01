@@ -16,7 +16,7 @@ import { LANGUAGE_OPTIONS, useTranslation } from "@/lib/i18n";
 import { SafetyShieldModal } from "@/components/SafetyShieldModal";
 import { FinancialInclusionModal } from "@/components/FinancialInclusionModal";
 import { CompareBankingModal } from "@/components/CompareBankingModal";
-import { ShieldCheck, ArrowLeftRight, FileText, Calculator } from "lucide-react";
+import { ShieldCheck, ArrowLeftRight, FileText, Calculator, FileSignature } from "lucide-react";
 import { OfficialLinkButton } from "@/components/OfficialLinkButton";
 import { SearchBar } from "@/components/SearchBar";
 
@@ -1260,7 +1260,7 @@ function Dashboard() {
           </div>
 
           {/* Premium Banking Shield */}
-          <div className={`bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200/60 p-4 rounded-[18px] flex flex-col gap-3 relative overflow-hidden group sm:col-span-2`}>
+          <div className={`bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200/60 p-4 rounded-[18px] flex flex-col gap-3 relative overflow-hidden group`}>
             <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
               <ShieldCheck className="w-16 h-16 text-purple-500" />
             </div>
@@ -1276,6 +1276,28 @@ function Dashboard() {
             <Link
               to="/premium/safety-shield"
               className="w-full mt-1 py-2.5 text-[13px] text-center block bg-purple-600 hover:bg-purple-700 text-white rounded-[12px] font-bold active:scale-[0.98] transition-all relative z-10"
+            >
+              {t("accessTool")}
+            </Link>
+          </div>
+
+          {/* AI Form Assistant Pro */}
+          <div className={`bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200/60 p-4 rounded-[18px] flex flex-col gap-3 relative overflow-hidden group`}>
+            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
+              <FileSignature className="w-16 h-16 text-amber-500" />
+            </div>
+            <div className="flex items-start gap-3 relative z-10">
+              <div className="w-10 h-10 rounded-[12px] bg-white shadow-sm flex items-center justify-center shrink-0">
+                <FileSignature className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h4 className="font-bold text-[14px] text-amber-900">{t("formAssistantPro")} <span className="inline-block px-2 py-0.5 ml-1 bg-amber-500 text-white text-[9px] font-bold uppercase rounded-full tracking-wider align-middle">{t("pro")}</span></h4>
+                <p className="text-[12px] font-medium text-amber-700/80 mt-0.5 line-clamp-2">{t("formAssistantDesc")}</p>
+              </div>
+            </div>
+            <Link
+              to="/premium/form-assistant"
+              className="w-full mt-1 py-2.5 text-[13px] text-center block bg-amber-600 hover:bg-amber-700 text-white rounded-[12px] font-bold active:scale-[0.98] transition-all relative z-10"
             >
               {t("accessTool")}
             </Link>

@@ -429,5 +429,18 @@
   "pasteMessageHere": "Paste the suspicious message or link here...",
   "analyzeThreatLevel": "Analyze Threat Level",
   "confidence": "Confidence",
-  "aiRecommendation": "AI Recommendation"
+  "aiRecommendation": "AI Recommendation",
+  "formAssistantPro": "AI Form Assistant Pro",
+  "formAssistantDesc": "Upload official forms, fill them easily, get AI guidance, and download completed PDFs.",
+  "uploadPdfForm": "Upload PDF Form",
+  "unsupportedPdf": "This PDF format is currently unsupported for automatic field extraction.",
+  "fillForm": "Fill Form Data",
+  "downloadFilledPdf": "Download Filled PDF",
+  "autofillCommonDetails": "Auto Fill Common Details",
+  "generateFilledPdf": "Generate Filled PDF",
+  "guidanceNominee": "A nominee is the person who will receive the benefits in case of your unfortunate demise. E.g., Your spouse or child.",
+  "guidanceOccupation": "Your current profession or job type. E.g., Salaried, Self-employed, Student.",
+  "guidanceIncome": "Your total earnings in a year before taxes. E.g., 500000",
+  "guidanceAccountType": "The type of bank account you want to open. E.g., Savings, Current.",
+  "lowConfidenceDetection": "We detected some possible form fields. Please review before continuing."
 }

@@ -15,6 +15,7 @@ import { Route as BanksRouteImport } from './routes/banks'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PremiumSafetyShieldRouteImport } from './routes/premium/safety-shield'
 import { Route as PremiumLetterGeneratorRouteImport } from './routes/premium/letter-generator'
+import { Route as PremiumFormAssistantRouteImport } from './routes/premium/form-assistant'
 import { Route as PremiumEmiPlannerRouteImport } from './routes/premium/emi-planner'
 import { Route as BanksBankIdRouteImport } from './routes/banks.$bankId'
 import { Route as BankIfscRouteImport } from './routes/bank.$ifsc'
@@ -49,6 +50,11 @@ const PremiumLetterGeneratorRoute = PremiumLetterGeneratorRouteImport.update({
   path: '/premium/letter-generator',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PremiumFormAssistantRoute = PremiumFormAssistantRouteImport.update({
+  id: '/premium/form-assistant',
+  path: '/premium/form-assistant',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PremiumEmiPlannerRoute = PremiumEmiPlannerRouteImport.update({
   id: '/premium/emi-planner',
   path: '/premium/emi-planner',
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/bank/$ifsc': typeof BankIfscRoute
   '/banks/$bankId': typeof BanksBankIdRoute
   '/premium/emi-planner': typeof PremiumEmiPlannerRoute
+  '/premium/form-assistant': typeof PremiumFormAssistantRoute
   '/premium/letter-generator': typeof PremiumLetterGeneratorRoute
   '/premium/safety-shield': typeof PremiumSafetyShieldRoute
 }
@@ -84,6 +91,7 @@ export interface FileRoutesByTo {
   '/bank/$ifsc': typeof BankIfscRoute
   '/banks/$bankId': typeof BanksBankIdRoute
   '/premium/emi-planner': typeof PremiumEmiPlannerRoute
+  '/premium/form-assistant': typeof PremiumFormAssistantRoute
   '/premium/letter-generator': typeof PremiumLetterGeneratorRoute
   '/premium/safety-shield': typeof PremiumSafetyShieldRoute
 }
@@ -96,6 +104,7 @@ export interface FileRoutesById {
   '/bank/$ifsc': typeof BankIfscRoute
   '/banks/$bankId': typeof BanksBankIdRoute
   '/premium/emi-planner': typeof PremiumEmiPlannerRoute
+  '/premium/form-assistant': typeof PremiumFormAssistantRoute
   '/premium/letter-generator': typeof PremiumLetterGeneratorRoute
   '/premium/safety-shield': typeof PremiumSafetyShieldRoute
 }
@@ -109,6 +118,7 @@ export interface FileRouteTypes {
     | '/bank/$ifsc'
     | '/banks/$bankId'
     | '/premium/emi-planner'
+    | '/premium/form-assistant'
     | '/premium/letter-generator'
     | '/premium/safety-shield'
   fileRoutesByTo: FileRoutesByTo
@@ -120,6 +130,7 @@ export interface FileRouteTypes {
     | '/bank/$ifsc'
     | '/banks/$bankId'
     | '/premium/emi-planner'
+    | '/premium/form-assistant'
     | '/premium/letter-generator'
     | '/premium/safety-shield'
   id:
@@ -131,6 +142,7 @@ export interface FileRouteTypes {
     | '/bank/$ifsc'
     | '/banks/$bankId'
     | '/premium/emi-planner'
+    | '/premium/form-assistant'
     | '/premium/letter-generator'
     | '/premium/safety-shield'
   fileRoutesById: FileRoutesById
@@ -142,6 +154,7 @@ export interface RootRouteChildren {
   FavoritesRoute: typeof FavoritesRoute
   BankIfscRoute: typeof BankIfscRoute
   PremiumEmiPlannerRoute: typeof PremiumEmiPlannerRoute
+  PremiumFormAssistantRoute: typeof PremiumFormAssistantRoute
   PremiumLetterGeneratorRoute: typeof PremiumLetterGeneratorRoute
   PremiumSafetyShieldRoute: typeof PremiumSafetyShieldRoute
 }
@@ -190,6 +203,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PremiumLetterGeneratorRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/premium/form-assistant': {
+      id: '/premium/form-assistant'
+      path: '/premium/form-assistant'
+      fullPath: '/premium/form-assistant'
+      preLoaderRoute: typeof PremiumFormAssistantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/premium/emi-planner': {
       id: '/premium/emi-planner'
       path: '/premium/emi-planner'
@@ -231,6 +251,7 @@ const rootRouteChildren: RootRouteChildren = {
   FavoritesRoute: FavoritesRoute,
   BankIfscRoute: BankIfscRoute,
   PremiumEmiPlannerRoute: PremiumEmiPlannerRoute,
+  PremiumFormAssistantRoute: PremiumFormAssistantRoute,
   PremiumLetterGeneratorRoute: PremiumLetterGeneratorRoute,
   PremiumSafetyShieldRoute: PremiumSafetyShieldRoute,
 }
