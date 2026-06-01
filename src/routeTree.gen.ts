@@ -13,6 +13,7 @@ import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as BanksRouteImport } from './routes/banks'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PremiumSmartFormRouteImport } from './routes/premium/smart-form'
 import { Route as PremiumSafetyShieldRouteImport } from './routes/premium/safety-shield'
 import { Route as PremiumLetterGeneratorRouteImport } from './routes/premium/letter-generator'
 import { Route as PremiumFormAssistantRouteImport } from './routes/premium/form-assistant'
@@ -38,6 +39,11 @@ const BanksRoute = BanksRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PremiumSmartFormRoute = PremiumSmartFormRouteImport.update({
+  id: '/premium/smart-form',
+  path: '/premium/smart-form',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PremiumSafetyShieldRoute = PremiumSafetyShieldRouteImport.update({
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/premium/form-assistant': typeof PremiumFormAssistantRoute
   '/premium/letter-generator': typeof PremiumLetterGeneratorRoute
   '/premium/safety-shield': typeof PremiumSafetyShieldRoute
+  '/premium/smart-form': typeof PremiumSmartFormRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByTo {
   '/premium/form-assistant': typeof PremiumFormAssistantRoute
   '/premium/letter-generator': typeof PremiumLetterGeneratorRoute
   '/premium/safety-shield': typeof PremiumSafetyShieldRoute
+  '/premium/smart-form': typeof PremiumSmartFormRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   '/premium/form-assistant': typeof PremiumFormAssistantRoute
   '/premium/letter-generator': typeof PremiumLetterGeneratorRoute
   '/premium/safety-shield': typeof PremiumSafetyShieldRoute
+  '/premium/smart-form': typeof PremiumSmartFormRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -121,6 +130,7 @@ export interface FileRouteTypes {
     | '/premium/form-assistant'
     | '/premium/letter-generator'
     | '/premium/safety-shield'
+    | '/premium/smart-form'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -133,6 +143,7 @@ export interface FileRouteTypes {
     | '/premium/form-assistant'
     | '/premium/letter-generator'
     | '/premium/safety-shield'
+    | '/premium/smart-form'
   id:
     | '__root__'
     | '/'
@@ -145,6 +156,7 @@ export interface FileRouteTypes {
     | '/premium/form-assistant'
     | '/premium/letter-generator'
     | '/premium/safety-shield'
+    | '/premium/smart-form'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -157,6 +169,7 @@ export interface RootRouteChildren {
   PremiumFormAssistantRoute: typeof PremiumFormAssistantRoute
   PremiumLetterGeneratorRoute: typeof PremiumLetterGeneratorRoute
   PremiumSafetyShieldRoute: typeof PremiumSafetyShieldRoute
+  PremiumSmartFormRoute: typeof PremiumSmartFormRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -187,6 +200,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/premium/smart-form': {
+      id: '/premium/smart-form'
+      path: '/premium/smart-form'
+      fullPath: '/premium/smart-form'
+      preLoaderRoute: typeof PremiumSmartFormRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/premium/safety-shield': {
@@ -254,6 +274,7 @@ const rootRouteChildren: RootRouteChildren = {
   PremiumFormAssistantRoute: PremiumFormAssistantRoute,
   PremiumLetterGeneratorRoute: PremiumLetterGeneratorRoute,
   PremiumSafetyShieldRoute: PremiumSafetyShieldRoute,
+  PremiumSmartFormRoute: PremiumSmartFormRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
