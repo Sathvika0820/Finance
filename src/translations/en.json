@@ -430,8 +430,6 @@
   "analyzeThreatLevel": "Analyze Threat Level",
   "confidence": "Confidence",
   "aiRecommendation": "AI Recommendation",
-  "formAssistantPro": "AI Form Assistant Pro",
-  "formAssistantDesc": "Upload official forms, fill them easily, get AI guidance, and download completed PDFs.",
   "uploadPdfForm": "Upload PDF Form",
   "unsupportedPdf": "This PDF format is currently unsupported for automatic field extraction.",
   "fillForm": "Fill Form Data",
