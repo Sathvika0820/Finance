@@ -1,14 +1,15 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { ChevronLeft, Heart, Smartphone, Check } from "lucide-react";
+import { ChevronLeft, Heart, Check } from "lucide-react";
 import { useEffect } from "react";
 import { getBankById, getBankDisplayName } from "@/data/banks";
 import { BankLogo } from "@/components/BankLogo";
-import { OfficialLinkButton } from "@/components/OfficialLinkButton";
 import { useFavorites, pushRecent } from "@/lib/favorites";
 import { BottomNav } from "@/components/BottomNav";
 import { useTranslation } from "@/lib/i18n";
 import { speakVoice } from "@/lib/voice";
+import { BankAppLauncher } from "@/components/BankAppLauncher";
+import { getBankApp } from "@/data/bankApps";
 
 export const Route = createFileRoute("/banks/$bankId")({
   loader: ({ params }) => {
@@ -104,31 +105,12 @@ function BankDetail() {
           <p className="text-sm text-foreground/80 leading-relaxed">{t("bankInformation")}</p>
         </div>
 
-        <div className="grid grid-cols-1 gap-3">
-          <OfficialLinkButton
-            item={bank}
-            label={t("openWebsite")}
-            className="w-full rounded-2xl p-4 text-sm"
-            onVerifiedClick={() => {
-              pushRecent(bank.id);
-              speakVoice("openingBank", { bank });
-            }}
-          />
-          {bank.appLink && bank.verified && (
-            <a
-              href={bank.appLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="fintech-card-interactive rounded-2xl p-4 flex items-center justify-between active:scale-[0.98] transition-transform"
-            >
-              <span className="flex items-center gap-3">
-                <Smartphone className="w-5 h-5" />
-                <span className="font-semibold text-sm">{t("openBankingApp")}</span>
-              </span>
-              <span className="text-xs font-bold text-muted-foreground">{t("open")}</span>
-            </a>
-          )}
-        </div>
+        <BankAppLauncher
+          bankId={bank.id}
+          bankName={getBankDisplayName(bank, lang)}
+          officialWebsite={bank.officialWebsiteUrl || bank.officialWebsite}
+          app={getBankApp(bank.id)}
+        />
 
         <section className="fintech-card rounded-[22px] p-5">
           <h2 className="font-semibold mb-3">{t("servicesOffered")}</h2>

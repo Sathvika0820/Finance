@@ -16,7 +16,7 @@ import { LANGUAGE_OPTIONS, useTranslation } from "@/lib/i18n";
 import { SafetyShieldModal } from "@/components/SafetyShieldModal";
 import { FinancialInclusionModal } from "@/components/FinancialInclusionModal";
 import { CompareBankingModal } from "@/components/CompareBankingModal";
-import { ShieldCheck, ArrowLeftRight, FileText, Calculator, FileSignature } from "lucide-react";
+import { ShieldCheck, ArrowLeftRight, FileText, Calculator } from "lucide-react";
 import { OfficialLinkButton } from "@/components/OfficialLinkButton";
 import { SearchBar } from "@/components/SearchBar";
 
@@ -1281,22 +1281,23 @@ function Dashboard() {
             </Link>
           </div>
 
-          <div className={`bg-gradient-to-br from-sky-50 to-cyan-50 border border-sky-200/60 p-4 rounded-[18px] flex flex-col gap-3 relative overflow-hidden group`}>
+          {/* Official Banking Form Library */}
+          <div className={`bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200/60 p-4 rounded-[18px] flex flex-col gap-3 relative overflow-hidden group`}>
             <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
-              <FileSignature className="w-16 h-16 text-sky-500" />
+              <FileText className="w-16 h-16 text-slate-500" />
             </div>
             <div className="flex items-start gap-3 relative z-10">
               <div className="w-10 h-10 rounded-[12px] bg-white shadow-sm flex items-center justify-center shrink-0">
-                <FileSignature className="w-5 h-5 text-sky-600" />
+                <FileText className="w-5 h-5 text-slate-600" />
               </div>
               <div>
-                <h4 className="font-bold text-[14px] text-sky-900">BankHub Form Studio <span className="inline-block px-2 py-0.5 ml-1 bg-sky-500 text-white text-[9px] font-bold uppercase rounded-full tracking-wider align-middle">{t("pro")}</span></h4>
-                <p className="text-[12px] font-medium text-sky-700/80 mt-0.5">Upload official forms, add fields manually, sign documents, and download completed PDFs.</p>
+                <h4 className="font-bold text-[14px] text-slate-900">{t("officialFormLibrary")} <span className="inline-block px-2 py-0.5 ml-1 bg-slate-500 text-white text-[9px] font-bold uppercase rounded-full tracking-wider align-middle">{t("pro")}</span></h4>
+                <p className="text-[12px] font-medium text-slate-700/80 mt-0.5">{t("officialFormLibraryDesc")}</p>
               </div>
             </div>
             <Link
-              to="/premium/form-studio"
-              className="w-full mt-1 py-2.5 text-[13px] text-center block bg-sky-600 hover:bg-sky-700 text-white rounded-[12px] font-bold active:scale-[0.98] transition-all relative z-10"
+              to="/premium/form-library"
+              className="w-full mt-1 py-2.5 text-[13px] text-center block bg-slate-700 hover:bg-slate-800 text-white rounded-[12px] font-bold active:scale-[0.98] transition-all relative z-10"
             >
               {t("accessTool")}
             </Link>
@@ -1446,5 +1447,3 @@ function Dashboard() {
     </div>
   );
 }
-
-

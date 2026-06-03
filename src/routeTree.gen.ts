@@ -9,17 +9,27 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as FormsRouteImport } from './routes/forms'
 import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as BanksRouteImport } from './routes/banks'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as FormsIndexRouteImport } from './routes/forms/index'
 import { Route as PremiumSafetyShieldRouteImport } from './routes/premium/safety-shield'
 import { Route as PremiumLetterGeneratorRouteImport } from './routes/premium/letter-generator'
 import { Route as PremiumFormStudioRouteImport } from './routes/premium/form-studio'
+import { Route as PremiumFormLibraryRouteImport } from './routes/premium/form-library'
 import { Route as PremiumEmiPlannerRouteImport } from './routes/premium/emi-planner'
+import { Route as FormsBankIdRouteImport } from './routes/forms/$bankId'
 import { Route as BanksBankIdRouteImport } from './routes/banks.$bankId'
 import { Route as BankIfscRouteImport } from './routes/bank.$ifsc'
+import { Route as FormsBankIdFormIdRouteImport } from './routes/forms/$bankId.$formId'
 
+const FormsRoute = FormsRouteImport.update({
+  id: '/forms',
+  path: '/forms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FavoritesRoute = FavoritesRouteImport.update({
   id: '/favorites',
   path: '/favorites',
@@ -40,6 +50,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FormsIndexRoute = FormsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => FormsRoute,
+} as any)
 const PremiumSafetyShieldRoute = PremiumSafetyShieldRouteImport.update({
   id: '/premium/safety-shield',
   path: '/premium/safety-shield',
@@ -55,10 +70,20 @@ const PremiumFormStudioRoute = PremiumFormStudioRouteImport.update({
   path: '/premium/form-studio',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PremiumFormLibraryRoute = PremiumFormLibraryRouteImport.update({
+  id: '/premium/form-library',
+  path: '/premium/form-library',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PremiumEmiPlannerRoute = PremiumEmiPlannerRouteImport.update({
   id: '/premium/emi-planner',
   path: '/premium/emi-planner',
   getParentRoute: () => rootRouteImport,
+} as any)
+const FormsBankIdRoute = FormsBankIdRouteImport.update({
+  id: '/$bankId',
+  path: '/$bankId',
+  getParentRoute: () => FormsRoute,
 } as any)
 const BanksBankIdRoute = BanksBankIdRouteImport.update({
   id: '/$bankId',
@@ -70,18 +95,28 @@ const BankIfscRoute = BankIfscRouteImport.update({
   path: '/bank/$ifsc',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FormsBankIdFormIdRoute = FormsBankIdFormIdRouteImport.update({
+  id: '/$formId',
+  path: '/$formId',
+  getParentRoute: () => FormsBankIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/banks': typeof BanksRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/favorites': typeof FavoritesRoute
+  '/forms': typeof FormsRouteWithChildren
   '/bank/$ifsc': typeof BankIfscRoute
   '/banks/$bankId': typeof BanksBankIdRoute
+  '/forms/$bankId': typeof FormsBankIdRouteWithChildren
   '/premium/emi-planner': typeof PremiumEmiPlannerRoute
+  '/premium/form-library': typeof PremiumFormLibraryRoute
   '/premium/form-studio': typeof PremiumFormStudioRoute
   '/premium/letter-generator': typeof PremiumLetterGeneratorRoute
   '/premium/safety-shield': typeof PremiumSafetyShieldRoute
+  '/forms/': typeof FormsIndexRoute
+  '/forms/$bankId/$formId': typeof FormsBankIdFormIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -90,10 +125,14 @@ export interface FileRoutesByTo {
   '/favorites': typeof FavoritesRoute
   '/bank/$ifsc': typeof BankIfscRoute
   '/banks/$bankId': typeof BanksBankIdRoute
+  '/forms/$bankId': typeof FormsBankIdRouteWithChildren
   '/premium/emi-planner': typeof PremiumEmiPlannerRoute
+  '/premium/form-library': typeof PremiumFormLibraryRoute
   '/premium/form-studio': typeof PremiumFormStudioRoute
   '/premium/letter-generator': typeof PremiumLetterGeneratorRoute
   '/premium/safety-shield': typeof PremiumSafetyShieldRoute
+  '/forms': typeof FormsIndexRoute
+  '/forms/$bankId/$formId': typeof FormsBankIdFormIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -101,12 +140,17 @@ export interface FileRoutesById {
   '/banks': typeof BanksRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/favorites': typeof FavoritesRoute
+  '/forms': typeof FormsRouteWithChildren
   '/bank/$ifsc': typeof BankIfscRoute
   '/banks/$bankId': typeof BanksBankIdRoute
+  '/forms/$bankId': typeof FormsBankIdRouteWithChildren
   '/premium/emi-planner': typeof PremiumEmiPlannerRoute
+  '/premium/form-library': typeof PremiumFormLibraryRoute
   '/premium/form-studio': typeof PremiumFormStudioRoute
   '/premium/letter-generator': typeof PremiumLetterGeneratorRoute
   '/premium/safety-shield': typeof PremiumSafetyShieldRoute
+  '/forms/': typeof FormsIndexRoute
+  '/forms/$bankId/$formId': typeof FormsBankIdFormIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -115,12 +159,17 @@ export interface FileRouteTypes {
     | '/banks'
     | '/dashboard'
     | '/favorites'
+    | '/forms'
     | '/bank/$ifsc'
     | '/banks/$bankId'
+    | '/forms/$bankId'
     | '/premium/emi-planner'
+    | '/premium/form-library'
     | '/premium/form-studio'
     | '/premium/letter-generator'
     | '/premium/safety-shield'
+    | '/forms/'
+    | '/forms/$bankId/$formId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -129,22 +178,31 @@ export interface FileRouteTypes {
     | '/favorites'
     | '/bank/$ifsc'
     | '/banks/$bankId'
+    | '/forms/$bankId'
     | '/premium/emi-planner'
+    | '/premium/form-library'
     | '/premium/form-studio'
     | '/premium/letter-generator'
     | '/premium/safety-shield'
+    | '/forms'
+    | '/forms/$bankId/$formId'
   id:
     | '__root__'
     | '/'
     | '/banks'
     | '/dashboard'
     | '/favorites'
+    | '/forms'
     | '/bank/$ifsc'
     | '/banks/$bankId'
+    | '/forms/$bankId'
     | '/premium/emi-planner'
+    | '/premium/form-library'
     | '/premium/form-studio'
     | '/premium/letter-generator'
     | '/premium/safety-shield'
+    | '/forms/'
+    | '/forms/$bankId/$formId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -152,8 +210,10 @@ export interface RootRouteChildren {
   BanksRoute: typeof BanksRouteWithChildren
   DashboardRoute: typeof DashboardRoute
   FavoritesRoute: typeof FavoritesRoute
+  FormsRoute: typeof FormsRouteWithChildren
   BankIfscRoute: typeof BankIfscRoute
   PremiumEmiPlannerRoute: typeof PremiumEmiPlannerRoute
+  PremiumFormLibraryRoute: typeof PremiumFormLibraryRoute
   PremiumFormStudioRoute: typeof PremiumFormStudioRoute
   PremiumLetterGeneratorRoute: typeof PremiumLetterGeneratorRoute
   PremiumSafetyShieldRoute: typeof PremiumSafetyShieldRoute
@@ -161,6 +221,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/forms': {
+      id: '/forms'
+      path: '/forms'
+      fullPath: '/forms'
+      preLoaderRoute: typeof FormsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/favorites': {
       id: '/favorites'
       path: '/favorites'
@@ -189,6 +256,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forms/': {
+      id: '/forms/'
+      path: '/'
+      fullPath: '/forms/'
+      preLoaderRoute: typeof FormsIndexRouteImport
+      parentRoute: typeof FormsRoute
+    }
     '/premium/safety-shield': {
       id: '/premium/safety-shield'
       path: '/premium/safety-shield'
@@ -210,12 +284,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PremiumFormStudioRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/premium/form-library': {
+      id: '/premium/form-library'
+      path: '/premium/form-library'
+      fullPath: '/premium/form-library'
+      preLoaderRoute: typeof PremiumFormLibraryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/premium/emi-planner': {
       id: '/premium/emi-planner'
       path: '/premium/emi-planner'
       fullPath: '/premium/emi-planner'
       preLoaderRoute: typeof PremiumEmiPlannerRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/forms/$bankId': {
+      id: '/forms/$bankId'
+      path: '/$bankId'
+      fullPath: '/forms/$bankId'
+      preLoaderRoute: typeof FormsBankIdRouteImport
+      parentRoute: typeof FormsRoute
     }
     '/banks/$bankId': {
       id: '/banks/$bankId'
@@ -231,6 +319,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BankIfscRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forms/$bankId/$formId': {
+      id: '/forms/$bankId/$formId'
+      path: '/$formId'
+      fullPath: '/forms/$bankId/$formId'
+      preLoaderRoute: typeof FormsBankIdFormIdRouteImport
+      parentRoute: typeof FormsBankIdRoute
+    }
   }
 }
 
@@ -244,13 +339,39 @@ const BanksRouteChildren: BanksRouteChildren = {
 
 const BanksRouteWithChildren = BanksRoute._addFileChildren(BanksRouteChildren)
 
+interface FormsBankIdRouteChildren {
+  FormsBankIdFormIdRoute: typeof FormsBankIdFormIdRoute
+}
+
+const FormsBankIdRouteChildren: FormsBankIdRouteChildren = {
+  FormsBankIdFormIdRoute: FormsBankIdFormIdRoute,
+}
+
+const FormsBankIdRouteWithChildren = FormsBankIdRoute._addFileChildren(
+  FormsBankIdRouteChildren,
+)
+
+interface FormsRouteChildren {
+  FormsBankIdRoute: typeof FormsBankIdRouteWithChildren
+  FormsIndexRoute: typeof FormsIndexRoute
+}
+
+const FormsRouteChildren: FormsRouteChildren = {
+  FormsBankIdRoute: FormsBankIdRouteWithChildren,
+  FormsIndexRoute: FormsIndexRoute,
+}
+
+const FormsRouteWithChildren = FormsRoute._addFileChildren(FormsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BanksRoute: BanksRouteWithChildren,
   DashboardRoute: DashboardRoute,
   FavoritesRoute: FavoritesRoute,
+  FormsRoute: FormsRouteWithChildren,
   BankIfscRoute: BankIfscRoute,
   PremiumEmiPlannerRoute: PremiumEmiPlannerRoute,
+  PremiumFormLibraryRoute: PremiumFormLibraryRoute,
   PremiumFormStudioRoute: PremiumFormStudioRoute,
   PremiumLetterGeneratorRoute: PremiumLetterGeneratorRoute,
   PremiumSafetyShieldRoute: PremiumSafetyShieldRoute,
