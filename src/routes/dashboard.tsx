@@ -1303,6 +1303,72 @@ function Dashboard() {
             </Link>
           </div>
 
+          {/* PDF Coordinate Mapper */}
+          <div className={`bg-gradient-to-br from-slate-900 to-blue-950 border border-amber-300/40 p-4 rounded-[18px] flex flex-col gap-3 relative overflow-hidden group`}>
+            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
+              <FileText className="w-16 h-16 text-amber-200" />
+            </div>
+            <div className="flex items-start gap-3 relative z-10">
+              <div className="w-10 h-10 rounded-[12px] bg-white/10 shadow-sm flex items-center justify-center shrink-0 border border-white/10">
+                <FileText className="w-5 h-5 text-amber-200" />
+              </div>
+              <div>
+                <h4 className="font-bold text-[14px] text-white">PDF Coordinate Mapper <span className="inline-block px-2 py-0.5 ml-1 bg-amber-400 text-slate-950 text-[9px] font-bold uppercase rounded-full tracking-wider align-middle">{t("pro")}</span></h4>
+                <p className="text-[12px] font-medium text-amber-100/85 mt-0.5">Upload official PDFs, map fields visually, save coordinates, and generate filled bank forms.</p>
+              </div>
+            </div>
+            <Link
+              to="/premium/pdf-coordinate-mapper"
+              className="w-full mt-1 py-2.5 text-[13px] text-center block bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-[12px] font-bold active:scale-[0.98] transition-all relative z-10"
+            >
+              {t("accessTool")}
+            </Link>
+          </div>
+
+          {/* AI Guided Form Assistant */}
+          <div className={`bg-gradient-to-br from-blue-950 via-slate-900 to-emerald-950 border border-cyan-200/30 p-4 rounded-[18px] flex flex-col gap-3 relative overflow-hidden group`}>
+            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
+              <FileText className="w-16 h-16 text-cyan-100" />
+            </div>
+            <div className="flex items-start gap-3 relative z-10">
+              <div className="w-10 h-10 rounded-[12px] bg-white/10 shadow-sm flex items-center justify-center shrink-0 border border-white/10">
+                <FileText className="w-5 h-5 text-cyan-100" />
+              </div>
+              <div>
+                <h4 className="font-bold text-[14px] text-white">AI Guided Form Assistant <span className="inline-block px-2 py-0.5 ml-1 bg-cyan-200 text-slate-950 text-[9px] font-bold uppercase rounded-full tracking-wider align-middle">{t("pro")}</span></h4>
+                <p className="text-[12px] font-medium text-cyan-50/85 mt-0.5">Answer one question at a time, validate details, upload signature, and preview a completed banking PDF.</p>
+              </div>
+            </div>
+            <Link
+              to="/premium/ai-guided-form-assistant"
+              className="w-full mt-1 py-2.5 text-[13px] text-center block bg-cyan-200 hover:bg-cyan-100 text-slate-950 rounded-[12px] font-bold active:scale-[0.98] transition-all relative z-10"
+            >
+              {t("accessTool")}
+            </Link>
+          </div>
+
+          {/* BankHub Forms Platform */}
+          <div className={`bg-gradient-to-br from-[#071b3a] via-[#0d2d5f] to-[#123c7a] border border-amber-300/50 p-4 rounded-[18px] flex flex-col gap-3 relative overflow-hidden group sm:col-span-2`}>
+            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
+              <FileText className="w-20 h-20 text-amber-100" />
+            </div>
+            <div className="flex items-start gap-3 relative z-10">
+              <div className="w-10 h-10 rounded-[12px] bg-white/10 shadow-sm flex items-center justify-center shrink-0 border border-white/10">
+                <FileText className="w-5 h-5 text-amber-100" />
+              </div>
+              <div>
+                <h4 className="font-bold text-[14px] text-white">BankHub Forms Platform <span className="inline-block px-2 py-0.5 ml-1 bg-amber-300 text-slate-950 text-[9px] font-bold uppercase rounded-full tracking-wider align-middle">{t("pro")}</span></h4>
+                <p className="text-[12px] font-medium text-amber-50/85 mt-0.5">SBI and ICICI forms library, PDF clone viewer, overlays, AI guidance, admin mappings, signature upload, and filled PDF downloads.</p>
+              </div>
+            </div>
+            <Link
+              to="/premium/bankhub-forms-platform"
+              className="w-full mt-1 py-2.5 text-[13px] text-center block bg-amber-300 hover:bg-amber-200 text-slate-950 rounded-[12px] font-bold active:scale-[0.98] transition-all relative z-10"
+            >
+              {t("accessTool")}
+            </Link>
+          </div>
+
         </div>
       </section>
 

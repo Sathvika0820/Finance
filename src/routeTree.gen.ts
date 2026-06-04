@@ -16,10 +16,12 @@ import { Route as BanksRouteImport } from './routes/banks'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as FormsIndexRouteImport } from './routes/forms/index'
 import { Route as PremiumSafetyShieldRouteImport } from './routes/premium/safety-shield'
+import { Route as PremiumPdfCoordinateMapperRouteImport } from './routes/premium/pdf-coordinate-mapper'
 import { Route as PremiumLetterGeneratorRouteImport } from './routes/premium/letter-generator'
-import { Route as PremiumFormStudioRouteImport } from './routes/premium/form-studio'
 import { Route as PremiumFormLibraryRouteImport } from './routes/premium/form-library'
 import { Route as PremiumEmiPlannerRouteImport } from './routes/premium/emi-planner'
+import { Route as PremiumBankhubFormsPlatformRouteImport } from './routes/premium/bankhub-forms-platform'
+import { Route as PremiumAiGuidedFormAssistantRouteImport } from './routes/premium/ai-guided-form-assistant'
 import { Route as FormsBankIdRouteImport } from './routes/forms/$bankId'
 import { Route as BanksBankIdRouteImport } from './routes/banks.$bankId'
 import { Route as BankIfscRouteImport } from './routes/bank.$ifsc'
@@ -60,14 +62,15 @@ const PremiumSafetyShieldRoute = PremiumSafetyShieldRouteImport.update({
   path: '/premium/safety-shield',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PremiumPdfCoordinateMapperRoute =
+  PremiumPdfCoordinateMapperRouteImport.update({
+    id: '/premium/pdf-coordinate-mapper',
+    path: '/premium/pdf-coordinate-mapper',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const PremiumLetterGeneratorRoute = PremiumLetterGeneratorRouteImport.update({
   id: '/premium/letter-generator',
   path: '/premium/letter-generator',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PremiumFormStudioRoute = PremiumFormStudioRouteImport.update({
-  id: '/premium/form-studio',
-  path: '/premium/form-studio',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PremiumFormLibraryRoute = PremiumFormLibraryRouteImport.update({
@@ -80,6 +83,18 @@ const PremiumEmiPlannerRoute = PremiumEmiPlannerRouteImport.update({
   path: '/premium/emi-planner',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PremiumBankhubFormsPlatformRoute =
+  PremiumBankhubFormsPlatformRouteImport.update({
+    id: '/premium/bankhub-forms-platform',
+    path: '/premium/bankhub-forms-platform',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const PremiumAiGuidedFormAssistantRoute =
+  PremiumAiGuidedFormAssistantRouteImport.update({
+    id: '/premium/ai-guided-form-assistant',
+    path: '/premium/ai-guided-form-assistant',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const FormsBankIdRoute = FormsBankIdRouteImport.update({
   id: '/$bankId',
   path: '/$bankId',
@@ -110,10 +125,12 @@ export interface FileRoutesByFullPath {
   '/bank/$ifsc': typeof BankIfscRoute
   '/banks/$bankId': typeof BanksBankIdRoute
   '/forms/$bankId': typeof FormsBankIdRouteWithChildren
+  '/premium/ai-guided-form-assistant': typeof PremiumAiGuidedFormAssistantRoute
+  '/premium/bankhub-forms-platform': typeof PremiumBankhubFormsPlatformRoute
   '/premium/emi-planner': typeof PremiumEmiPlannerRoute
   '/premium/form-library': typeof PremiumFormLibraryRoute
-  '/premium/form-studio': typeof PremiumFormStudioRoute
   '/premium/letter-generator': typeof PremiumLetterGeneratorRoute
+  '/premium/pdf-coordinate-mapper': typeof PremiumPdfCoordinateMapperRoute
   '/premium/safety-shield': typeof PremiumSafetyShieldRoute
   '/forms/': typeof FormsIndexRoute
   '/forms/$bankId/$formId': typeof FormsBankIdFormIdRoute
@@ -126,10 +143,12 @@ export interface FileRoutesByTo {
   '/bank/$ifsc': typeof BankIfscRoute
   '/banks/$bankId': typeof BanksBankIdRoute
   '/forms/$bankId': typeof FormsBankIdRouteWithChildren
+  '/premium/ai-guided-form-assistant': typeof PremiumAiGuidedFormAssistantRoute
+  '/premium/bankhub-forms-platform': typeof PremiumBankhubFormsPlatformRoute
   '/premium/emi-planner': typeof PremiumEmiPlannerRoute
   '/premium/form-library': typeof PremiumFormLibraryRoute
-  '/premium/form-studio': typeof PremiumFormStudioRoute
   '/premium/letter-generator': typeof PremiumLetterGeneratorRoute
+  '/premium/pdf-coordinate-mapper': typeof PremiumPdfCoordinateMapperRoute
   '/premium/safety-shield': typeof PremiumSafetyShieldRoute
   '/forms': typeof FormsIndexRoute
   '/forms/$bankId/$formId': typeof FormsBankIdFormIdRoute
@@ -144,10 +163,12 @@ export interface FileRoutesById {
   '/bank/$ifsc': typeof BankIfscRoute
   '/banks/$bankId': typeof BanksBankIdRoute
   '/forms/$bankId': typeof FormsBankIdRouteWithChildren
+  '/premium/ai-guided-form-assistant': typeof PremiumAiGuidedFormAssistantRoute
+  '/premium/bankhub-forms-platform': typeof PremiumBankhubFormsPlatformRoute
   '/premium/emi-planner': typeof PremiumEmiPlannerRoute
   '/premium/form-library': typeof PremiumFormLibraryRoute
-  '/premium/form-studio': typeof PremiumFormStudioRoute
   '/premium/letter-generator': typeof PremiumLetterGeneratorRoute
+  '/premium/pdf-coordinate-mapper': typeof PremiumPdfCoordinateMapperRoute
   '/premium/safety-shield': typeof PremiumSafetyShieldRoute
   '/forms/': typeof FormsIndexRoute
   '/forms/$bankId/$formId': typeof FormsBankIdFormIdRoute
@@ -163,10 +184,12 @@ export interface FileRouteTypes {
     | '/bank/$ifsc'
     | '/banks/$bankId'
     | '/forms/$bankId'
+    | '/premium/ai-guided-form-assistant'
+    | '/premium/bankhub-forms-platform'
     | '/premium/emi-planner'
     | '/premium/form-library'
-    | '/premium/form-studio'
     | '/premium/letter-generator'
+    | '/premium/pdf-coordinate-mapper'
     | '/premium/safety-shield'
     | '/forms/'
     | '/forms/$bankId/$formId'
@@ -179,10 +202,12 @@ export interface FileRouteTypes {
     | '/bank/$ifsc'
     | '/banks/$bankId'
     | '/forms/$bankId'
+    | '/premium/ai-guided-form-assistant'
+    | '/premium/bankhub-forms-platform'
     | '/premium/emi-planner'
     | '/premium/form-library'
-    | '/premium/form-studio'
     | '/premium/letter-generator'
+    | '/premium/pdf-coordinate-mapper'
     | '/premium/safety-shield'
     | '/forms'
     | '/forms/$bankId/$formId'
@@ -196,10 +221,12 @@ export interface FileRouteTypes {
     | '/bank/$ifsc'
     | '/banks/$bankId'
     | '/forms/$bankId'
+    | '/premium/ai-guided-form-assistant'
+    | '/premium/bankhub-forms-platform'
     | '/premium/emi-planner'
     | '/premium/form-library'
-    | '/premium/form-studio'
     | '/premium/letter-generator'
+    | '/premium/pdf-coordinate-mapper'
     | '/premium/safety-shield'
     | '/forms/'
     | '/forms/$bankId/$formId'
@@ -212,10 +239,12 @@ export interface RootRouteChildren {
   FavoritesRoute: typeof FavoritesRoute
   FormsRoute: typeof FormsRouteWithChildren
   BankIfscRoute: typeof BankIfscRoute
+  PremiumAiGuidedFormAssistantRoute: typeof PremiumAiGuidedFormAssistantRoute
+  PremiumBankhubFormsPlatformRoute: typeof PremiumBankhubFormsPlatformRoute
   PremiumEmiPlannerRoute: typeof PremiumEmiPlannerRoute
   PremiumFormLibraryRoute: typeof PremiumFormLibraryRoute
-  PremiumFormStudioRoute: typeof PremiumFormStudioRoute
   PremiumLetterGeneratorRoute: typeof PremiumLetterGeneratorRoute
+  PremiumPdfCoordinateMapperRoute: typeof PremiumPdfCoordinateMapperRoute
   PremiumSafetyShieldRoute: typeof PremiumSafetyShieldRoute
 }
 
@@ -270,18 +299,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PremiumSafetyShieldRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/premium/pdf-coordinate-mapper': {
+      id: '/premium/pdf-coordinate-mapper'
+      path: '/premium/pdf-coordinate-mapper'
+      fullPath: '/premium/pdf-coordinate-mapper'
+      preLoaderRoute: typeof PremiumPdfCoordinateMapperRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/premium/letter-generator': {
       id: '/premium/letter-generator'
       path: '/premium/letter-generator'
       fullPath: '/premium/letter-generator'
       preLoaderRoute: typeof PremiumLetterGeneratorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/premium/form-studio': {
-      id: '/premium/form-studio'
-      path: '/premium/form-studio'
-      fullPath: '/premium/form-studio'
-      preLoaderRoute: typeof PremiumFormStudioRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/premium/form-library': {
@@ -296,6 +325,20 @@ declare module '@tanstack/react-router' {
       path: '/premium/emi-planner'
       fullPath: '/premium/emi-planner'
       preLoaderRoute: typeof PremiumEmiPlannerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/premium/bankhub-forms-platform': {
+      id: '/premium/bankhub-forms-platform'
+      path: '/premium/bankhub-forms-platform'
+      fullPath: '/premium/bankhub-forms-platform'
+      preLoaderRoute: typeof PremiumBankhubFormsPlatformRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/premium/ai-guided-form-assistant': {
+      id: '/premium/ai-guided-form-assistant'
+      path: '/premium/ai-guided-form-assistant'
+      fullPath: '/premium/ai-guided-form-assistant'
+      preLoaderRoute: typeof PremiumAiGuidedFormAssistantRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forms/$bankId': {
@@ -370,10 +413,12 @@ const rootRouteChildren: RootRouteChildren = {
   FavoritesRoute: FavoritesRoute,
   FormsRoute: FormsRouteWithChildren,
   BankIfscRoute: BankIfscRoute,
+  PremiumAiGuidedFormAssistantRoute: PremiumAiGuidedFormAssistantRoute,
+  PremiumBankhubFormsPlatformRoute: PremiumBankhubFormsPlatformRoute,
   PremiumEmiPlannerRoute: PremiumEmiPlannerRoute,
   PremiumFormLibraryRoute: PremiumFormLibraryRoute,
-  PremiumFormStudioRoute: PremiumFormStudioRoute,
   PremiumLetterGeneratorRoute: PremiumLetterGeneratorRoute,
+  PremiumPdfCoordinateMapperRoute: PremiumPdfCoordinateMapperRoute,
   PremiumSafetyShieldRoute: PremiumSafetyShieldRoute,
 }
 export const routeTree = rootRouteImport
