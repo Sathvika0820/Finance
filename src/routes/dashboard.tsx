@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Heart, ChevronDown, Search, ExternalLink, ArrowDownUp, Settings, Landmark, Building2, Wallet, CreditCard, Home, Users, X, Mail, PiggyBank, Globe, MapPin, Shield, Activity, HeartHandshake, Award } from "lucide-react";
 import { BANKS, CATEGORIES, getBankDisplayName, Bank, logoUrl, bankMatchesSearch } from "@/data/banks";
 import { SERVICES_DATA, FinanceService, ServiceCategory, getServiceDescription, getServiceName } from "@/data/services";
-import { openServiceAction } from "@/lib/serviceRedirect";
 import { runServicesHealthCheckBackground } from "@/lib/urlHealth";
 import { BankLogo } from "@/components/BankLogo";
 import { useFavorites, pushRecent } from "@/lib/favorites";
@@ -17,8 +16,9 @@ import { SafetyShieldModal } from "@/components/SafetyShieldModal";
 import { FinancialInclusionModal } from "@/components/FinancialInclusionModal";
 import { CompareBankingModal } from "@/components/CompareBankingModal";
 import { ShieldCheck, ArrowLeftRight, FileText, Calculator } from "lucide-react";
-import { OfficialLinkButton } from "@/components/OfficialLinkButton";
 import { SearchBar } from "@/components/SearchBar";
+import { SmartRedirectActions } from "@/components/SmartRedirectActions";
+import { getInstitutionRedirect } from "@/data/institutionRedirects";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -411,11 +411,6 @@ function ServiceCard({ service, isFav, onToggleFav, onOpen, lang, t }: ServiceCa
   const serviceName = getServiceName(service, lang);
   const serviceDescription = t("officialServiceDescription");
   const serviceLogoSrc = service.logo ? service.logo : (service.logoDomain ? logoUrl(service.logoDomain) : "");
-  const officialItem = {
-    name: serviceName,
-    officialWebsite: service.officialWebsite,
-    verified: service.verified,
-  };
 
   const isCompactService = isPostOfficeService(service) || isInsuranceService(service);
   const nameClass = `font-bold ${isCompactService ? 'text-[9px] sm:text-[10px]' : 'text-[10px] sm:text-[11px]'} text-foreground leading-snug group-hover:text-slate-950 transition-colors`;
@@ -473,15 +468,6 @@ function ServiceCard({ service, isFav, onToggleFav, onOpen, lang, t }: ServiceCa
         >
           <Heart className={`w-4 h-4 ${isFav ? "fill-red-500 text-red-500" : "text-muted-foreground/30 hover:text-red-400"}`} />
         </button>
-
-        <OfficialLinkButton
-          item={officialItem}
-          compact
-          iconOnly={isPostOfficeService(service) || isInsuranceService(service)}
-          onVerifiedClick={(event) => {
-            event.stopPropagation();
-          }}
-        />
       </div>
     </div>
   );
@@ -657,6 +643,25 @@ function ServiceDetailModal({ service, lang, onClose }: { service: FinanceServic
   const Icon = SERVICE_ICONS[service.iconName] || Mail;
   const categoryLabel = t(isPostOfficeService(service) ? "categoryPostOffice" : "categoryInsurance");
   const serviceLogoSrc = service.logo ? service.logo : (service.logoDomain ? logoUrl(service.logoDomain) : "");
+  const redirectKind = isInsuranceService(service) ? "insurance" : "post_office";
+  const institution = getInstitutionRedirect(redirectKind, service.id) ?? {
+    id: service.id,
+    kind: redirectKind,
+    name: serviceName,
+    website: service.officialWebsite || service.officialUrl,
+    appName: `${serviceName} app`,
+  };
+  const renderServiceLogo = () => (
+    !logoErrored && serviceLogoSrc ? (
+      <div className="w-12 h-12 rounded-2xl bg-white shadow-soft shrink-0 overflow-hidden flex items-center justify-center border border-border/60 p-2">
+        <img src={serviceLogoSrc} alt={`${serviceName} logo`} onError={() => setLogoErrored(true)} className="w-full h-full object-contain" />
+      </div>
+    ) : (
+      <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-soft shrink-0">
+        <Icon className="w-6 h-6 stroke-[2.5]" />
+      </div>
+    )
+  );
 
   return (
     <AnimatePresence>
@@ -679,15 +684,7 @@ function ServiceDetailModal({ service, lang, onClose }: { service: FinanceServic
         >
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3 min-w-0">
-              {!logoErrored && serviceLogoSrc ? (
-                <div className="w-12 h-12 rounded-2xl bg-white shadow-soft shrink-0 overflow-hidden flex items-center justify-center border border-border/60 p-2">
-                  <img src={serviceLogoSrc} alt={`${serviceName} logo`} onError={() => setLogoErrored(true)} className="w-full h-full object-contain" />
-                </div>
-              ) : (
-                <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-soft shrink-0">
-                  <Icon className="w-6 h-6 stroke-[2.5]" />
-                </div>
-              )}
+              {renderServiceLogo()}
               <div className="min-w-0">
                 <h3 className="text-[18px] font-bold leading-tight text-foreground">{serviceName}</h3>
                 <p className="inline-flex mt-2 px-2.5 py-1 rounded-full bg-muted text-[11px] font-bold text-muted-foreground">{categoryLabel}</p>
@@ -705,36 +702,12 @@ function ServiceDetailModal({ service, lang, onClose }: { service: FinanceServic
           </div>
 
           <div className="mt-5">
-            <h4 className="text-[12px] uppercase tracking-[0.08em] font-bold text-muted-foreground mb-3">{t("officialActions")}</h4>
-            <div className="grid grid-cols-1 gap-2.5">
-              {service.actions.map((action) => {
-                const isActionVerified = action.url && action.url.trim() !== "";
-                const actionLabel = isActionVerified ? t("openOfficialLink") : t("officialLinkNotVerifiedYet");
-                return (
-                  <button
-                    key={action.id}
-                    disabled={!isActionVerified}
-                    onClick={(event) => {
-                      if (!isActionVerified) {
-                        event.stopPropagation();
-                        event.preventDefault();
-                        return;
-                      }
-                      openServiceAction(service.id, action.id, event);
-                    }}
-                    className={`w-full min-h-12 px-4 py-3 rounded-2xl font-bold text-[13px] flex items-center justify-between gap-3 transition-all ${
-                      isActionVerified
-                        ? "bg-foreground text-background active:scale-[0.99] cursor-pointer shadow-soft"
-                        : "bg-muted text-muted-foreground/60 cursor-not-allowed opacity-75 active:scale-100"
-                    }`}
-                    title={isActionVerified ? undefined : t("officialLinkNotVerifiedYet")}
-                  >
-                    <span className="text-left leading-snug">{actionLabel}</span>
-                    {isActionVerified && <ExternalLink className="w-4 h-4 shrink-0" />}
-                  </button>
-                );
-              })}
-            </div>
+            <SmartRedirectActions
+              institution={institution}
+              logo={renderServiceLogo()}
+              onWebsiteOpened={onClose}
+              onAppResolved={onClose}
+            />
           </div>
         </motion.div>
       </div>

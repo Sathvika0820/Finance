@@ -1,10 +1,11 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
-import { X, ExternalLink, Mail, CreditCard, Wallet, PiggyBank, Globe, MapPin, Shield, Activity, Home, HeartHandshake, Award } from "lucide-react";
+import { X, Mail, CreditCard, Wallet, PiggyBank, Globe, MapPin, Shield, Activity, Home, HeartHandshake, Award } from "lucide-react";
 import { FinanceService, getServiceName } from "@/data/services";
 import { logoUrl } from "@/data/banks";
-import { openServiceAction } from "@/lib/serviceRedirect";
 import { useTranslation } from "@/lib/i18n";
+import { SmartRedirectActions } from "@/components/SmartRedirectActions";
+import { getInstitutionRedirect } from "@/data/institutionRedirects";
 
 const SERVICE_ICONS: Record<string, any> = {
   Mail,
@@ -52,6 +53,30 @@ export function ServiceDetailModal({ service, lang, onClose }: ServiceDetailModa
   const Icon = SERVICE_ICONS[service.iconName] || Mail;
   const categoryLabel = t(isPostOfficeService(service) ? "categoryPostOffice" : "categoryInsurance");
   const serviceLogoSrc = service.logo ? service.logo : (service.logoDomain ? logoUrl(service.logoDomain) : "");
+  const redirectKind = service.category === "insurance" ? "insurance" : "post_office";
+  const institution = getInstitutionRedirect(redirectKind, service.id) ?? {
+    id: service.id,
+    kind: redirectKind,
+    name: serviceName,
+    website: service.officialWebsite || service.officialUrl,
+    appName: `${serviceName} app`,
+  };
+  const renderLogo = () => (
+    !logoErrored && serviceLogoSrc ? (
+      <div className="w-12 h-12 rounded-2xl bg-white shadow-soft shrink-0 overflow-hidden flex items-center justify-center border border-border/60 p-2.5 transition-transform hover:scale-105">
+        <img
+          src={serviceLogoSrc}
+          alt={`${serviceName} logo`}
+          onError={() => setLogoErrored(true)}
+          className="w-full h-full object-contain"
+        />
+      </div>
+    ) : (
+      <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-soft shrink-0">
+        <Icon className="w-6 h-6 stroke-[2.5]" />
+      </div>
+    )
+  );
 
   return (
     <AnimatePresence>
@@ -82,20 +107,7 @@ export function ServiceDetailModal({ service, lang, onClose }: ServiceDetailModa
           {/* Header */}
           <div className="flex items-start justify-between gap-4 shrink-0">
             <div className="flex items-start gap-3.5 min-w-0">
-              {!logoErrored && serviceLogoSrc ? (
-                <div className="w-12 h-12 rounded-2xl bg-white shadow-soft shrink-0 overflow-hidden flex items-center justify-center border border-border/60 p-2.5 transition-transform hover:scale-105">
-                  <img
-                    src={serviceLogoSrc}
-                    alt={`${serviceName} logo`}
-                    onError={() => setLogoErrored(true)}
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-              ) : (
-                <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-soft shrink-0">
-                  <Icon className="w-6 h-6 stroke-[2.5]" />
-                </div>
-              )}
+              {renderLogo()}
               <div className="min-w-0">
                 <h3 className="text-[17px] font-extrabold leading-tight text-foreground">{serviceName}</h3>
                 <p className="inline-flex mt-1.5 px-2.5 py-0.5 rounded-full bg-muted text-[10px] font-extrabold text-muted-foreground tracking-wide uppercase">
@@ -125,26 +137,13 @@ export function ServiceDetailModal({ service, lang, onClose }: ServiceDetailModa
             </p>
           </div>
 
-          {/* Action Buttons List */}
           <div className="mt-5 flex-1">
-            <h4 className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted-foreground mb-3">
-              {t("officialActions")}
-            </h4>
-            <div className="grid grid-cols-1 gap-2.5">
-              {service.actions?.map((action) => {
-                const actionLabel = t("openOfficialLink");
-                return (
-                  <button
-                    key={action.id}
-                    onClick={(event) => openServiceAction(service.id, action.id, event)}
-                    className="w-full min-h-12 px-4 py-3 rounded-2xl fintech-button font-bold text-[13px] flex items-center justify-between gap-3 active:scale-[0.985] transition-all outline-none focus:ring-2 focus:ring-ring/30 cursor-pointer"
-                  >
-                    <span className="text-left leading-snug">{actionLabel}</span>
-                    <ExternalLink className="w-4 h-4 shrink-0 opacity-80" />
-                  </button>
-                );
-              })}
-            </div>
+            <SmartRedirectActions
+              institution={institution}
+              logo={renderLogo()}
+              onWebsiteOpened={onClose}
+              onAppResolved={onClose}
+            />
           </div>
         </motion.div>
       </div>
