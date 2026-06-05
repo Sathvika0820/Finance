@@ -39,17 +39,15 @@ function openExternal(url: string) {
   if (!opened) window.location.assign(url);
 }
 
-function buildAndroidIntent(config: InstitutionRedirectConfig) {
+function buildAndroidIntent(config: InstitutionRedirectConfig, fallbackUrl: string) {
   if (!config.androidPackage) return "";
-  const deepLinkMatch = config.deepLink?.match(/^([a-z][a-z0-9+.-]*):\/\/(.*)$/i);
-  const scheme = deepLinkMatch?.[1] || "https";
-  const path = deepLinkMatch?.[2] || "";
-  return `intent://${path}#Intent;scheme=${scheme};package=${config.androidPackage};end`;
+  const scheme = config.deepLink?.split(":")[0] || "https";
+  return `intent://open#Intent;scheme=${scheme};package=${config.androidPackage};S.browser_fallback_url=${encodeURIComponent(fallbackUrl)};end`;
 }
 
-function getLaunchUrl(config: InstitutionRedirectConfig, platform: Platform) {
+function getLaunchUrl(config: InstitutionRedirectConfig, platform: Platform, fallbackUrl: string) {
   if (platform === "android") {
-    return buildAndroidIntent(config) || config.deepLink || "";
+    return buildAndroidIntent(config, fallbackUrl) || config.deepLink || "";
   }
 
   if (platform === "ios") {
@@ -69,7 +67,6 @@ export function SmartRedirectActions({
   const [status, setStatus] = useState<RedirectStatus>("unknown");
   const [busyAction, setBusyAction] = useState<"website" | "app" | null>(null);
   const redirectGuard = useRef({ key: "", time: 0 });
-  const storeRedirectGuard = useRef(false);
 
   const platform = useMemo(getPlatform, []);
   const androidStore = getAndroidStoreUrl(institution);
@@ -99,20 +96,12 @@ export function SmartRedirectActions({
     }, 180);
   };
 
-  const markAppNotFound = (openStore = false) => {
+  const redirectToStore = () => {
     setStatus("not_installed");
     setBusyAction(null);
-    toast.info("Banking app not found on this device.");
-    if (openStore && storeUrl && isStoreUrl(storeUrl) && !storeRedirectGuard.current) {
-      storeRedirectGuard.current = true;
-      window.setTimeout(() => openExternal(storeUrl), 650);
-    }
-  };
-
-  const redirectToStore = () => {
-    markAppNotFound();
+    toast.info("App not found on this device. Redirecting to official store.");
     if (storeUrl && isStoreUrl(storeUrl)) {
-      openExternal(storeUrl);
+      window.setTimeout(() => openExternal(storeUrl), 350);
     }
   };
 
@@ -120,10 +109,9 @@ export function SmartRedirectActions({
     const now = Date.now();
     if (redirectGuard.current.key === `app:${institution.id}` && now - redirectGuard.current.time < 1800) return;
     redirectGuard.current = { key: `app:${institution.id}`, time: now };
-    storeRedirectGuard.current = false;
 
     if (!canOpenApp || !storeUrl) {
-      markAppNotFound(true);
+      redirectToStore();
       return;
     }
 
@@ -155,24 +143,16 @@ export function SmartRedirectActions({
     const launchUrl = getLaunchUrl(institution, platform, storeUrl);
     if (!launchUrl) {
       cleanup();
-      markAppNotFound(true);
+      redirectToStore();
       return;
     }
 
-    console.info("[BankHub Redirect] Checking installed app before store fallback", {
-      institution: institution.name,
-      platform,
-      androidPackage: institution.androidPackage,
-      iosAppId: institution.iosAppId,
-      deepLink: institution.deepLink,
-      launchUrl,
-    });
     window.location.href = launchUrl;
 
     window.setTimeout(() => {
       cleanup();
-      if (!launched && !document.hidden) markAppNotFound(true);
-    }, 1400);
+      if (!launched && !document.hidden) redirectToStore();
+    }, 500);
   };
 
   const statusCopy = {
@@ -256,23 +236,14 @@ export function SmartRedirectActions({
 
       <AnimatePresence>
         {status === "not_installed" && (
-          <motion.div
+          <motion.p
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
-            className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[12px] font-semibold leading-relaxed text-amber-900"
+            className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] font-semibold leading-relaxed text-amber-900"
           >
-            <p>Banking app not found on this device.</p>
-            {storeUrl && isStoreUrl(storeUrl) && (
-              <button
-                type="button"
-                onClick={redirectToStore}
-                className="mt-2 w-full rounded-xl bg-amber-500 px-3 py-2 text-center text-[12px] font-black text-slate-950 shadow-sm transition-colors hover:bg-amber-400"
-              >
-                Download App
-              </button>
-            )}
-          </motion.div>
+            App not found on this device. Redirecting to official store.
+          </motion.p>
         )}
       </AnimatePresence>
     </div>
