@@ -9,29 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as FormsRouteImport } from './routes/forms'
 import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as BanksRouteImport } from './routes/banks'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as FormsIndexRouteImport } from './routes/forms/index'
 import { Route as PremiumSafetyShieldRouteImport } from './routes/premium/safety-shield'
-import { Route as PremiumPdfCoordinateMapperRouteImport } from './routes/premium/pdf-coordinate-mapper'
 import { Route as PremiumLetterGeneratorRouteImport } from './routes/premium/letter-generator'
-import { Route as PremiumFormLibraryRouteImport } from './routes/premium/form-library'
+import { Route as PremiumFormAssistantRouteImport } from './routes/premium/form-assistant'
 import { Route as PremiumEmiPlannerRouteImport } from './routes/premium/emi-planner'
-import { Route as PremiumBankhubFormsPlatformRouteImport } from './routes/premium/bankhub-forms-platform'
-import { Route as PremiumAiGuidedFormAssistantRouteImport } from './routes/premium/ai-guided-form-assistant'
-import { Route as FormsBankIdRouteImport } from './routes/forms/$bankId'
 import { Route as BanksBankIdRouteImport } from './routes/banks.$bankId'
 import { Route as BankIfscRouteImport } from './routes/bank.$ifsc'
-import { Route as FormsBankIdFormIdRouteImport } from './routes/forms/$bankId.$formId'
 
-const FormsRoute = FormsRouteImport.update({
-  id: '/forms',
-  path: '/forms',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const FavoritesRoute = FavoritesRouteImport.update({
   id: '/favorites',
   path: '/favorites',
@@ -52,53 +40,25 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const FormsIndexRoute = FormsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => FormsRoute,
-} as any)
 const PremiumSafetyShieldRoute = PremiumSafetyShieldRouteImport.update({
   id: '/premium/safety-shield',
   path: '/premium/safety-shield',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PremiumPdfCoordinateMapperRoute =
-  PremiumPdfCoordinateMapperRouteImport.update({
-    id: '/premium/pdf-coordinate-mapper',
-    path: '/premium/pdf-coordinate-mapper',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const PremiumLetterGeneratorRoute = PremiumLetterGeneratorRouteImport.update({
   id: '/premium/letter-generator',
   path: '/premium/letter-generator',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PremiumFormLibraryRoute = PremiumFormLibraryRouteImport.update({
-  id: '/premium/form-library',
-  path: '/premium/form-library',
+const PremiumFormAssistantRoute = PremiumFormAssistantRouteImport.update({
+  id: '/premium/form-assistant',
+  path: '/premium/form-assistant',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PremiumEmiPlannerRoute = PremiumEmiPlannerRouteImport.update({
   id: '/premium/emi-planner',
   path: '/premium/emi-planner',
   getParentRoute: () => rootRouteImport,
-} as any)
-const PremiumBankhubFormsPlatformRoute =
-  PremiumBankhubFormsPlatformRouteImport.update({
-    id: '/premium/bankhub-forms-platform',
-    path: '/premium/bankhub-forms-platform',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const PremiumAiGuidedFormAssistantRoute =
-  PremiumAiGuidedFormAssistantRouteImport.update({
-    id: '/premium/ai-guided-form-assistant',
-    path: '/premium/ai-guided-form-assistant',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const FormsBankIdRoute = FormsBankIdRouteImport.update({
-  id: '/$bankId',
-  path: '/$bankId',
-  getParentRoute: () => FormsRoute,
 } as any)
 const BanksBankIdRoute = BanksBankIdRouteImport.update({
   id: '/$bankId',
@@ -110,30 +70,18 @@ const BankIfscRoute = BankIfscRouteImport.update({
   path: '/bank/$ifsc',
   getParentRoute: () => rootRouteImport,
 } as any)
-const FormsBankIdFormIdRoute = FormsBankIdFormIdRouteImport.update({
-  id: '/$formId',
-  path: '/$formId',
-  getParentRoute: () => FormsBankIdRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/banks': typeof BanksRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/favorites': typeof FavoritesRoute
-  '/forms': typeof FormsRouteWithChildren
   '/bank/$ifsc': typeof BankIfscRoute
   '/banks/$bankId': typeof BanksBankIdRoute
-  '/forms/$bankId': typeof FormsBankIdRouteWithChildren
-  '/premium/ai-guided-form-assistant': typeof PremiumAiGuidedFormAssistantRoute
-  '/premium/bankhub-forms-platform': typeof PremiumBankhubFormsPlatformRoute
   '/premium/emi-planner': typeof PremiumEmiPlannerRoute
-  '/premium/form-library': typeof PremiumFormLibraryRoute
+  '/premium/form-assistant': typeof PremiumFormAssistantRoute
   '/premium/letter-generator': typeof PremiumLetterGeneratorRoute
-  '/premium/pdf-coordinate-mapper': typeof PremiumPdfCoordinateMapperRoute
   '/premium/safety-shield': typeof PremiumSafetyShieldRoute
-  '/forms/': typeof FormsIndexRoute
-  '/forms/$bankId/$formId': typeof FormsBankIdFormIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -142,16 +90,10 @@ export interface FileRoutesByTo {
   '/favorites': typeof FavoritesRoute
   '/bank/$ifsc': typeof BankIfscRoute
   '/banks/$bankId': typeof BanksBankIdRoute
-  '/forms/$bankId': typeof FormsBankIdRouteWithChildren
-  '/premium/ai-guided-form-assistant': typeof PremiumAiGuidedFormAssistantRoute
-  '/premium/bankhub-forms-platform': typeof PremiumBankhubFormsPlatformRoute
   '/premium/emi-planner': typeof PremiumEmiPlannerRoute
-  '/premium/form-library': typeof PremiumFormLibraryRoute
+  '/premium/form-assistant': typeof PremiumFormAssistantRoute
   '/premium/letter-generator': typeof PremiumLetterGeneratorRoute
-  '/premium/pdf-coordinate-mapper': typeof PremiumPdfCoordinateMapperRoute
   '/premium/safety-shield': typeof PremiumSafetyShieldRoute
-  '/forms': typeof FormsIndexRoute
-  '/forms/$bankId/$formId': typeof FormsBankIdFormIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -159,19 +101,12 @@ export interface FileRoutesById {
   '/banks': typeof BanksRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/favorites': typeof FavoritesRoute
-  '/forms': typeof FormsRouteWithChildren
   '/bank/$ifsc': typeof BankIfscRoute
   '/banks/$bankId': typeof BanksBankIdRoute
-  '/forms/$bankId': typeof FormsBankIdRouteWithChildren
-  '/premium/ai-guided-form-assistant': typeof PremiumAiGuidedFormAssistantRoute
-  '/premium/bankhub-forms-platform': typeof PremiumBankhubFormsPlatformRoute
   '/premium/emi-planner': typeof PremiumEmiPlannerRoute
-  '/premium/form-library': typeof PremiumFormLibraryRoute
+  '/premium/form-assistant': typeof PremiumFormAssistantRoute
   '/premium/letter-generator': typeof PremiumLetterGeneratorRoute
-  '/premium/pdf-coordinate-mapper': typeof PremiumPdfCoordinateMapperRoute
   '/premium/safety-shield': typeof PremiumSafetyShieldRoute
-  '/forms/': typeof FormsIndexRoute
-  '/forms/$bankId/$formId': typeof FormsBankIdFormIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -180,19 +115,12 @@ export interface FileRouteTypes {
     | '/banks'
     | '/dashboard'
     | '/favorites'
-    | '/forms'
     | '/bank/$ifsc'
     | '/banks/$bankId'
-    | '/forms/$bankId'
-    | '/premium/ai-guided-form-assistant'
-    | '/premium/bankhub-forms-platform'
     | '/premium/emi-planner'
-    | '/premium/form-library'
+    | '/premium/form-assistant'
     | '/premium/letter-generator'
-    | '/premium/pdf-coordinate-mapper'
     | '/premium/safety-shield'
-    | '/forms/'
-    | '/forms/$bankId/$formId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -201,35 +129,22 @@ export interface FileRouteTypes {
     | '/favorites'
     | '/bank/$ifsc'
     | '/banks/$bankId'
-    | '/forms/$bankId'
-    | '/premium/ai-guided-form-assistant'
-    | '/premium/bankhub-forms-platform'
     | '/premium/emi-planner'
-    | '/premium/form-library'
+    | '/premium/form-assistant'
     | '/premium/letter-generator'
-    | '/premium/pdf-coordinate-mapper'
     | '/premium/safety-shield'
-    | '/forms'
-    | '/forms/$bankId/$formId'
   id:
     | '__root__'
     | '/'
     | '/banks'
     | '/dashboard'
     | '/favorites'
-    | '/forms'
     | '/bank/$ifsc'
     | '/banks/$bankId'
-    | '/forms/$bankId'
-    | '/premium/ai-guided-form-assistant'
-    | '/premium/bankhub-forms-platform'
     | '/premium/emi-planner'
-    | '/premium/form-library'
+    | '/premium/form-assistant'
     | '/premium/letter-generator'
-    | '/premium/pdf-coordinate-mapper'
     | '/premium/safety-shield'
-    | '/forms/'
-    | '/forms/$bankId/$formId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -237,26 +152,15 @@ export interface RootRouteChildren {
   BanksRoute: typeof BanksRouteWithChildren
   DashboardRoute: typeof DashboardRoute
   FavoritesRoute: typeof FavoritesRoute
-  FormsRoute: typeof FormsRouteWithChildren
   BankIfscRoute: typeof BankIfscRoute
-  PremiumAiGuidedFormAssistantRoute: typeof PremiumAiGuidedFormAssistantRoute
-  PremiumBankhubFormsPlatformRoute: typeof PremiumBankhubFormsPlatformRoute
   PremiumEmiPlannerRoute: typeof PremiumEmiPlannerRoute
-  PremiumFormLibraryRoute: typeof PremiumFormLibraryRoute
+  PremiumFormAssistantRoute: typeof PremiumFormAssistantRoute
   PremiumLetterGeneratorRoute: typeof PremiumLetterGeneratorRoute
-  PremiumPdfCoordinateMapperRoute: typeof PremiumPdfCoordinateMapperRoute
   PremiumSafetyShieldRoute: typeof PremiumSafetyShieldRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/forms': {
-      id: '/forms'
-      path: '/forms'
-      fullPath: '/forms'
-      preLoaderRoute: typeof FormsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/favorites': {
       id: '/favorites'
       path: '/favorites'
@@ -285,25 +189,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/forms/': {
-      id: '/forms/'
-      path: '/'
-      fullPath: '/forms/'
-      preLoaderRoute: typeof FormsIndexRouteImport
-      parentRoute: typeof FormsRoute
-    }
     '/premium/safety-shield': {
       id: '/premium/safety-shield'
       path: '/premium/safety-shield'
       fullPath: '/premium/safety-shield'
       preLoaderRoute: typeof PremiumSafetyShieldRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/premium/pdf-coordinate-mapper': {
-      id: '/premium/pdf-coordinate-mapper'
-      path: '/premium/pdf-coordinate-mapper'
-      fullPath: '/premium/pdf-coordinate-mapper'
-      preLoaderRoute: typeof PremiumPdfCoordinateMapperRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/premium/letter-generator': {
@@ -313,11 +203,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PremiumLetterGeneratorRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/premium/form-library': {
-      id: '/premium/form-library'
-      path: '/premium/form-library'
-      fullPath: '/premium/form-library'
-      preLoaderRoute: typeof PremiumFormLibraryRouteImport
+    '/premium/form-assistant': {
+      id: '/premium/form-assistant'
+      path: '/premium/form-assistant'
+      fullPath: '/premium/form-assistant'
+      preLoaderRoute: typeof PremiumFormAssistantRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/premium/emi-planner': {
@@ -326,27 +216,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/premium/emi-planner'
       preLoaderRoute: typeof PremiumEmiPlannerRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/premium/bankhub-forms-platform': {
-      id: '/premium/bankhub-forms-platform'
-      path: '/premium/bankhub-forms-platform'
-      fullPath: '/premium/bankhub-forms-platform'
-      preLoaderRoute: typeof PremiumBankhubFormsPlatformRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/premium/ai-guided-form-assistant': {
-      id: '/premium/ai-guided-form-assistant'
-      path: '/premium/ai-guided-form-assistant'
-      fullPath: '/premium/ai-guided-form-assistant'
-      preLoaderRoute: typeof PremiumAiGuidedFormAssistantRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/forms/$bankId': {
-      id: '/forms/$bankId'
-      path: '/$bankId'
-      fullPath: '/forms/$bankId'
-      preLoaderRoute: typeof FormsBankIdRouteImport
-      parentRoute: typeof FormsRoute
     }
     '/banks/$bankId': {
       id: '/banks/$bankId'
@@ -362,13 +231,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BankIfscRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/forms/$bankId/$formId': {
-      id: '/forms/$bankId/$formId'
-      path: '/$formId'
-      fullPath: '/forms/$bankId/$formId'
-      preLoaderRoute: typeof FormsBankIdFormIdRouteImport
-      parentRoute: typeof FormsBankIdRoute
-    }
   }
 }
 
@@ -382,43 +244,15 @@ const BanksRouteChildren: BanksRouteChildren = {
 
 const BanksRouteWithChildren = BanksRoute._addFileChildren(BanksRouteChildren)
 
-interface FormsBankIdRouteChildren {
-  FormsBankIdFormIdRoute: typeof FormsBankIdFormIdRoute
-}
-
-const FormsBankIdRouteChildren: FormsBankIdRouteChildren = {
-  FormsBankIdFormIdRoute: FormsBankIdFormIdRoute,
-}
-
-const FormsBankIdRouteWithChildren = FormsBankIdRoute._addFileChildren(
-  FormsBankIdRouteChildren,
-)
-
-interface FormsRouteChildren {
-  FormsBankIdRoute: typeof FormsBankIdRouteWithChildren
-  FormsIndexRoute: typeof FormsIndexRoute
-}
-
-const FormsRouteChildren: FormsRouteChildren = {
-  FormsBankIdRoute: FormsBankIdRouteWithChildren,
-  FormsIndexRoute: FormsIndexRoute,
-}
-
-const FormsRouteWithChildren = FormsRoute._addFileChildren(FormsRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BanksRoute: BanksRouteWithChildren,
   DashboardRoute: DashboardRoute,
   FavoritesRoute: FavoritesRoute,
-  FormsRoute: FormsRouteWithChildren,
   BankIfscRoute: BankIfscRoute,
-  PremiumAiGuidedFormAssistantRoute: PremiumAiGuidedFormAssistantRoute,
-  PremiumBankhubFormsPlatformRoute: PremiumBankhubFormsPlatformRoute,
   PremiumEmiPlannerRoute: PremiumEmiPlannerRoute,
-  PremiumFormLibraryRoute: PremiumFormLibraryRoute,
+  PremiumFormAssistantRoute: PremiumFormAssistantRoute,
   PremiumLetterGeneratorRoute: PremiumLetterGeneratorRoute,
-  PremiumPdfCoordinateMapperRoute: PremiumPdfCoordinateMapperRoute,
   PremiumSafetyShieldRoute: PremiumSafetyShieldRoute,
 }
 export const routeTree = rootRouteImport

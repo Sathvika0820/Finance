@@ -10,6 +10,7 @@ import mrLocale from "@/translations/mr.json";
 import bnLocale from "@/translations/bn.json";
 import guLocale from "@/translations/gu.json";
 import paLocale from "@/translations/pa.json";
+import mlLocale from "@/translations/ml.json";
 
 export type AppLanguage =
   | "english"
@@ -17,6 +18,7 @@ export type AppLanguage =
   | "telugu"
   | "tamil"
   | "kannada"
+  | "malayalam"
   | "odia"
   | "urdu"
   | "marathi"
@@ -30,6 +32,7 @@ export const LANGUAGE_OPTIONS: { id: AppLanguage; code: string; label: string; n
   { id: "telugu", code: "te", label: "Telugu", nativeLabel: "తెలుగు" },
   { id: "tamil", code: "ta", label: "Tamil", nativeLabel: "தமிழ்" },
   { id: "kannada", code: "kn", label: "Kannada", nativeLabel: "ಕನ್ನಡ" },
+  { id: "malayalam", code: "ml", label: "Malayalam", nativeLabel: "Malayalam" },
   { id: "odia", code: "or", label: "Odia", nativeLabel: "ଓଡ଼ିଆ" },
   { id: "urdu", code: "ur", label: "Urdu", nativeLabel: "اردو", dir: "rtl" },
   { id: "marathi", code: "mr", label: "Marathi", nativeLabel: "मराठी" },
@@ -44,6 +47,7 @@ export const SPEECH_LOCALE_BY_LANGUAGE: Record<AppLanguage, string> = {
   telugu: "te-IN",
   tamil: "ta-IN",
   kannada: "kn-IN",
+  malayalam: "ml-IN",
   odia: "or-IN",
   urdu: "ur-IN",
   marathi: "mr-IN",
@@ -66,6 +70,7 @@ const localeResources: Record<AppLanguage, Record<string, string>> = {
   telugu: teLocale,
   tamil: taLocale,
   kannada: knLocale,
+  malayalam: mlLocale,
   odia: orLocale,
   urdu: urLocale,
   marathi: mrLocale,
@@ -110,7 +115,13 @@ export function getCurrentStoredLanguage(): AppLanguage {
   if (typeof window === "undefined") return "english";
   try {
     const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-    return stored ? normalizeLanguage(stored) : "english";
+    if (stored) return normalizeLanguage(stored);
+    const deviceLanguages = navigator.languages?.length ? navigator.languages : [navigator.language];
+    for (const deviceLanguage of deviceLanguages) {
+      const detected = normalizeLanguage(deviceLanguage);
+      if (detected !== "english" || String(deviceLanguage || "").toLowerCase().startsWith("en")) return detected;
+    }
+    return "english";
   } catch {
     return "english";
   }
@@ -188,3 +199,7 @@ export function useTranslation() {
 
   return { t, lang, setLang, languageCode: getLanguageCode(lang), dir: isRtlLanguage(lang) ? "rtl" : "ltr" };
 }
+
+
+
+
