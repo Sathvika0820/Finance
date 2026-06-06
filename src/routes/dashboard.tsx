@@ -1254,6 +1254,28 @@ function Dashboard() {
             </Link>
           </div>
 
+          {/* SBI Form Assistant */}
+          <div className={`bg-gradient-to-br from-sky-50 to-blue-50 border border-sky-200/60 p-4 rounded-[18px] flex flex-col gap-3 relative overflow-hidden group`}>
+            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
+              <FileText className="w-16 h-16 text-sky-500" />
+            </div>
+            <div className="flex items-start gap-3 relative z-10">
+              <div className="w-10 h-10 rounded-[12px] bg-white shadow-sm flex items-center justify-center shrink-0">
+                <FileText className="w-5 h-5 text-sky-600" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="font-bold text-[14px] text-sky-900">Form Assistant <span className="inline-block px-2 py-0.5 ml-1 bg-sky-500 text-white text-[9px] font-bold uppercase rounded-full tracking-wider align-middle">{t("pro")}</span></h4>
+                <p className="text-[12px] font-medium text-sky-700/80 mt-0.5">Fill the SBI Internet Banking Registration form.</p>
+              </div>
+            </div>
+            <Link
+              to="/premium/form-assistant"
+              className="w-full mt-1 py-2.5 text-[13px] text-center block bg-sky-600 hover:bg-sky-700 text-white rounded-[12px] font-bold active:scale-[0.98] transition-all relative z-10"
+            >
+              {t("accessTool")}
+            </Link>
+          </div>
+
         </div>
       </section>
 
