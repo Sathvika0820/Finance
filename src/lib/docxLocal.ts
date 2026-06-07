@@ -287,19 +287,34 @@ function centerCellContent(cellXml: string) {
   let output = cellXml;
   if (/<w:tcPr[\s\S]*?<\/w:tcPr>/.test(output)) {
     output = output.replace(/<w:tcPr[\s\S]*?<\/w:tcPr>/, (tcPr) => {
-      if (/<w:vAlign\b[^>]*\/>/.test(tcPr)) return tcPr.replace(/<w:vAlign\b[^>]*\/>/, '<w:vAlign w:val="center"/>');
-      return tcPr.replace("</w:tcPr>", '<w:vAlign w:val="center"/></w:tcPr>');
+      let nextTcPr = /<w:vAlign\b[^>]*\/>/.test(tcPr)
+        ? tcPr.replace(/<w:vAlign\b[^>]*\/>/, '<w:vAlign w:val="center"/>')
+        : tcPr.replace("</w:tcPr>", '<w:vAlign w:val="center"/></w:tcPr>');
+      if (/<w:tcMar[\s\S]*?<\/w:tcMar>/.test(nextTcPr)) {
+        nextTcPr = nextTcPr.replace(/<w:tcMar[\s\S]*?<\/w:tcMar>/, '<w:tcMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tcMar>');
+      } else {
+        nextTcPr = nextTcPr.replace("</w:tcPr>", '<w:tcMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tcMar></w:tcPr>');
+      }
+      return nextTcPr;
     });
   } else {
-    output = output.replace(/<w:tc(\s[^>]*)?>/, '<w:tc$1><w:tcPr><w:vAlign w:val="center"/></w:tcPr>');
+    output = output.replace(/<w:tc(\s[^>]*)?>/, '<w:tc$1><w:tcPr><w:vAlign w:val="center"/><w:tcMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tcMar></w:tcPr>');
   }
   if (/<w:pPr[\s\S]*?<\/w:pPr>/.test(output)) {
     output = output.replace(/<w:pPr[\s\S]*?<\/w:pPr>/, (pPr) => {
-      if (/<w:jc\b[^>]*\/>/.test(pPr)) return pPr.replace(/<w:jc\b[^>]*\/>/, '<w:jc w:val="center"/>');
-      return pPr.replace("</w:pPr>", '<w:jc w:val="center"/></w:pPr>');
+      let nextPPr = /<w:jc\b[^>]*\/>/.test(pPr)
+        ? pPr.replace(/<w:jc\b[^>]*\/>/, '<w:jc w:val="center"/>')
+        : pPr.replace("</w:pPr>", '<w:jc w:val="center"/></w:pPr>');
+      nextPPr = /<w:spacing\b[^>]*\/>/.test(nextPPr)
+        ? nextPPr.replace(/<w:spacing\b[^>]*\/>/, '<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>')
+        : nextPPr.replace("</w:pPr>", '<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>');
+      nextPPr = /<w:ind\b[^>]*\/>/.test(nextPPr)
+        ? nextPPr.replace(/<w:ind\b[^>]*\/>/, '<w:ind w:left="0" w:right="0" w:firstLine="0" w:hanging="0"/>')
+        : nextPPr.replace("</w:pPr>", '<w:ind w:left="0" w:right="0" w:firstLine="0" w:hanging="0"/></w:pPr>');
+      return nextPPr;
     });
   } else {
-    output = output.replace(/<w:p(\s[^>]*)?>/, '<w:p$1><w:pPr><w:jc w:val="center"/></w:pPr>');
+    output = output.replace(/<w:p(\s[^>]*)?>/, '<w:p$1><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:left="0" w:right="0" w:firstLine="0" w:hanging="0"/></w:pPr>');
   }
   return output;
 }

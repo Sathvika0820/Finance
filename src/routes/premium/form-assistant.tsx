@@ -9,6 +9,9 @@ import { AppShell } from "@/components/AppShell";
 import { buildFilledDocx, type DocxAnswers, type DocxImageValue } from "@/lib/docxLocal";
 
 const sbiTemplateUrl = new URL("../../forms/sbi/ib_registration_original.docx", import.meta.url).href;
+const DOCUMENT_PAGE_WIDTH = 794;
+const DOCUMENT_PAGE_HEIGHT = 1123;
+const DOCUMENT_PAGE_PADDING = 24;
 
 export const Route = createFileRoute("/premium/form-assistant")({
   head: () => ({
@@ -229,6 +232,7 @@ function SimpleSbiFormAssistant() {
   ]);
   const [validationError, setValidationError] = useState("");
   const [documentError, setDocumentError] = useState("");
+  const [pdfDiagnostics, setPdfDiagnostics] = useState<string[]>([]);
   const [status, setStatus] = useState("");
   const [isGeneratingDocx, setIsGeneratingDocx] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -258,14 +262,14 @@ function SimpleSbiFormAssistant() {
 
   const fitPreviewToPage = useCallback(() => {
     if (previewFitMode !== "page" || !previewRef.current || !previewViewportRef.current) return;
-    const page = previewRef.current.querySelector<HTMLElement>(".docx-wrapper section, .docx-wrapper > section, .docx");
+    const page = previewRef.current.querySelector<HTMLElement>(".bankhub-fixed-page, .docx-wrapper section, .docx-wrapper > section, .docx");
     if (!page) return;
-    const pageWidth = page.offsetWidth || page.scrollWidth;
-    const pageHeight = page.offsetHeight || page.scrollHeight;
+    const pageWidth = DOCUMENT_PAGE_WIDTH;
+    const pageHeight = DOCUMENT_PAGE_HEIGHT;
     if (!pageWidth || !pageHeight) return;
 
-    const availableWidth = Math.max(previewViewportRef.current.clientWidth - 32, 280);
-    const availableHeight = Math.max(Math.min(window.innerHeight * 0.72, 820) - 32, 420);
+    const availableWidth = Math.max(previewViewportRef.current.clientWidth - DOCUMENT_PAGE_PADDING, 280);
+    const availableHeight = Math.max(Math.min(window.innerHeight * 0.72, 820) - DOCUMENT_PAGE_PADDING, 420);
     const nextZoom = Math.max(0.3, Math.min(1, availableWidth / pageWidth, availableHeight / pageHeight));
     setPreviewZoom(Number(nextZoom.toFixed(2)));
   }, [previewFitMode]);
@@ -335,6 +339,7 @@ function SimpleSbiFormAssistant() {
           breakPages: false,
         });
         if (cancelled) return;
+        applyFixedDocumentLayout(previewRef.current);
         requestAnimationFrame(fitPreviewToPage);
         console.info("[BankHub SBI Form Assistant] Live preview render success", { size: docx.size });
       })
@@ -529,43 +534,103 @@ function SimpleSbiFormAssistant() {
 
     setIsGeneratingPdf(true);
     setDocumentError("");
+    setPdfDiagnostics([]);
     setStatus("Generating PDF...");
+    const diagnostics = [
+      `Template Loaded = ${templateReady ? "YES" : "NO"}`,
+      `Form Populated = ${docx ? "YES" : "NO"}`,
+      `PDF Library Loaded = ${html2canvas && jsPDF ? "YES" : "NO"}`,
+      "PDF Render Success = NO",
+    ];
+    setPdfDiagnostics(diagnostics);
+    console.info("[BankHub SBI Form Assistant] PDF Conversion Started", diagnostics);
     const container = document.createElement("div");
     container.style.position = "fixed";
-    container.style.left = "-10000px";
-    container.style.top = "0";
-    container.style.width = "900px";
+    container.style.inset = "0";
+    container.style.opacity = "0";
+    container.style.pointerEvents = "none";
+    container.style.zIndex = "-1";
+    container.style.width = `${DOCUMENT_PAGE_WIDTH}px`;
+    container.style.height = `${DOCUMENT_PAGE_HEIGHT}px`;
+    container.style.overflow = "hidden";
     container.style.background = "#ffffff";
     document.body.appendChild(container);
 
     try {
-      await renderAsync(await docx.arrayBuffer(), container, undefined, {
-        className: "bankhub-sbi-pdf-page",
-        inWrapper: true,
-        ignoreFonts: false,
-        ignoreWidth: false,
-        ignoreHeight: false,
-        breakPages: false,
-      });
-      const pageTarget = container.querySelector<HTMLElement>(".docx-wrapper section, .docx-wrapper > section, .docx-wrapper, .docx") || container;
+      let pageTarget: HTMLElement | null = null;
+      const visiblePreviewPage = previewRef.current?.querySelector<HTMLElement>(".bankhub-fixed-page, .docx-wrapper section, .docx");
+
+      if (visiblePreviewPage) {
+        const previewClone = visiblePreviewPage.cloneNode(true) as HTMLElement;
+        previewClone.style.transform = "none";
+        previewClone.style.margin = "0";
+        previewClone.style.width = `${DOCUMENT_PAGE_WIDTH}px`;
+        previewClone.style.minWidth = `${DOCUMENT_PAGE_WIDTH}px`;
+        previewClone.style.maxWidth = `${DOCUMENT_PAGE_WIDTH}px`;
+        previewClone.style.height = `${DOCUMENT_PAGE_HEIGHT}px`;
+        previewClone.style.minHeight = `${DOCUMENT_PAGE_HEIGHT}px`;
+        previewClone.style.maxHeight = `${DOCUMENT_PAGE_HEIGHT}px`;
+        previewClone.style.overflow = "hidden";
+        container.appendChild(previewClone);
+        pageTarget = previewClone;
+      } else {
+        await renderAsync(await docx.arrayBuffer(), container, undefined, {
+          className: "bankhub-sbi-pdf-page",
+          inWrapper: true,
+          ignoreFonts: false,
+          ignoreWidth: false,
+          ignoreHeight: false,
+          breakPages: false,
+        });
+        applyFixedDocumentLayout(container);
+        pageTarget = container.querySelector<HTMLElement>(".bankhub-fixed-page, .docx-wrapper section, .docx");
+      }
+
+      if (!pageTarget) {
+        throw new Error("Unable to locate the fixed SBI page for PDF rendering.");
+      }
+
+      if ("fonts" in document) {
+        await document.fonts.ready;
+      }
+      await waitForNextFrame();
+      await waitForNextFrame();
+
       const canvas = await html2canvas(pageTarget, {
         backgroundColor: "#ffffff",
         scale: 2,
         useCORS: true,
         scrollX: 0,
         scrollY: 0,
-        windowWidth: pageTarget.scrollWidth || pageTarget.clientWidth,
-        windowHeight: pageTarget.scrollHeight || pageTarget.clientHeight,
+        width: DOCUMENT_PAGE_WIDTH,
+        height: DOCUMENT_PAGE_HEIGHT,
+        windowWidth: DOCUMENT_PAGE_WIDTH,
+        windowHeight: DOCUMENT_PAGE_HEIGHT,
       });
-      const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? "landscape" : "portrait", unit: "px", format: [canvas.width, canvas.height] });
-      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, canvas.width, canvas.height);
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "px",
+        format: [DOCUMENT_PAGE_WIDTH, DOCUMENT_PAGE_HEIGHT],
+        compress: true,
+      });
+      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, DOCUMENT_PAGE_WIDTH, DOCUMENT_PAGE_HEIGHT);
       const pdfBlob = pdf.output("blob");
       downloadBlob(pdfBlob, "SBI_Internet_Banking_Registration.pdf");
+      const successDiagnostics = diagnostics.map((line) => line === "PDF Render Success = NO" ? "PDF Render Success = YES" : line);
+      setPdfDiagnostics(successDiagnostics);
       setStatus("PDF downloaded as a single page.");
+      console.info("[BankHub SBI Form Assistant] PDF Conversion Success", successDiagnostics, { width: canvas.width, height: canvas.height });
       console.info("[BankHub SBI Form Assistant] PDF download success", { pages: 1, width: canvas.width, height: canvas.height });
     } catch (error) {
+      const errorDetails = getErrorDetails(error);
+      const failureDiagnostics = [
+        ...diagnostics,
+        `Actual Error Message = ${errorDetails}`,
+      ];
+      setPdfDiagnostics(failureDiagnostics);
+      console.error("[BankHub SBI Form Assistant] PDF Conversion Failure", failureDiagnostics, error);
       console.error("[BankHub SBI Form Assistant] PDF download failed", error);
-      setDocumentError("PDF generation failed. Please try downloading DOCX first or generate again.");
+      setDocumentError(`PDF generation failed: ${errorDetails}`);
     } finally {
       container.remove();
       setIsGeneratingPdf(false);
@@ -592,6 +657,43 @@ function SimpleSbiFormAssistant() {
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-5 sm:px-6 lg:px-8">
+      <style>{`
+        .bankhub-docx-preview,
+        .bankhub-sbi-pdf-page {
+          width: ${DOCUMENT_PAGE_WIDTH}px;
+          min-width: ${DOCUMENT_PAGE_WIDTH}px;
+          max-width: ${DOCUMENT_PAGE_WIDTH}px;
+        }
+
+        .bankhub-docx-preview .docx-wrapper,
+        .bankhub-sbi-pdf-page .docx-wrapper {
+          width: ${DOCUMENT_PAGE_WIDTH}px !important;
+          min-width: ${DOCUMENT_PAGE_WIDTH}px !important;
+          max-width: ${DOCUMENT_PAGE_WIDTH}px !important;
+          margin: 0 auto !important;
+          padding: 0 !important;
+          background: transparent !important;
+        }
+
+        .bankhub-docx-preview .bankhub-fixed-page,
+        .bankhub-sbi-pdf-page .bankhub-fixed-page,
+        .bankhub-docx-preview .docx-wrapper section,
+        .bankhub-sbi-pdf-page .docx-wrapper section {
+          width: ${DOCUMENT_PAGE_WIDTH}px !important;
+          min-width: ${DOCUMENT_PAGE_WIDTH}px !important;
+          max-width: ${DOCUMENT_PAGE_WIDTH}px !important;
+          height: ${DOCUMENT_PAGE_HEIGHT}px !important;
+          min-height: ${DOCUMENT_PAGE_HEIGHT}px !important;
+          max-height: ${DOCUMENT_PAGE_HEIGHT}px !important;
+          box-sizing: border-box !important;
+          overflow: hidden !important;
+          margin: 0 auto !important;
+          padding: 0 !important;
+          background: white !important;
+          page-break-after: avoid !important;
+          break-after: avoid-page !important;
+        }
+      `}</style>
       <div className="mx-auto flex max-w-5xl flex-col gap-5">
         <div className="flex items-center justify-between gap-3">
           <Link
@@ -749,7 +851,7 @@ function SimpleSbiFormAssistant() {
                 </div>
                 {previewError ? <InlineNotice tone="error" text="Preview could not be shown. You can still generate the document." /> : null}
                 {isRenderingPreview ? <p className="mt-3 text-sm font-semibold text-sky-700">Updating preview...</p> : null}
-                <div ref={previewViewportRef} className={`mt-4 max-h-[820px] overflow-y-auto overflow-x-hidden rounded-2xl border border-slate-200 bg-slate-100 p-4 ${previewFitMode === "page" ? "flex justify-center" : ""}`}>
+                <div ref={previewViewportRef} className={`mt-4 max-h-[820px] overflow-y-auto overflow-x-hidden rounded-2xl border border-slate-200 bg-slate-100 p-4 ${previewFitMode === "page" ? "flex justify-center" : ""}`} style={{ touchAction: "pan-x pan-y" }}>
                   <div
                     ref={previewRef}
                     className="bankhub-docx-preview bg-white shadow-sm"
@@ -766,6 +868,7 @@ function SimpleSbiFormAssistant() {
             ) : null}
 
             {documentError ? <InlineNotice tone="error" text={documentError} /> : null}
+            {pdfDiagnostics.length ? <InlineNotice tone="info" text={pdfDiagnostics.join(" | ")} /> : null}
 
             {isComplete ? (
               <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
@@ -816,6 +919,48 @@ function InlineNotice({ text, tone }: { text: string; tone: "error" | "info" }) 
       {text}
     </div>
   );
+}
+
+function applyFixedDocumentLayout(root: HTMLElement) {
+  const wrappers = root.querySelectorAll<HTMLElement>(".docx-wrapper");
+  wrappers.forEach((wrapper) => {
+    wrapper.style.width = `${DOCUMENT_PAGE_WIDTH}px`;
+    wrapper.style.minWidth = `${DOCUMENT_PAGE_WIDTH}px`;
+    wrapper.style.maxWidth = `${DOCUMENT_PAGE_WIDTH}px`;
+    wrapper.style.margin = "0 auto";
+    wrapper.style.padding = "0";
+    wrapper.style.background = "transparent";
+  });
+
+  const pages = root.querySelectorAll<HTMLElement>(".docx-wrapper section, .docx");
+  pages.forEach((page) => {
+    page.classList.add("bankhub-fixed-page");
+    page.style.width = `${DOCUMENT_PAGE_WIDTH}px`;
+    page.style.minWidth = `${DOCUMENT_PAGE_WIDTH}px`;
+    page.style.maxWidth = `${DOCUMENT_PAGE_WIDTH}px`;
+    page.style.height = `${DOCUMENT_PAGE_HEIGHT}px`;
+    page.style.minHeight = `${DOCUMENT_PAGE_HEIGHT}px`;
+    page.style.maxHeight = `${DOCUMENT_PAGE_HEIGHT}px`;
+    page.style.boxSizing = "border-box";
+    page.style.overflow = "hidden";
+    page.style.margin = "0 auto";
+    page.style.padding = "0";
+    page.style.background = "#ffffff";
+  });
+}
+
+function waitForNextFrame() {
+  return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+function getErrorDetails(error: unknown) {
+  if (error instanceof Error) return error.stack || error.message;
+  if (typeof error === "string") return error;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return "Unknown PDF error";
+  }
 }
 
 function validateAnswer(key: string, value: string) {
@@ -947,8 +1092,9 @@ function downloadBlob(blob: Blob, fileName: string) {
   const link = document.createElement("a");
   link.href = url;
   link.download = fileName;
+  link.rel = "noopener";
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
