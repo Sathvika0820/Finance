@@ -1,5 +1,5 @@
 ﻿import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { renderAsync } from "docx-preview";
 import html2canvas from "html2canvas";
@@ -235,34 +235,69 @@ function SimpleSbiFormAssistant() {
   const [generatedDocx, setGeneratedDocx] = useState<Blob | null>(null);
   const [returnToAssistantAfterAnswer, setReturnToAssistantAfterAnswer] = useState(false);
   const [previewError, setPreviewError] = useState("");
-  const [previewZoom, setPreviewZoom] = useState(0.8);
-  const [previewFitMode, setPreviewFitMode] = useState<"width" | "page">("width");
+  const [previewZoom, setPreviewZoom] = useState(0.58);
+  const [previewFitMode, setPreviewFitMode] = useState<"width" | "page">("page");
   const [isRenderingPreview, setIsRenderingPreview] = useState(false);
   const previewRef = useRef<HTMLDivElement | null>(null);
+  const previewViewportRef = useRef<HTMLDivElement | null>(null);
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
+  const textInputRef = useRef<HTMLInputElement | null>(null);
 
   const activeField = QUESTIONS[currentIndex];
   const progress = Math.min(100, Math.round((Math.min(currentIndex, QUESTIONS.length) / QUESTIONS.length) * 100));
   const missingFields = useMemo(() => REQUIRED_KEYS.filter((key) => !answers[key]), [answers]);
   const isComplete = missingFields.length === 0;
-  const summary = buildSummary(answers);
-  const accountSummary = buildAccountSummary(answers);
+  const shouldShowPreview = Boolean(
+    answers.branch_name
+      && answers.customer_name_boxes
+      && answers.mobile_number_boxes
+      && answers.email_id
+      && answers.dob
+      && answers.account_number_1_boxes,
+  );
+
+  const fitPreviewToPage = useCallback(() => {
+    if (previewFitMode !== "page" || !previewRef.current || !previewViewportRef.current) return;
+    const page = previewRef.current.querySelector<HTMLElement>(".docx-wrapper section, .docx-wrapper > section, .docx");
+    if (!page) return;
+    const pageWidth = page.offsetWidth || page.scrollWidth;
+    const pageHeight = page.offsetHeight || page.scrollHeight;
+    if (!pageWidth || !pageHeight) return;
+
+    const availableWidth = Math.max(previewViewportRef.current.clientWidth - 32, 280);
+    const availableHeight = Math.max(Math.min(window.innerHeight * 0.72, 820) - 32, 420);
+    const nextZoom = Math.max(0.3, Math.min(1, availableWidth / pageWidth, availableHeight / pageHeight));
+    setPreviewZoom(Number(nextZoom.toFixed(2)));
+  }, [previewFitMode]);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    if (templateReady && activeField?.kind !== "choice" && activeField?.kind !== "image") {
+      window.setTimeout(() => textInputRef.current?.focus(), 80);
+    }
+  }, [chat, templateReady, activeField?.kind, activeField?.key]);
+
+  useEffect(() => {
+    if (!shouldShowPreview) return;
+    window.addEventListener("resize", fitPreviewToPage);
+    return () => window.removeEventListener("resize", fitPreviewToPage);
+  }, [fitPreviewToPage, shouldShowPreview]);
 
   useEffect(() => {
     if (!bankSelected) return;
     let cancelled = false;
     setTemplateReady(false);
     setTemplateError("");
-    setStatus("Loading SBI template...");
+    setStatus("");
 
     fetch(sbiTemplateUrl, { method: "HEAD" })
       .then((response) => {
         if (cancelled) return;
         if (!response.ok) throw new Error(`Template request failed: ${response.status}`);
         setTemplateReady(true);
-        setStatus("SBI template loaded.");
+        setStatus("");
         setChat([
-          { id: "intro", role: "assistant", text: "SBI Internet Banking Registration Form loaded." },
-          { id: "fixed-map", role: "assistant", text: "Using fixed SBI field mapping only." },
+          { id: "intro", role: "assistant", text: "Welcome. I will help you complete your SBI Internet Banking Registration Form." },
           { id: "q-0", role: "assistant", text: QUESTIONS[0].question },
         ]);
         console.info("[BankHub SBI Form Assistant] SBI template available. Fixed mapping active.", {
@@ -282,7 +317,7 @@ function SimpleSbiFormAssistant() {
   }, [bankSelected]);
 
   useEffect(() => {
-    if (!templateReady || !previewRef.current) return;
+    if (!templateReady || !shouldShowPreview || !previewRef.current) return;
     let cancelled = false;
     setIsRenderingPreview(true);
     setPreviewError("");
@@ -300,6 +335,7 @@ function SimpleSbiFormAssistant() {
           breakPages: false,
         });
         if (cancelled) return;
+        requestAnimationFrame(fitPreviewToPage);
         console.info("[BankHub SBI Form Assistant] Live preview render success", { size: docx.size });
       })
       .catch((error) => {
@@ -314,7 +350,7 @@ function SimpleSbiFormAssistant() {
     return () => {
       cancelled = true;
     };
-  }, [answers, templateReady]);
+  }, [answers, fitPreviewToPage, templateReady, shouldShowPreview]);
 
   function startSbi() {
     setBankSelected(true);
@@ -511,11 +547,20 @@ function SimpleSbiFormAssistant() {
         ignoreHeight: false,
         breakPages: false,
       });
-      const pageTarget = container.querySelector<HTMLElement>(".docx-wrapper") || container;
-      const canvas = await html2canvas(pageTarget, { backgroundColor: "#ffffff", scale: 2, useCORS: true });
+      const pageTarget = container.querySelector<HTMLElement>(".docx-wrapper section, .docx-wrapper > section, .docx-wrapper, .docx") || container;
+      const canvas = await html2canvas(pageTarget, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        useCORS: true,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: pageTarget.scrollWidth || pageTarget.clientWidth,
+        windowHeight: pageTarget.scrollHeight || pageTarget.clientHeight,
+      });
       const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? "landscape" : "portrait", unit: "px", format: [canvas.width, canvas.height] });
       pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, canvas.width, canvas.height);
-      pdf?.save("sbi_internet_banking_registration_filled.pdf");
+      const pdfBlob = pdf.output("blob");
+      downloadBlob(pdfBlob, "SBI_Internet_Banking_Registration.pdf");
       setStatus("PDF downloaded as a single page.");
       console.info("[BankHub SBI Form Assistant] PDF download success", { pages: 1, width: canvas.width, height: canvas.height });
     } catch (error) {
@@ -540,288 +585,235 @@ function SimpleSbiFormAssistant() {
     setStatus("");
     setReturnToAssistantAfterAnswer(false);
     setPreviewError("");
-    setPreviewZoom(0.8);
-    setPreviewFitMode("width");
+    setPreviewZoom(0.58);
+    setPreviewFitMode("page");
     setChat([{ id: "welcome", role: "assistant", text: "Select SBI to start the Internet Banking Registration Form." }]);
   }
 
   return (
-    <main className="min-h-screen bg-[#f8fbff] px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto flex max-w-7xl flex-col gap-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <main className="min-h-screen bg-slate-50 px-4 py-5 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-5xl flex-col gap-5">
+        <div className="flex items-center justify-between gap-3">
           <Link
             to="/dashboard"
-            className="inline-flex w-fit items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-sky-200 hover:text-sky-700"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
+            Back
           </Link>
           <button
             type="button"
             onClick={resetFlow}
-            className="w-fit rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+            className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-sky-200 hover:text-sky-700"
           >
             Reset
           </button>
         </div>
 
-        <section className="rounded-[2rem] border border-sky-100 bg-white p-6 shadow-sm sm:p-8">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+          <div className="flex flex-col gap-4">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-sky-600">BankHub Form Assistant</p>
-              <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">SBI Internet Banking Registration</h1>
-              <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-600">
-                Uses the uploaded SBI form as the master template. Detected fields are filled into the original document and shown in a live full-form preview.
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-600">BankHub Form Assistant</p>
+              <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">SBI Internet Banking Registration</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+                Answer a few questions to automatically fill your SBI form.
               </p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">
-              Progress: {progress}%
+            <div>
+              <div className="flex items-center justify-between text-sm font-semibold text-slate-700">
+                <span>Progress</span>
+                <span>{progress}%</span>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                <div className="h-full rounded-full bg-sky-600 transition-all duration-500" style={{ width: `${progress}%` }} />
+              </div>
             </div>
           </div>
         </section>
 
         {!bankSelected ? (
-          <section className="grid gap-4 md:grid-cols-2">
+          <section className="grid gap-4 sm:grid-cols-2">
             <button
               type="button"
               onClick={startSbi}
-              className="rounded-[2rem] border border-emerald-100 bg-white p-6 text-left shadow-sm transition hover:-translate-y-1 hover:border-emerald-200 hover:shadow-lg"
+              className="rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md"
             >
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
-                <Landmark className="h-7 w-7" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-700">
+                <Landmark className="h-6 w-6" />
               </div>
-              <h2 className="mt-5 text-2xl font-black text-slate-950">SBI</h2>
-              <p className="mt-2 text-sm font-semibold text-slate-600">Internet Banking Registration Form</p>
+              <h2 className="mt-4 text-xl font-black text-slate-950">SBI</h2>
+              <p className="mt-1 text-sm text-slate-600">Internet Banking Registration Form</p>
             </button>
           </section>
         ) : (
-          <section className="grid gap-6 lg:grid-cols-[420px_minmax(0,1fr)]">
-            <div className="flex flex-col gap-4 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50 text-sky-700">
-                  <Bot className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="text-base font-black text-slate-950">AI Questions</h2>
-                  <p className="text-xs font-bold text-slate-500">Fixed SBI question flow</p>
-                </div>
-              </div>
-
-              {templateError ? <Alert tone="error" text={templateError} /> : null}
-              {validationError ? <Alert tone="error" text={validationError} /> : null}
-              {status ? <Alert tone="info" text={status} /> : null}
-
-              <div className="max-h-[360px] space-y-3 overflow-y-auto pr-1">
-                {chat.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`rounded-2xl px-4 py-3 text-sm font-semibold leading-6 ${message.role === "assistant" ? "bg-slate-50 text-slate-700" : "bg-sky-600 text-white"}`}
-                  >
-                    {message.text}
+          <>
+            <section className="flex min-w-0 flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-sky-700">
+                    <Bot className="h-5 w-5" />
                   </div>
-                ))}
-              </div>
+                  <div>
+                    <h2 className="text-base font-black text-slate-950">AI Assistant</h2>
+                    <p className="text-sm text-slate-500">Answer one question at a time.</p>
+                  </div>
+                </div>
 
-              {templateReady && activeField ? (
-                activeField.kind === "image" ? (
-                  <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-sky-300 bg-sky-50 px-4 py-4 text-sm font-black text-sky-800 transition hover:bg-sky-100">
-                    <Upload className="h-5 w-5" />
-                    Upload Signature
-                    <input type="file" accept="image/*" className="hidden" onChange={handleSignatureUpload} />
-                  </label>
-                ) : activeField.kind === "choice" ? (
-                  <div className="grid grid-cols-2 gap-2">
-                    {activeField.choices?.map((choice) => (
+                {templateError ? <InlineNotice tone="error" text="The SBI form could not be loaded. Please try again." /> : null}
+                {validationError ? <InlineNotice tone="error" text={validationError} /> : null}
+
+                <div className="max-h-[520px] space-y-3 overflow-y-auto pr-1">
+                  {chat.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`max-w-[92%] rounded-3xl px-4 py-3 text-sm leading-6 ${message.role === "assistant" ? "bg-slate-100 text-slate-800" : "ml-auto bg-sky-600 text-white"}`}
+                    >
+                      <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.12em] opacity-60">
+                        {message.role === "assistant" ? "AI" : "You"}
+                      </span>
+                      {message.text}
+                    </div>
+                  ))}
+                  <div ref={chatEndRef} />
+                </div>
+
+                {templateReady && activeField ? (
+                  activeField.kind === "image" ? (
+                    <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-sky-300 bg-sky-50 px-4 py-4 text-sm font-bold text-sky-800 transition hover:bg-sky-100">
+                      <Upload className="h-5 w-5" />
+                      Upload Signature
+                      <input type="file" accept="image/*" className="hidden" onChange={handleSignatureUpload} />
+                    </label>
+                  ) : activeField.kind === "choice" ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      {activeField.choices?.map((choice) => (
+                        <button
+                          key={choice.value}
+                          type="button"
+                          onClick={() => handleChoice(activeField, choice.value, choice.label)}
+                          className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-bold text-sky-800 transition hover:bg-sky-100"
+                        >
+                          {choice.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <form onSubmit={handleSubmit} className="flex gap-2">
+                      <input
+                        ref={textInputRef}
+                        value={input}
+                        onChange={(event) => setInput(event.target.value)}
+                        placeholder="Type your answer..."
+                        className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
+                      />
                       <button
-                        key={choice.value}
-                        type="button"
-                        onClick={() => handleChoice(activeField, choice.value, choice.label)}
-                        className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-black text-sky-800 transition hover:bg-sky-100"
+                        type="submit"
+                        aria-label="Send answer"
+                        className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-600 text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        {choice.label}
+                        <Send className="h-5 w-5" />
                       </button>
-                    ))}
-                  </div>
-                ) : (
+                    </form>
+                  )
+                ) : templateReady && !activeField ? (
                   <form onSubmit={handleSubmit} className="flex gap-2">
                     <input
+                      ref={textInputRef}
                       value={input}
                       onChange={(event) => setInput(event.target.value)}
-                      placeholder={activeField.placeholder}
-                      className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:bg-white focus:ring-4 focus:ring-sky-100"
+                      placeholder="Type your answer..."
+                      className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
                     />
                     <button
                       type="submit"
-                      aria-label="Send answer"
-                      className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-600 text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      aria-label="Send assistant message"
+                      className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-600 text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <Send className="h-5 w-5" />
                     </button>
                   </form>
-                )
-              ) : templateReady && !activeField ? (
-                <form onSubmit={handleSubmit} className="flex gap-2">
-                  <input
-                    value={input}
-                    onChange={(event) => setInput(event.target.value)}
-                    placeholder="Ask a banking doubt or type Change mobile number"
-                    className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:bg-white focus:ring-4 focus:ring-sky-100"
+                ) : null}
+            </section>
+
+            {shouldShowPreview ? (
+              <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-base font-black text-slate-950">Form Preview</h2>
+                    <p className="mt-1 text-sm text-slate-500">Review the filled SBI form before downloading.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => setPreviewZoom((zoom) => Math.max(0.5, Number((zoom - 0.1).toFixed(2))))} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">Zoom Out</button>
+                    <button type="button" onClick={() => setPreviewZoom((zoom) => Math.min(1.6, Number((zoom + 0.1).toFixed(2))))} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">Zoom In</button>
+                    <button type="button" onClick={() => { setPreviewFitMode("page"); setPreviewZoom(0.58); }} className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-bold text-sky-800">Fit to Page</button>
+                  </div>
+                </div>
+                {previewError ? <InlineNotice tone="error" text="Preview could not be shown. You can still generate the document." /> : null}
+                {isRenderingPreview ? <p className="mt-3 text-sm font-semibold text-sky-700">Updating preview...</p> : null}
+                <div ref={previewViewportRef} className={`mt-4 max-h-[820px] overflow-y-auto overflow-x-hidden rounded-2xl border border-slate-200 bg-slate-100 p-4 ${previewFitMode === "page" ? "flex justify-center" : ""}`}>
+                  <div
+                    ref={previewRef}
+                    className="bankhub-docx-preview bg-white shadow-sm"
+                    style={{
+                      transform: `scale(${previewZoom})`,
+                      transformOrigin: "top center",
+                      width: previewFitMode === "width" ? `${100 / previewZoom}%` : undefined,
+                      minHeight: 620,
+                      margin: "0 auto",
+                    }}
                   />
+                </div>
+              </section>
+            ) : null}
+
+            {documentError ? <InlineNotice tone="error" text={documentError} /> : null}
+
+            {isComplete ? (
+              <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                {!generatedDocx ? (
                   <button
-                    type="submit"
-                    aria-label="Send assistant message"
-                    className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-600 text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    type="button"
+                    onClick={generateDocument}
+                    disabled={isGeneratingDocx}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-sky-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    <Send className="h-5 w-5" />
+                    {isGeneratingDocx ? <Loader2 className="h-5 w-5 animate-spin" /> : <FileCheck2 className="h-5 w-5" />}
+                    Generate Form
                   </button>
-                </form>
-              ) : null}
-
-              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-xs font-bold leading-5 text-slate-500">
-                <p>Detected fields: {QUESTIONS.length + 1}</p>
-                <p>Submission date: {String(answers.submission_date || "")}</p>
-                {isComplete ? <p className="mt-1 text-emerald-700">All required fields completed.</p> : <p className="mt-1 text-amber-700">Missing: {missingFields.length}</p>}
-              </div>
-
-              <div className="rounded-2xl border border-slate-100 bg-white p-4">
-                <h3 className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Detected SBI Fields</h3>
-                <div className="mt-3 max-h-44 space-y-2 overflow-y-auto pr-1">
-                  {QUESTIONS.map((field) => (
-                    <div key={field.key} className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600">
-                      {field.label} <span className="text-slate-400">- {field.fieldType}</span>
-                    </div>
-                  ))}
-                  <div className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600">
-                    Submission Date <span className="text-slate-400">- Auto-filled date field</span>
+                ) : (
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={downloadDocx}
+                      disabled={isGeneratingDocx}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-800 transition hover:border-sky-200 hover:text-sky-700 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <Download className="h-4 w-4" />
+                      Download DOCX
+                    </button>
+                    <button
+                      type="button"
+                      onClick={downloadPdf}
+                      disabled={isGeneratingDocx || isGeneratingPdf}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                      Download PDF
+                    </button>
                   </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex min-w-0 flex-col gap-4 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                <div>
-                  <h2 className="text-base font-black text-slate-950">Live SBI Form Preview</h2>
-                  <p className="text-xs font-bold text-slate-500">Actual DOCX layout. Scroll to inspect the complete form.</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={() => setPreviewZoom((zoom) => Math.max(0.5, Number((zoom - 0.1).toFixed(2))))} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm">Zoom Out</button>
-                  <button type="button" onClick={() => setPreviewZoom((zoom) => Math.min(1.6, Number((zoom + 0.1).toFixed(2))))} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm">Zoom In</button>
-                  <button type="button" onClick={() => { setPreviewFitMode("width"); setPreviewZoom(0.8); }} className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-black text-sky-800 shadow-sm">Fit Width</button>
-                  <button type="button" onClick={() => { setPreviewFitMode("page"); setPreviewZoom(0.58); }} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm">Fit to Page</button>
-                </div>
-              </div>
-
-              {documentError ? <Alert tone="error" text={documentError} /> : null}
-              {previewError ? <Alert tone="error" text={previewError} /> : null}
-              {isRenderingPreview ? <Alert tone="info" text="Updating live preview..." /> : null}
-
-              <div className={`max-h-[760px] overflow-auto rounded-3xl border border-slate-200 bg-slate-100 p-4 ${previewFitMode === "page" ? "flex justify-center" : ""}`}>
-                <div
-                  ref={previewRef}
-                  className="bankhub-docx-preview origin-top-left bg-white shadow-sm"
-                  style={{
-                    transform: `scale(${previewZoom})`,
-                    transformOrigin: "top left",
-                    width: previewFitMode === "width" ? `${100 / previewZoom}%` : undefined,
-                    minHeight: 680,
-                  }}
-                />
-              </div>
-
-              <div>
-                <h2 className="text-base font-black text-slate-950">Answer Summary</h2>
-                <p className="text-xs font-bold text-slate-500">Generate downloads after all required answers are complete.</p>
-              </div>
-
-              <div className="grid gap-3 rounded-3xl border border-slate-100 bg-slate-50 p-4 text-sm font-bold text-slate-700 sm:grid-cols-2">
-                <SummaryItem label="Branch" value={summary.branch} />
-                <SummaryItem label="Name" value={summary.name} />
-                <SummaryItem label="Mobile" value={summary.mobile} />
-                <SummaryItem label="Email" value={summary.email} />
-                <SummaryItem label="DOB" value={summary.dob} />
-                <SummaryItem label="Account Number" value={summary.accountNumber} />
-                <SummaryItem label="Signature" value={summary.signature} />
-              </div>
-
-              {accountSummary.length ? (
-                <div className="rounded-3xl border border-slate-100 bg-white p-4">
-                  <h3 className="text-sm font-black text-slate-950">Account Table</h3>
-                  <div className="mt-3 grid gap-2 text-xs font-bold text-slate-600">
-                    {accountSummary.map((account) => (
-                      <div key={account.row} className="rounded-2xl bg-slate-50 p-3">
-                        Account {account.row}: {account.number} | {account.type || "Type pending"} | Transaction {account.transactionRights || "pending"} | Limited {account.limitedTransactionRights || "pending"}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              {!isComplete ? (
-                <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm font-bold leading-6 text-amber-800">
-                  Complete the remaining questions. The document will be generated only after all required SBI details are captured.
-                </div>
-              ) : generatedDocx ? (
-                <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 text-center">
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-emerald-700 shadow-sm">
-                    <FileCheck2 className="h-7 w-7" />
-                  </div>
-                  <h3 className="mt-4 text-xl font-black text-emerald-950">Document Ready</h3>
-                  <p className="mt-2 text-sm font-bold text-emerald-700">Download the populated SBI form as DOCX or PDF.</p>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={generateDocument}
-                  disabled={isGeneratingDocx}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-sky-600 px-5 py-3 text-sm font-black text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isGeneratingDocx ? <Loader2 className="h-5 w-5 animate-spin" /> : <FileCheck2 className="h-5 w-5" />}
-                  Generate Document
-                </button>
-              )}
-
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={downloadDocx}
-                  disabled={!isComplete || isGeneratingDocx}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <Download className="h-4 w-4" />
-                  Download DOCX
-                </button>
-                <button
-                  type="button"
-                  onClick={downloadPdf}
-                  disabled={!isComplete || isGeneratingDocx || isGeneratingPdf}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-sky-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-                  Download PDF
-                </button>
-              </div>
-            </div>
-          </section>
+                )}
+              </section>
+            ) : null}
+          </>
         )}
       </div>
     </main>
   );
 }
 
-function Alert({ text, tone }: { text: string; tone: "error" | "info" }) {
+function InlineNotice({ text, tone }: { text: string; tone: "error" | "info" }) {
   return (
-    <div className={`rounded-2xl px-4 py-3 text-sm font-bold ${tone === "error" ? "border border-rose-200 bg-rose-50 text-rose-700" : "border border-sky-200 bg-sky-50 text-sky-700"}`}>
+    <div className={`rounded-2xl px-4 py-3 text-sm font-semibold ${tone === "error" ? "border border-rose-200 bg-rose-50 text-rose-700" : "border border-sky-200 bg-sky-50 text-sky-700"}`}>
       {text}
-    </div>
-  );
-}
-
-function SummaryItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl bg-white p-4 shadow-sm">
-      <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</p>
-      <p className="mt-1 break-words text-sm font-black text-slate-900">{value || "Pending"}</p>
     </div>
   );
 }
@@ -913,39 +905,6 @@ function logRenderValidation(answers: DocxAnswers, missing: readonly string[]) {
     customer_signature: answers.customer_signature ? "uploaded" : "MISSING",
     "Render Status": missing.length ? "FAILED" : "SUCCESS",
   });
-}
-
-function buildSummary(answers: DocxAnswers) {
-  return {
-    branch: textAnswer(answers.branch_name),
-    name: textAnswer(answers.customer_name_boxes),
-    mobile: textAnswer(answers.mobile_number_boxes),
-    email: textAnswer(answers.email_id),
-    dob: textAnswer(answers.dob),
-    accountNumber: textAnswer(answers.account_number_1_boxes),
-    signature: answers.customer_signature ? "Uploaded" : "Pending",
-  };
-}
-
-function buildAccountSummary(answers: DocxAnswers) {
-  return Array.from({ length: 7 }, (_, index) => {
-    const row = index + 1;
-    const number = textAnswer(answers[`account_number_${row}_boxes`]);
-    if (!number) return null;
-    return {
-      row,
-      number,
-      type: textAnswer(answers[`account_${row}_single_joint`]),
-      transactionRights: yesNoLabel(textAnswer(answers[`account_${row}_transaction_rights`])),
-      limitedTransactionRights: yesNoLabel(textAnswer(answers[`account_${row}_limited_transaction_rights`])),
-    };
-  }).filter(Boolean) as Array<{ row: number; number: string; type: string; transactionRights: string; limitedTransactionRights: string }>;
-}
-
-function yesNoLabel(value: string) {
-  if (value === "Y") return "Yes";
-  if (value === "N") return "No";
-  return value;
 }
 
 function correctionQuestionIndex(message: string) {

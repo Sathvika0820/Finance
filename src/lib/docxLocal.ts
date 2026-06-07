@@ -33,8 +33,8 @@ type DocxImagePart = {
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 const EMU_PER_PIXEL = 9525;
-const SIGNATURE_WIDTH_EMU = 170 * EMU_PER_PIXEL;
-const SIGNATURE_HEIGHT_EMU = 42 * EMU_PER_PIXEL;
+const SIGNATURE_WIDTH_EMU = 138 * EMU_PER_PIXEL;
+const SIGNATURE_HEIGHT_EMU = 30 * EMU_PER_PIXEL;
 const PHOTO_WIDTH_EMU = 95 * EMU_PER_PIXEL;
 const PHOTO_HEIGHT_EMU = 115 * EMU_PER_PIXEL;
 
@@ -290,6 +290,8 @@ function centerCellContent(cellXml: string) {
       if (/<w:vAlign\b[^>]*\/>/.test(tcPr)) return tcPr.replace(/<w:vAlign\b[^>]*\/>/, '<w:vAlign w:val="center"/>');
       return tcPr.replace("</w:tcPr>", '<w:vAlign w:val="center"/></w:tcPr>');
     });
+  } else {
+    output = output.replace(/<w:tc(\s[^>]*)?>/, '<w:tc$1><w:tcPr><w:vAlign w:val="center"/></w:tcPr>');
   }
   if (/<w:pPr[\s\S]*?<\/w:pPr>/.test(output)) {
     output = output.replace(/<w:pPr[\s\S]*?<\/w:pPr>/, (pPr) => {
@@ -465,7 +467,28 @@ function replaceXmlPlaceholders(xml: string, answers: DocxAnswers, imageParts: D
     output = output.replace(/\[\[[\s\S]*?\]\]/g, "");
   }
   console.info("[BankHub Form Assistant] Replaced placeholders", replaced);
-  return populateSbiInlineFields(populateSbiInternetBankingStructure(output, answers), answers, imageParts);
+  return lockSinglePageWordLayout(populateSbiInlineFields(populateSbiInternetBankingStructure(output, answers), answers, imageParts));
+}
+
+function lockSinglePageWordLayout(xml: string) {
+  return xml
+    .replace(/<w:pageBreakBefore\b[^>]*\/>/g, "")
+    .replace(/<w:br\b[^>]*w:type="page"[^>]*\/>/g, "")
+    .replace(/<w:tbl(?:\s|>)[\s\S]*?<\/w:tbl>/g, (table) => enforceFixedTableLayout(table))
+    .replace(/<w:trHeight\b[^>]*\/>/g, (height) => {
+      const withoutRule = height.replace(/\s+w:hRule="[^"]*"/, "");
+      return withoutRule.replace(/\/>$/, ' w:hRule="exact"/>');
+    });
+}
+
+function enforceFixedTableLayout(tableXml: string) {
+  if (/<w:tblLayout\b[^>]*\/>/.test(tableXml)) {
+    return tableXml.replace(/<w:tblLayout\b[^>]*\/>/, '<w:tblLayout w:type="fixed"/>');
+  }
+  if (/<w:tblPr[\s\S]*?<\/w:tblPr>/.test(tableXml)) {
+    return tableXml.replace("</w:tblPr>", '<w:tblLayout w:type="fixed"/></w:tblPr>');
+  }
+  return tableXml.replace(/<w:tbl(\s[^>]*)?>/, '<w:tbl$1><w:tblPr><w:tblLayout w:type="fixed"/></w:tblPr>');
 }
 
 function populateSbiInlineFields(xml: string, answers: DocxAnswers, imageParts: DocxImagePart[]) {
@@ -497,7 +520,7 @@ function replaceBranchNameLine(xml: string, branchName: string) {
     if (replaced) return paragraph;
     const text = xmlText(paragraph).trim();
     if (!/^[.\u2026]{3,}$/.test(text)) return paragraph;
-    const updated = replaceFirstTextRun(paragraph, branchName, '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>');
+    const updated = replaceFirstTextRun(paragraph, branchName);
     replaced = updated !== paragraph;
     return updated;
   });
@@ -515,7 +538,7 @@ function replaceEmailLine(xml: string, email: string) {
   let replaced = false;
   const output = xml.replace(/<w:p(?:\s|>)[\s\S]*?<\/w:p>/g, (paragraph) => {
     if (replaced || !/E-?Mail\s*:/i.test(xmlText(paragraph))) return paragraph;
-    const updated = replaceLastTextRun(paragraph, ` ${email}`, compactEmailRunProperties(email));
+    const updated = replaceLastTextRun(paragraph, ` ${email}`);
     replaced = updated !== paragraph;
     return updated;
   });
@@ -580,16 +603,12 @@ function replaceParagraphContent(paragraph: string, contentXml: string) {
   const pPr = paragraph.match(/<w:pPr[\s\S]*?<\/w:pPr>/)?.[0] || "";
   const open = paragraph.match(/^<w:p(?:\s[^>]*)?>/)?.[0];
   if (!open || !paragraph.endsWith("</w:p>")) return paragraph;
-  const compactPPr = pPr
-    ? replaceOrAppendLeftSignatureIndent(replaceOrAppendJustification(replaceOrAppendSpacing(pPr), "left"))
-    : '<w:pPr><w:jc w:val="left"/><w:ind w:left="540"/><w:spacing w:before="0" w:after="0" w:line="260" w:lineRule="exact"/></w:pPr>';
-  return `${open}${compactPPr}${contentXml}</w:p>`;
+  return `${open}${pPr}${contentXml}</w:p>`;
 }
 
 function replaceLastTextRun(paragraph: string, value: string, runProperties = "") {
   const runs = Array.from(paragraph.matchAll(/<w:t(\s[^>]*)?>[\s\S]*?<\/w:t>/g));
   const target = [...runs].reverse().find((match) => /^\s*$/.test(xmlText(match[0])));
-  const replacementRun = `<w:r>${runProperties}<w:t xml:space="preserve">${escapeXml(value)}</w:t></w:r>`;
   if (!target) return paragraph;
 
   const containingRun = Array.from(paragraph.matchAll(/<w:r(?:\s|>)[\s\S]*?<\/w:r>/g)).find((match) => {
@@ -599,6 +618,7 @@ function replaceLastTextRun(paragraph: string, value: string, runProperties = ""
     return targetIndex >= start && targetIndex < end;
   });
   if (containingRun?.index !== undefined) {
+    const replacementRun = `<w:r>${runProperties || runPropertiesFromRun(containingRun[0])}<w:t xml:space="preserve">${escapeXml(value)}</w:t></w:r>`;
     return paragraph.slice(0, containingRun.index) + replacementRun + paragraph.slice(containingRun.index + containingRun[0].length);
   }
 
@@ -614,34 +634,15 @@ function replaceFirstTextRun(paragraph: string, value: string, runProperties = "
     const end = start + match[0].length;
     return target.index! >= start && target.index! < end;
   });
-  const replacementRun = `<w:r>${runProperties}<w:t xml:space="preserve">${escapeXml(value)}</w:t></w:r>`;
   if (containingRun?.index !== undefined) {
+    const replacementRun = `<w:r>${runProperties || runPropertiesFromRun(containingRun[0])}<w:t xml:space="preserve">${escapeXml(value)}</w:t></w:r>`;
     return paragraph.slice(0, containingRun.index) + replacementRun + paragraph.slice(containingRun.index + containingRun[0].length);
   }
   return paragraph.slice(0, target.index) + `<w:t xml:space="preserve">${escapeXml(value)}</w:t>` + paragraph.slice(target.index + target[0].length);
 }
 
-function replaceOrAppendSpacing(pPr: string) {
-  const compactSpacing = '<w:spacing w:before="0" w:after="0" w:line="260" w:lineRule="exact"/>';
-  if (/<w:spacing\b[^>]*\/>/.test(pPr)) return pPr.replace(/<w:spacing\b[^>]*\/>/, compactSpacing);
-  return pPr.replace("</w:pPr>", `${compactSpacing}</w:pPr>`);
-}
-
-function replaceOrAppendJustification(pPr: string, value: "left" | "center") {
-  const justification = `<w:jc w:val="${value}"/>`;
-  if (/<w:jc\b[^>]*\/>/.test(pPr)) return pPr.replace(/<w:jc\b[^>]*\/>/, justification);
-  return pPr.replace("</w:pPr>", `${justification}</w:pPr>`);
-}
-
-function replaceOrAppendLeftSignatureIndent(pPr: string) {
-  const indent = '<w:ind w:left="540"/>';
-  if (/<w:ind\b[^>]*\/>/.test(pPr)) return pPr.replace(/<w:ind\b[^>]*\/>/, indent);
-  return pPr.replace("</w:pPr>", `${indent}</w:pPr>`);
-}
-
-function compactEmailRunProperties(email: string) {
-  const fontSize = email.length > 52 ? 18 : email.length > 42 ? 20 : 22;
-  return `<w:rPr><w:sz w:val="${fontSize}"/><w:szCs w:val="${fontSize}"/></w:rPr>`;
+function runPropertiesFromRun(runXml: string) {
+  return runXml.match(/<w:rPr[\s\S]*?<\/w:rPr>/)?.[0] || "";
 }
 
 function populateSbiInternetBankingStructure(xml: string, answers: DocxAnswers) {
@@ -652,13 +653,7 @@ function populateSbiInternetBankingStructure(xml: string, answers: DocxAnswers) 
     rowIndex += 1;
     if (rowIndex === 0) return fillRowCells(row, 0, nameBoxChars(textValue(answers.customer_name_boxes)), true);
     if (rowIndex === 1) return fillRowCells(row, 1, limitedDigitBoxChars(textValue(answers.mobile_number_boxes), 10), true);
-    if (rowIndex === 2) {
-      return fillRowCells(row, 0, [
-        textValue(answers.dob_dd_boxes),
-        textValue(answers.dob_mm_boxes),
-        textValue(answers.dob_yy_boxes),
-      ], true);
-    }
+    if (rowIndex === 2) return fillDobRow(row, answers);
     if (rowIndex >= 4 && rowIndex <= 10) {
       const accountRow = rowIndex - 3;
       const accountNumber = textValue(answers[`account_number_${accountRow}_boxes`]);
@@ -686,12 +681,35 @@ function fillRowCells(rowXml: string, startIndex: number, values: string[], cent
   return output;
 }
 
+function fillDobRow(rowXml: string, answers: DocxAnswers) {
+  const dayDigits = digitBoxChars(textValue(answers.dob_dd_boxes)).slice(0, 2);
+  const monthDigits = digitBoxChars(textValue(answers.dob_mm_boxes)).slice(0, 2);
+  const yearDigits = digitBoxChars(textValue(answers.dob_yy_boxes)).slice(0, 2);
+  const cells = rowXml.match(/<w:tc(?:\s|>)[\s\S]*?<\/w:tc>/g);
+
+  if (cells && cells.length >= 6) {
+    return fillRowCells(rowXml, 0, [...dayDigits, ...monthDigits, ...yearDigits], true);
+  }
+
+  return fillRowCells(rowXml, 0, [
+    dobCellText(textValue(answers.dob_dd_boxes)),
+    dobCellText(textValue(answers.dob_mm_boxes)),
+    dobCellText(textValue(answers.dob_yy_boxes)),
+  ], true);
+}
+
 function nameBoxChars(value: string) {
   return value.toUpperCase().replace(/\s+/g, " ").trim().split("").slice(0, 25).map((char) => char === " " ? "" : char);
 }
 
 function digitBoxChars(value: string) {
   return value.replace(/\D/g, "").split("");
+}
+
+function dobCellText(value: string) {
+  const chars = digitBoxChars(value).slice(0, 2);
+  if (chars.length <= 1) return chars[0] || "";
+  return `${chars[0]}   ${chars[1]}`;
 }
 
 function limitedDigitBoxChars(value: string, limit: number) {
