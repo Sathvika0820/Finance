@@ -558,10 +558,18 @@ function SimpleSbiFormAssistant() {
 
     try {
       let pageTarget: HTMLElement | null = null;
-      const visiblePreviewPage = previewRef.current?.querySelector<HTMLElement>(".bankhub-fixed-page, .docx-wrapper section, .docx");
+      let sourcePageTarget: HTMLElement | null = null;
+      const previewSearch = findPdfPageTarget(previewRef.current);
+      const visiblePreviewPage = previewSearch.target;
+      console.info("[BankHub SBI Form Assistant] PDF Target:", visiblePreviewPage, {
+        expectedSelectors: PDF_TARGET_SELECTORS,
+        previewSearchDetails: previewSearch.details,
+      });
 
       if (visiblePreviewPage) {
         const previewClone = visiblePreviewPage.cloneNode(true) as HTMLElement;
+        applyPdfSafeStyles(visiblePreviewPage, previewClone);
+        logUnsupportedColorNodes(visiblePreviewPage);
         previewClone.style.transform = "none";
         previewClone.style.margin = "0";
         previewClone.style.width = `${DOCUMENT_PAGE_WIDTH}px`;
@@ -572,6 +580,7 @@ function SimpleSbiFormAssistant() {
         previewClone.style.maxHeight = `${DOCUMENT_PAGE_HEIGHT}px`;
         previewClone.style.overflow = "hidden";
         container.appendChild(previewClone);
+        sourcePageTarget = visiblePreviewPage;
         pageTarget = previewClone;
       } else {
         await renderAsync(await docx.arrayBuffer(), container, undefined, {
@@ -583,11 +592,60 @@ function SimpleSbiFormAssistant() {
           breakPages: false,
         });
         applyFixedDocumentLayout(container);
-        pageTarget = container.querySelector<HTMLElement>(".bankhub-fixed-page, .docx-wrapper section, .docx");
+        const fallbackSearch = findPdfPageTarget(container);
+        pageTarget = fallbackSearch.target;
+        if (pageTarget) {
+          applyPdfSafeStyles(pageTarget, pageTarget);
+          logUnsupportedColorNodes(pageTarget);
+          sourcePageTarget = pageTarget;
+        }
+        console.info("[BankHub SBI Form Assistant] PDF fallback target:", pageTarget, {
+          expectedSelectors: PDF_TARGET_SELECTORS,
+          fallbackSearchDetails: fallbackSearch.details,
+        });
       }
 
       if (!pageTarget) {
-        throw new Error("Unable to locate the fixed SBI page for PDF rendering.");
+        const actualDom = summarizeDomStructure(container);
+        console.error("[BankHub SBI Form Assistant] PDF target lookup failed", {
+          expectedSelectors: PDF_TARGET_SELECTORS,
+          previewDom: summarizeDomStructure(previewRef.current),
+          fallbackDom: actualDom,
+        });
+        throw new Error(`Unable to locate the fixed SBI page for PDF rendering. Expected selectors: ${PDF_TARGET_SELECTORS.join(", ")}. Actual DOM: ${actualDom}`);
+      }
+
+      const pageDescription = describeElement(pageTarget);
+      diagnostics.push(`PDF Target Element = ${pageDescription}`);
+      setPdfDiagnostics([...diagnostics]);
+      console.info("[BankHub SBI Form Assistant] Element selected for PDF", {
+        element: pageTarget,
+        description: pageDescription,
+      });
+
+      const pdfClone = pageTarget.cloneNode(true) as HTMLElement;
+      const pdfCloneHost = document.createElement("div");
+      pdfCloneHost.style.position = "fixed";
+      pdfCloneHost.style.left = "-10000px";
+      pdfCloneHost.style.top = "0";
+      pdfCloneHost.style.width = `${DOCUMENT_PAGE_WIDTH}px`;
+      pdfCloneHost.style.height = `${DOCUMENT_PAGE_HEIGHT}px`;
+      pdfCloneHost.style.overflow = "hidden";
+      pdfCloneHost.style.background = "#ffffff";
+      pdfCloneHost.style.pointerEvents = "none";
+      pdfCloneHost.style.zIndex = "-1";
+      pdfCloneHost.setAttribute("data-bankhub-pdf-clone-host", "true");
+      container.appendChild(pdfCloneHost);
+
+      if (sourcePageTarget) {
+        applyPdfSafeStyles(sourcePageTarget, pdfClone);
+      }
+      enforcePdfSafeOverrides(pdfClone);
+      pdfCloneHost.appendChild(pdfClone);
+
+      const globalOffenders = scanDocumentForUnsupportedColors(document);
+      if (globalOffenders.length) {
+        console.info("[BankHub SBI Form Assistant] Document-wide OKLCH offenders", globalOffenders);
       }
 
       if ("fonts" in document) {
@@ -595,8 +653,20 @@ function SimpleSbiFormAssistant() {
       }
       await waitForNextFrame();
       await waitForNextFrame();
+      const liveOffenders = collectUnsupportedColorNodes(pdfClone);
+      if (liveOffenders.length) {
+        console.info("[BankHub SBI Form Assistant] PDF clone OKLCH offenders", liveOffenders);
+      }
 
-      const canvas = await html2canvas(pageTarget, {
+      diagnostics.push("html2canvas start = YES");
+      setPdfDiagnostics([...diagnostics]);
+      console.info("[BankHub SBI Form Assistant] html2canvas start", {
+        target: pageDescription,
+        clone: describeElement(pdfClone),
+        width: DOCUMENT_PAGE_WIDTH,
+        height: DOCUMENT_PAGE_HEIGHT,
+      });
+      const canvas = await html2canvas(pdfClone, {
         backgroundColor: "#ffffff",
         scale: 2,
         useCORS: true,
@@ -606,7 +676,33 @@ function SimpleSbiFormAssistant() {
         height: DOCUMENT_PAGE_HEIGHT,
         windowWidth: DOCUMENT_PAGE_WIDTH,
         windowHeight: DOCUMENT_PAGE_HEIGHT,
+        onclone: (clonedDocument) => {
+          const clonedHost = clonedDocument.querySelector<HTMLElement>('[data-bankhub-pdf-clone-host="true"]');
+          const clonedTarget = clonedHost?.firstElementChild instanceof HTMLElement
+            ? clonedHost.firstElementChild
+            : findPdfPageTarget(clonedDocument.body).target;
+          if (!clonedTarget) {
+            console.error("[BankHub SBI Form Assistant] html2canvas clone target missing", summarizeDomStructure(clonedDocument.body));
+            return;
+          }
+
+          forcePdfSafeDocument(clonedDocument, clonedTarget);
+          const cloneOffenders = collectUnsupportedColorNodes(clonedTarget);
+          if (cloneOffenders.length) {
+            console.info("[BankHub SBI Form Assistant] Clone OKLCH offenders", cloneOffenders);
+          }
+        },
       });
+      diagnostics.push("html2canvas success = YES");
+      setPdfDiagnostics([...diagnostics]);
+      console.info("[BankHub SBI Form Assistant] html2canvas success", {
+        width: canvas.width,
+        height: canvas.height,
+      });
+
+      diagnostics.push("jsPDF start = YES");
+      setPdfDiagnostics([...diagnostics]);
+      console.info("[BankHub SBI Form Assistant] jsPDF start");
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "px",
@@ -615,6 +711,11 @@ function SimpleSbiFormAssistant() {
       });
       pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, DOCUMENT_PAGE_WIDTH, DOCUMENT_PAGE_HEIGHT);
       const pdfBlob = pdf.output("blob");
+      diagnostics.push("jsPDF success = YES");
+      setPdfDiagnostics([...diagnostics]);
+      console.info("[BankHub SBI Form Assistant] jsPDF success", {
+        blobSize: pdfBlob.size,
+      });
       downloadBlob(pdfBlob, "SBI_Internet_Banking_Registration.pdf");
       const successDiagnostics = diagnostics.map((line) => line === "PDF Render Success = NO" ? "PDF Render Success = YES" : line);
       setPdfDiagnostics(successDiagnostics);
@@ -935,6 +1036,7 @@ function applyFixedDocumentLayout(root: HTMLElement) {
   const pages = root.querySelectorAll<HTMLElement>(".docx-wrapper section, .docx");
   pages.forEach((page) => {
     page.classList.add("bankhub-fixed-page");
+    page.setAttribute("data-bankhub-pdf-page", "sbi-form-page");
     page.style.width = `${DOCUMENT_PAGE_WIDTH}px`;
     page.style.minWidth = `${DOCUMENT_PAGE_WIDTH}px`;
     page.style.maxWidth = `${DOCUMENT_PAGE_WIDTH}px`;
@@ -946,6 +1048,253 @@ function applyFixedDocumentLayout(root: HTMLElement) {
     page.style.margin = "0 auto";
     page.style.padding = "0";
     page.style.background = "#ffffff";
+  });
+}
+
+const PDF_TARGET_SELECTORS = [
+  '[data-bankhub-pdf-page="sbi-form-page"]',
+  ".bankhub-fixed-page",
+  ".docx-wrapper section",
+  ".docx-wrapper > section",
+  ".docx",
+];
+
+function findPdfPageTarget(root: ParentNode | null | undefined) {
+  if (!root) {
+    return {
+      target: null as HTMLElement | null,
+      details: "root unavailable",
+    };
+  }
+
+  for (const selector of PDF_TARGET_SELECTORS) {
+    const target = root.querySelector<HTMLElement>(selector);
+    if (target) {
+      return {
+        target,
+        details: `matched ${selector}`,
+      };
+    }
+  }
+
+  const firstElement = root.querySelector<HTMLElement>("section, .docx-wrapper, .docx, div");
+  if (firstElement) {
+    return {
+      target: firstElement,
+      details: `fallback first element ${describeElement(firstElement)}`,
+    };
+  }
+
+  return {
+    target: null as HTMLElement | null,
+    details: "no matching element found",
+  };
+}
+
+function summarizeDomStructure(root: ParentNode | null | undefined) {
+  if (!root) return "root unavailable";
+  const elements = Array.from(root.querySelectorAll<HTMLElement>("section, div, article")).slice(0, 12);
+  if (!elements.length) return "no candidate elements";
+  return elements.map(describeElement).join(" | ");
+}
+
+function describeElement(element: HTMLElement) {
+  const id = element.id ? `#${element.id}` : "";
+  const className = typeof element.className === "string" && element.className.trim()
+    ? `.${element.className.trim().split(/\s+/).join(".")}`
+    : "";
+  const marker = element.getAttribute("data-bankhub-pdf-page");
+  const dataAttr = marker ? `[data-bankhub-pdf-page="${marker}"]` : "";
+  return `${element.tagName.toLowerCase()}${id}${className}${dataAttr}`;
+}
+
+function applyPdfSafeStyles(sourceRoot: HTMLElement, targetRoot: HTMLElement) {
+  const sourceNodes = [sourceRoot, ...Array.from(sourceRoot.querySelectorAll<HTMLElement>("*"))];
+  const targetNodes = [targetRoot, ...Array.from(targetRoot.querySelectorAll<HTMLElement>("*"))];
+
+  for (let index = 0; index < Math.min(sourceNodes.length, targetNodes.length); index += 1) {
+    const sourceNode = sourceNodes[index];
+    const targetNode = targetNodes[index];
+    const computed = getComputedStyle(sourceNode);
+    targetNode.removeAttribute("class");
+
+    for (let styleIndex = 0; styleIndex < computed.length; styleIndex += 1) {
+      const property = computed.item(styleIndex);
+      if (!property) continue;
+      const value = computed.getPropertyValue(property);
+      if (!value) continue;
+
+      let safeValue = value;
+      if (value.includes("oklch(")) {
+        safeValue = convertCssColorFunctions(value, property);
+      }
+
+      targetNode.style.setProperty(property, safeValue, computed.getPropertyPriority(property));
+    }
+
+    targetNode.style.setProperty("color-scheme", "light");
+    targetNode.style.setProperty("background-color", computed.backgroundColor || "#ffffff");
+    targetNode.style.setProperty("border-color", computed.borderColor || "#d1d5db");
+  }
+}
+
+function convertCssColorFunctions(value: string, property: string) {
+  if (property === "background-image" || property === "mask-image" || property === "filter" || property === "backdrop-filter") {
+    return "none";
+  }
+
+  return value.replace(/oklch\([^()]+\)/g, (match) => normalizeCssColor(match));
+}
+
+function normalizeCssColor(colorValue: string) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1;
+  canvas.height = 1;
+  const context = canvas.getContext("2d");
+  if (!context) return "#000000";
+
+  try {
+    context.fillStyle = "#000000";
+    context.fillStyle = colorValue.trim();
+    const normalized = context.fillStyle;
+    return typeof normalized === "string" && normalized ? normalized : "#000000";
+  } catch {
+    return "#000000";
+  }
+}
+
+function logUnsupportedColorNodes(root: HTMLElement) {
+  const matches = collectUnsupportedColorNodes(root);
+  if (matches.length) {
+    console.info("[BankHub SBI Form Assistant] OKLCH computed style matches", matches);
+  }
+}
+
+function collectUnsupportedColorNodes(root: HTMLElement) {
+  const nodes = [root, ...Array.from(root.querySelectorAll<HTMLElement>("*"))];
+  return nodes.flatMap((node) => {
+    const computed = getComputedStyle(node);
+    const offenders: Array<{ property: string; value: string }> = [];
+
+    for (let styleIndex = 0; styleIndex < computed.length; styleIndex += 1) {
+      const property = computed.item(styleIndex);
+      if (!property) continue;
+      const value = computed.getPropertyValue(property);
+      if (value && value.includes("oklch(")) {
+        offenders.push({ property, value });
+      }
+    }
+
+    if (!offenders.length) return [];
+
+    return [{
+      tag: node.tagName.toLowerCase(),
+      className: node.className,
+      id: node.id,
+      offenders,
+    }];
+  });
+}
+
+function scanDocumentForUnsupportedColors(doc: Document) {
+  const nodes = Array.from(doc.querySelectorAll<HTMLElement>("*"));
+  const propertiesToCheck = [
+    "backgroundColor",
+    "color",
+    "borderColor",
+    "outlineColor",
+    "boxShadow",
+  ] as const;
+
+  return nodes.flatMap((node) => {
+    const computed = getComputedStyle(node);
+    const offenders = propertiesToCheck.flatMap((property) => {
+      const value = computed[property];
+      if (typeof value === "string" && value.includes("oklch")) {
+        return [{ property, value }];
+      }
+      return [];
+    });
+
+    if (!offenders.length) return [];
+
+    return [{
+      tag: node.tagName.toLowerCase(),
+      className: node.className,
+      id: node.id,
+      offenders,
+    }];
+  });
+}
+
+function forcePdfSafeDocument(clonedDocument: Document, clonedTarget: HTMLElement) {
+  const resetStyle = clonedDocument.createElement("style");
+  resetStyle.textContent = `
+    html, body {
+      background: #ffffff !important;
+      color: #000000 !important;
+    }
+    * {
+      color-scheme: light !important;
+      box-shadow: none !important;
+      text-shadow: none !important;
+      caret-color: #000000 !important;
+      outline-color: #d1d5db !important;
+    }
+  `;
+  clonedDocument.head.appendChild(resetStyle);
+
+  const nodes = [clonedTarget, ...Array.from(clonedTarget.querySelectorAll<HTMLElement>("*"))];
+  nodes.forEach((node) => {
+    const computed = clonedDocument.defaultView?.getComputedStyle(node);
+    if (!computed) return;
+
+    for (let styleIndex = 0; styleIndex < computed.length; styleIndex += 1) {
+      const property = computed.item(styleIndex);
+      if (!property) continue;
+      const value = computed.getPropertyValue(property);
+      if (!value) continue;
+
+      let safeValue = value;
+      if (value.includes("oklch(")) {
+        safeValue = convertCssColorFunctions(value, property);
+      }
+      if (property === "background-image" || property === "mask-image" || property === "filter" || property === "backdrop-filter") {
+        safeValue = "none";
+      }
+      node.style.setProperty(property, safeValue, "important");
+    }
+
+    if (node !== clonedTarget) {
+      node.style.setProperty("background-color", computed.backgroundColor || "transparent", "important");
+    } else {
+      node.style.setProperty("background-color", "#ffffff", "important");
+    }
+    node.style.setProperty("color", computed.color && !computed.color.includes("oklch(") ? computed.color : "#000000", "important");
+    node.style.setProperty("border-color", computed.borderColor && !computed.borderColor.includes("oklch(") ? computed.borderColor : "#d1d5db", "important");
+    node.style.setProperty("outline-color", computed.outlineColor && !computed.outlineColor.includes("oklch(") ? computed.outlineColor : "#d1d5db", "important");
+  });
+}
+
+function enforcePdfSafeOverrides(root: HTMLElement) {
+  const nodes = [root, ...Array.from(root.querySelectorAll<HTMLElement>("*"))];
+  nodes.forEach((node, index) => {
+    if (index === 0) {
+      node.style.setProperty("background-color", "#ffffff", "important");
+    }
+    node.style.setProperty("color-scheme", "light", "important");
+    node.style.setProperty("box-shadow", "none", "important");
+    node.style.setProperty("text-shadow", "none", "important");
+    node.style.setProperty("filter", "none", "important");
+    node.style.setProperty("backdrop-filter", "none", "important");
+    node.style.setProperty("outline-color", "#d1d5db", "important");
+    node.style.setProperty("border-color", "#d1d5db", "important");
+    if (!node.style.backgroundColor || node.style.backgroundColor.includes("oklch")) {
+      node.style.setProperty("background-color", index === 0 ? "#ffffff" : "transparent", "important");
+    }
+    if (!node.style.color || node.style.color.includes("oklch")) {
+      node.style.setProperty("color", "#000000", "important");
+    }
   });
 }
 
