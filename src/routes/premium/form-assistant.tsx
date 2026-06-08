@@ -9,6 +9,7 @@ import { AppShell } from "@/components/AppShell";
 import { buildFilledDocx, type DocxAnswers, type DocxImageValue } from "@/lib/docxLocal";
 
 const sbiTemplateUrl = new URL("../../forms/sbi/ib_registration_original.docx", import.meta.url).href;
+const iciciTemplateUrl = new URL("../../forms/icici/customer_details_updation_form.docx", import.meta.url).href;
 const DOCUMENT_PAGE_WIDTH = 794;
 const DOCUMENT_PAGE_HEIGHT = 1123;
 const DOCUMENT_PAGE_PADDING = 24;
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/premium/form-assistant")({
   head: () => ({
     meta: [
       { title: "BankHub Form Assistant" },
-      { name: "description", content: "Fill the SBI Internet Banking Registration form with guided questions." },
+      { name: "description", content: "Fill bank forms with guided questions." },
     ],
   }),
   component: () => (
@@ -36,6 +37,8 @@ type AssistantField = {
   question: string;
   kind: FieldKind;
   placeholder?: string;
+  defaultValue?: () => string;
+  uploadLabel?: string;
   optional?: boolean;
   accountRow?: number;
   choices?: Array<{ label: string; value: string }>;
@@ -47,7 +50,42 @@ type ChatMessage = {
   text: string;
 };
 
-const QUESTIONS: AssistantField[] = [
+type FormId = "sbi" | "icici";
+
+type FormConfig = {
+  id: FormId;
+  bankName: string;
+  cardTitle: string;
+  cardSubtitle: string;
+  pageTitle: string;
+  pageDescription: string;
+  metaDescription: string;
+  templateUrl: string;
+  docxFormType: "sbi-internet-banking" | "icici-customer-details";
+  initialChatText: string;
+  introText: string;
+  completeText: string;
+  templateErrorText: string;
+  previewDescription: string;
+  generateDocxName: string;
+  generatePdfName: string;
+  defaultDateKey?: string;
+  questions: AssistantField[];
+  requiredKeys: readonly string[];
+  renderRequiredKeys: readonly string[];
+  requiredFieldLabels: Record<string, string>;
+  requiredQuestionIndex: Record<string, number>;
+  fixedFieldMap: readonly (readonly [string, string])[];
+  shouldShowPreview: (answers: DocxAnswers) => boolean;
+  validateAnswer: (key: string, value: string) => string;
+  normalizeAnswer: (field: AssistantField, value: string, answers: DocxAnswers) => DocxAnswers;
+  findNextQuestionIndex: (answers: DocxAnswers, startIndex: number) => number;
+  correctionQuestionIndex: (message: string) => number;
+  assistantResponse: (message: string) => string;
+  logRenderValidation: (answers: DocxAnswers, missing: readonly string[]) => void;
+};
+
+const SBI_QUESTIONS: AssistantField[] = [
   {
     key: "branch_name",
     label: "Branch Name",
@@ -154,10 +192,11 @@ const QUESTIONS: AssistantField[] = [
     fieldType: "Signature image field",
     question: "Please upload your signature.",
     kind: "image",
+    uploadLabel: "Upload Signature",
   },
 ];
 
-const REQUIRED_KEYS = [
+const SBI_REQUIRED_KEYS = [
   "branch_name",
   "customer_name_boxes",
   "mobile_number_boxes",
@@ -172,7 +211,7 @@ const REQUIRED_KEYS = [
   "customer_signature",
 ] as const;
 
-const FIXED_FIELD_MAP = [
+const SBI_FIXED_FIELD_MAP = [
   ["Branch Name", "branch_name"],
   ["Full Name", "customer_name_boxes"],
   ["Mobile Number", "mobile_number_boxes"],
@@ -188,7 +227,7 @@ const FIXED_FIELD_MAP = [
   ["Current Date", "submission_date"],
 ] as const;
 
-const REQUIRED_FIELD_LABELS: Record<(typeof REQUIRED_KEYS)[number], string> = {
+const SBI_REQUIRED_FIELD_LABELS: Record<(typeof SBI_REQUIRED_KEYS)[number], string> = {
   branch_name: "Branch Name",
   customer_name_boxes: "Full Name",
   mobile_number_boxes: "Mobile Number",
@@ -203,7 +242,7 @@ const REQUIRED_FIELD_LABELS: Record<(typeof REQUIRED_KEYS)[number], string> = {
   customer_signature: "Signature",
 };
 
-const REQUIRED_QUESTION_INDEX: Record<(typeof REQUIRED_KEYS)[number], number> = {
+const SBI_REQUIRED_QUESTION_INDEX: Record<(typeof SBI_REQUIRED_KEYS)[number], number> = {
   branch_name: 0,
   customer_name_boxes: 1,
   mobile_number_boxes: 2,
@@ -215,20 +254,331 @@ const REQUIRED_QUESTION_INDEX: Record<(typeof REQUIRED_KEYS)[number], number> = 
   account_1_single_joint: 6,
   account_1_transaction_rights: 7,
   account_1_limited_transaction_rights: 8,
-  customer_signature: QUESTIONS.length - 1,
+  customer_signature: SBI_QUESTIONS.length - 1,
 };
 
-const RENDER_REQUIRED_KEYS = ["email_id", "submission_date", "customer_signature"] as const;
+const SBI_RENDER_REQUIRED_KEYS = ["email_id", "submission_date", "customer_signature"] as const;
+
+const ICICI_QUESTIONS: AssistantField[] = [
+  {
+    key: "branch_name",
+    label: "Branch Name",
+    fieldType: "Text field",
+    question: "What is your ICICI Branch Name?",
+    kind: "text",
+    placeholder: "Example: ICICI Hyderabad Branch",
+  },
+  {
+    key: "request_date",
+    label: "Request Date",
+    fieldType: "Date field",
+    question: "What is the request date?",
+    kind: "date",
+    placeholder: "DD/MM/YYYY",
+    defaultValue: todayDate,
+  },
+  {
+    key: "primary_holder_name",
+    label: "Primary Account Holder Name",
+    fieldType: "Text field",
+    question: "What is the Primary Account Holder Name?",
+    kind: "text",
+    placeholder: "Example: Ravi Kumar",
+  },
+  {
+    key: "account_number_boxes",
+    label: "Account Number",
+    fieldType: "Account number box field",
+    question: "What is your ICICI Account Number?",
+    kind: "text",
+    placeholder: "Digits only",
+  },
+  {
+    key: "primary_mobile_number_boxes",
+    label: "Mobile Number",
+    fieldType: "Mobile number box field",
+    question: "What is the Primary Holder Mobile Number?",
+    kind: "text",
+    placeholder: "10 digits",
+  },
+  {
+    key: "primary_pan_boxes",
+    label: "PAN Number",
+    fieldType: "PAN box field",
+    question: "What is the Primary Holder PAN Number?",
+    kind: "text",
+    placeholder: "ABCDE1234F",
+  },
+  {
+    key: "primary_gender",
+    label: "Gender",
+    fieldType: "Selection field",
+    question: "Select the Primary Holder Gender.",
+    kind: "choice",
+    choices: [
+      { label: "Male", value: "Male" },
+      { label: "Female", value: "Female" },
+      { label: "Other", value: "Other" },
+    ],
+  },
+  {
+    key: "primary_occupation",
+    label: "Occupation",
+    fieldType: "Text field",
+    question: "What is the Primary Holder Occupation?",
+    kind: "text",
+  },
+  {
+    key: "primary_marital_status",
+    label: "Marital Status",
+    fieldType: "Text field",
+    question: "What is the Primary Holder Marital Status?",
+    kind: "text",
+  },
+  {
+    key: "primary_category",
+    label: "Category",
+    fieldType: "Text field",
+    question: "What is the Primary Holder Category?",
+    kind: "text",
+  },
+  {
+    key: "primary_nationality",
+    label: "Nationality",
+    fieldType: "Text field",
+    question: "What is the Primary Holder Nationality?",
+    kind: "text",
+  },
+  {
+    key: "primary_gross_annual_income",
+    label: "Gross Annual Income",
+    fieldType: "Text field",
+    question: "What is the Primary Holder Gross Annual Income?",
+    kind: "text",
+  },
+  {
+    key: "house_building_name",
+    label: "House / Building Name",
+    fieldType: "Address text field",
+    question: "What is the House / Building Name?",
+    kind: "text",
+  },
+  {
+    key: "street_name",
+    label: "Street",
+    fieldType: "Address text field",
+    question: "What is the Street?",
+    kind: "text",
+  },
+  {
+    key: "locality",
+    label: "Locality",
+    fieldType: "Address text field",
+    question: "What is the Locality?",
+    kind: "text",
+  },
+  {
+    key: "city",
+    label: "City",
+    fieldType: "Address text field",
+    question: "What is the City?",
+    kind: "text",
+  },
+  {
+    key: "state",
+    label: "State",
+    fieldType: "Address text field",
+    question: "What is the State?",
+    kind: "text",
+  },
+  {
+    key: "country",
+    label: "Country",
+    fieldType: "Address text field",
+    question: "What is the Country?",
+    kind: "text",
+  },
+  {
+    key: "pin_code_boxes",
+    label: "PIN Code",
+    fieldType: "PIN code box field",
+    question: "What is the PIN Code?",
+    kind: "text",
+    placeholder: "6 digits",
+  },
+  {
+    key: "primary_holder_photo",
+    label: "Photo",
+    fieldType: "Photo image field",
+    question: "Please upload the Primary Holder Photo.",
+    kind: "image",
+    uploadLabel: "Upload Photo",
+  },
+  {
+    key: "primary_signature",
+    label: "Signature",
+    fieldType: "Signature image field",
+    question: "Please upload the Primary Holder Signature.",
+    kind: "image",
+    uploadLabel: "Upload Signature",
+  },
+];
+
+const ICICI_REQUIRED_KEYS = [
+  "branch_name",
+  "request_date",
+  "primary_holder_name",
+  "account_number_boxes",
+  "primary_mobile_number_boxes",
+  "primary_pan_boxes",
+  "primary_gender",
+  "primary_occupation",
+  "primary_marital_status",
+  "primary_category",
+  "primary_nationality",
+  "primary_gross_annual_income",
+  "house_building_name",
+  "street_name",
+  "locality",
+  "city",
+  "state",
+  "country",
+  "pin_code_boxes",
+  "primary_holder_photo",
+  "primary_signature",
+] as const;
+
+const ICICI_REQUIRED_FIELD_LABELS: Record<(typeof ICICI_REQUIRED_KEYS)[number], string> = {
+  branch_name: "Branch Name",
+  request_date: "Request Date",
+  primary_holder_name: "Primary Account Holder Name",
+  account_number_boxes: "ICICI Account Number",
+  primary_mobile_number_boxes: "Primary Holder Mobile Number",
+  primary_pan_boxes: "Primary Holder PAN Number",
+  primary_gender: "Gender",
+  primary_occupation: "Occupation",
+  primary_marital_status: "Marital Status",
+  primary_category: "Category",
+  primary_nationality: "Nationality",
+  primary_gross_annual_income: "Gross Annual Income",
+  house_building_name: "House / Building Name",
+  street_name: "Street",
+  locality: "Locality",
+  city: "City",
+  state: "State",
+  country: "Country",
+  pin_code_boxes: "PIN Code",
+  primary_holder_photo: "Photo",
+  primary_signature: "Signature",
+};
+
+const ICICI_REQUIRED_QUESTION_INDEX: Record<(typeof ICICI_REQUIRED_KEYS)[number], number> = Object.fromEntries(
+  ICICI_REQUIRED_KEYS.map((key) => [key, ICICI_QUESTIONS.findIndex((question) => question.key === key)]),
+) as Record<(typeof ICICI_REQUIRED_KEYS)[number], number>;
+
+const ICICI_RENDER_REQUIRED_KEYS = ["request_date", "primary_holder_photo", "primary_signature"] as const;
+
+const ICICI_FIXED_FIELD_MAP = [
+  ["Branch Name", "branch_name"],
+  ["Request Date", "request_date"],
+  ["Primary Holder Name", "primary_holder_name"],
+  ["Account Number", "account_number_boxes"],
+  ["Mobile Number", "primary_mobile_number_boxes"],
+  ["PAN Number", "primary_pan_boxes"],
+  ["Gender", "primary_gender"],
+  ["Occupation", "primary_occupation"],
+  ["Marital Status", "primary_marital_status"],
+  ["Category", "primary_category"],
+  ["Nationality", "primary_nationality"],
+  ["Gross Annual Income", "primary_gross_annual_income"],
+  ["House / Building Name", "house_building_name"],
+  ["Street", "street_name"],
+  ["Locality", "locality"],
+  ["City", "city"],
+  ["State", "state"],
+  ["Country", "country"],
+  ["PIN Code", "pin_code_boxes"],
+  ["Photo", "primary_holder_photo"],
+  ["Signature", "primary_signature"],
+] as const;
+
+const FORM_CONFIGS: Record<FormId, FormConfig> = {
+  sbi: {
+    id: "sbi",
+    bankName: "SBI",
+    cardTitle: "SBI",
+    cardSubtitle: "Internet Banking Registration Form",
+    pageTitle: "SBI Internet Banking Registration",
+    pageDescription: "Answer a few questions to automatically fill your SBI form.",
+    metaDescription: "Fill the SBI Internet Banking Registration form with guided questions.",
+    templateUrl: sbiTemplateUrl,
+    docxFormType: "sbi-internet-banking",
+    initialChatText: "Select SBI to start the Internet Banking Registration Form.",
+    introText: "Welcome. I will help you complete your SBI Internet Banking Registration Form.",
+    completeText: "All SBI form details are captured. Review the form and click Generate Form.",
+    templateErrorText: "The SBI form could not be loaded. Please try again.",
+    previewDescription: "Review the filled SBI form before downloading.",
+    generateDocxName: "sbi_internet_banking_registration_filled.docx",
+    generatePdfName: "SBI_Internet_Banking_Registration.pdf",
+    defaultDateKey: "submission_date",
+    questions: SBI_QUESTIONS,
+    requiredKeys: SBI_REQUIRED_KEYS,
+    renderRequiredKeys: SBI_RENDER_REQUIRED_KEYS,
+    requiredFieldLabels: SBI_REQUIRED_FIELD_LABELS,
+    requiredQuestionIndex: SBI_REQUIRED_QUESTION_INDEX,
+    fixedFieldMap: SBI_FIXED_FIELD_MAP,
+    shouldShowPreview: shouldShowSbiPreview,
+    validateAnswer: validateSbiAnswer,
+    normalizeAnswer: normalizeSbiAnswer,
+    findNextQuestionIndex: findNextSbiQuestionIndex,
+    correctionQuestionIndex: sbiCorrectionQuestionIndex,
+    assistantResponse: sbiAssistantResponse,
+    logRenderValidation: logSbiRenderValidation,
+  },
+  icici: {
+    id: "icici",
+    bankName: "ICICI",
+    cardTitle: "ICICI Bank",
+    cardSubtitle: "Customer Details Updation Form",
+    pageTitle: "ICICI Customer Details Updation Form",
+    pageDescription: "Answer one question at a time to fill your ICICI form.",
+    metaDescription: "Fill the ICICI Customer Details Updation Form with guided questions.",
+    templateUrl: iciciTemplateUrl,
+    docxFormType: "icici-customer-details",
+    initialChatText: "Select ICICI Bank to start the Customer Details Updation Form.",
+    introText: "Welcome. I will help you complete your ICICI Customer Details Updation Form.",
+    completeText: "All ICICI form details are captured. Review the form and click Generate Form.",
+    templateErrorText: "The ICICI form could not be loaded. Please try again.",
+    previewDescription: "Review the filled ICICI form before downloading.",
+    generateDocxName: "icici_customer_details_updation_filled.docx",
+    generatePdfName: "ICICI_Customer_Details_Updation_Form.pdf",
+    defaultDateKey: "request_date",
+    questions: ICICI_QUESTIONS,
+    requiredKeys: ICICI_REQUIRED_KEYS,
+    renderRequiredKeys: ICICI_RENDER_REQUIRED_KEYS,
+    requiredFieldLabels: ICICI_REQUIRED_FIELD_LABELS,
+    requiredQuestionIndex: ICICI_REQUIRED_QUESTION_INDEX,
+    fixedFieldMap: ICICI_FIXED_FIELD_MAP,
+    shouldShowPreview: shouldShowIciciPreview,
+    validateAnswer: validateIciciAnswer,
+    normalizeAnswer: normalizeIciciAnswer,
+    findNextQuestionIndex: findNextLinearQuestionIndex,
+    correctionQuestionIndex: iciciCorrectionQuestionIndex,
+    assistantResponse: iciciAssistantResponse,
+    logRenderValidation: logIciciRenderValidation,
+  },
+};
 
 function SimpleSbiFormAssistant() {
+  const [selectedFormId, setSelectedFormId] = useState<FormId>("sbi");
   const [bankSelected, setBankSelected] = useState(false);
   const [templateReady, setTemplateReady] = useState(false);
   const [templateError, setTemplateError] = useState("");
-  const [answers, setAnswers] = useState<DocxAnswers>(() => ({ submission_date: todayDate() }));
+  const [answers, setAnswers] = useState<DocxAnswers>(() => initialAnswers("sbi"));
   const [currentIndex, setCurrentIndex] = useState(0);
   const [input, setInput] = useState("");
   const [chat, setChat] = useState<ChatMessage[]>([
-    { id: "welcome", role: "assistant", text: "Select SBI to start the Internet Banking Registration Form." },
+    { id: "welcome", role: "assistant", text: FORM_CONFIGS.sbi.initialChatText },
   ]);
   const [validationError, setValidationError] = useState("");
   const [documentError, setDocumentError] = useState("");
@@ -247,18 +597,12 @@ function SimpleSbiFormAssistant() {
   const chatEndRef = useRef<HTMLDivElement | null>(null);
   const textInputRef = useRef<HTMLInputElement | null>(null);
 
-  const activeField = QUESTIONS[currentIndex];
-  const progress = Math.min(100, Math.round((Math.min(currentIndex, QUESTIONS.length) / QUESTIONS.length) * 100));
-  const missingFields = useMemo(() => REQUIRED_KEYS.filter((key) => !answers[key]), [answers]);
+  const selectedForm = FORM_CONFIGS[selectedFormId];
+  const activeField = selectedForm.questions[currentIndex];
+  const progress = Math.min(100, Math.round((Math.min(currentIndex, selectedForm.questions.length) / selectedForm.questions.length) * 100));
+  const missingFields = useMemo(() => selectedForm.requiredKeys.filter((key) => !answers[key]), [answers, selectedForm]);
   const isComplete = missingFields.length === 0;
-  const shouldShowPreview = Boolean(
-    answers.branch_name
-      && answers.customer_name_boxes
-      && answers.mobile_number_boxes
-      && answers.email_id
-      && answers.dob
-      && answers.account_number_1_boxes,
-  );
+  const shouldShowPreview = selectedForm.shouldShowPreview(answers);
 
   const fitPreviewToPage = useCallback(() => {
     if (previewFitMode !== "page" || !previewRef.current || !previewViewportRef.current) return;
@@ -294,31 +638,32 @@ function SimpleSbiFormAssistant() {
     setTemplateError("");
     setStatus("");
 
-    fetch(sbiTemplateUrl, { method: "HEAD" })
+    fetch(selectedForm.templateUrl, { method: "HEAD" })
       .then((response) => {
         if (cancelled) return;
         if (!response.ok) throw new Error(`Template request failed: ${response.status}`);
         setTemplateReady(true);
         setStatus("");
         setChat([
-          { id: "intro", role: "assistant", text: "Welcome. I will help you complete your SBI Internet Banking Registration Form." },
-          { id: "q-0", role: "assistant", text: QUESTIONS[0].question },
+          { id: "intro", role: "assistant", text: selectedForm.introText },
+          { id: "q-0", role: "assistant", text: selectedForm.questions[0].question },
         ]);
-        console.info("[BankHub SBI Form Assistant] SBI template available. Fixed mapping active.", {
-          fields: FIXED_FIELD_MAP.map(([, key]) => key),
+        console.info("[BankHub Form Assistant] Template available. Fixed mapping active.", {
+          form: selectedForm.id,
+          fields: selectedForm.fixedFieldMap.map(([, key]) => key),
         });
       })
       .catch((error) => {
         if (cancelled) return;
-        console.error("[BankHub SBI Form Assistant] Template load failed", error);
-        setTemplateError("SBI template could not be loaded.");
+        console.error("[BankHub Form Assistant] Template load failed", error);
+        setTemplateError(`${selectedForm.bankName} template could not be loaded.`);
         setStatus("");
       });
 
     return () => {
       cancelled = true;
     };
-  }, [bankSelected]);
+  }, [bankSelected, selectedForm]);
 
   useEffect(() => {
     if (!templateReady || !shouldShowPreview || !previewRef.current) return;
@@ -326,7 +671,7 @@ function SimpleSbiFormAssistant() {
     setIsRenderingPreview(true);
     setPreviewError("");
 
-    buildFilledDocx(sbiTemplateUrl, answers, { blankUnanswered: true })
+    buildFilledDocx(selectedForm.templateUrl, answers, { blankUnanswered: true, formType: selectedForm.docxFormType })
       .then(async (docx) => {
         if (cancelled || !previewRef.current) return;
         previewRef.current.innerHTML = "";
@@ -341,11 +686,11 @@ function SimpleSbiFormAssistant() {
         if (cancelled) return;
         applyFixedDocumentLayout(previewRef.current);
         requestAnimationFrame(fitPreviewToPage);
-        console.info("[BankHub SBI Form Assistant] Live preview render success", { size: docx.size });
+        console.info("[BankHub Form Assistant] Live preview render success", { form: selectedForm.id, size: docx.size });
       })
       .catch((error) => {
         if (cancelled) return;
-        console.error("[BankHub SBI Form Assistant] Live preview render failed", error);
+        console.error("[BankHub Form Assistant] Live preview render failed", error);
         setPreviewError("Live preview could not be rendered. DOCX/PDF generation may still work.");
       })
       .finally(() => {
@@ -355,9 +700,23 @@ function SimpleSbiFormAssistant() {
     return () => {
       cancelled = true;
     };
-  }, [answers, fitPreviewToPage, templateReady, shouldShowPreview]);
+  }, [answers, fitPreviewToPage, selectedForm, templateReady, shouldShowPreview]);
 
-  function startSbi() {
+  function startForm(formId: FormId) {
+    const form = FORM_CONFIGS[formId];
+    setSelectedFormId(formId);
+    setAnswers(initialAnswers(formId));
+    setCurrentIndex(0);
+    setInput("");
+    setValidationError("");
+    setDocumentError("");
+    setGeneratedDocx(null);
+    setTemplateReady(false);
+    setTemplateError("");
+    setPdfDiagnostics([]);
+    setPreviewError("");
+    setStatus("");
+    setChat([{ id: "welcome", role: "assistant", text: form.initialChatText }]);
     setBankSelected(true);
   }
 
@@ -366,32 +725,32 @@ function SimpleSbiFormAssistant() {
     setDocumentError("");
     if (returnToAssistantAfterAnswer) {
       setReturnToAssistantAfterAnswer(false);
-      setCurrentIndex(QUESTIONS.length);
+      setCurrentIndex(selectedForm.questions.length);
       setInput("");
       setStatus("Correction saved. Regenerate the document to include the update.");
       setChat((messages) => [
         ...messages,
         { id: `updated-${Date.now()}`, role: "assistant", text: "Updated. You can regenerate the document, ask another banking question, or request another correction." },
       ]);
-      console.info("[BankHub SBI Form Assistant] Correction saved", nextAnswers);
+      console.info("[BankHub Form Assistant] Correction saved", { form: selectedForm.id, nextAnswers });
       return;
     }
-    const resolvedNextIndex = findNextQuestionIndex(nextAnswers, nextIndex);
+    const resolvedNextIndex = selectedForm.findNextQuestionIndex(nextAnswers, nextIndex);
     setCurrentIndex(resolvedNextIndex);
     setInput("");
-    if (resolvedNextIndex < QUESTIONS.length) {
+    if (resolvedNextIndex < selectedForm.questions.length) {
       setChat((messages) => [
         ...messages,
-        { id: `q-${resolvedNextIndex}-${Date.now()}`, role: "assistant", text: QUESTIONS[resolvedNextIndex].question },
+        { id: `q-${resolvedNextIndex}-${Date.now()}`, role: "assistant", text: selectedForm.questions[resolvedNextIndex].question },
       ]);
       return;
     }
     setStatus("Answers captured. Review the summary and generate the document.");
     setChat((messages) => [
       ...messages,
-      { id: `done-${Date.now()}`, role: "assistant", text: "All SBI form details are captured. Review the summary and click Generate Document." },
+      { id: `done-${Date.now()}`, role: "assistant", text: selectedForm.completeText },
     ]);
-    console.info("[BankHub SBI Form Assistant] All answers captured", nextAnswers);
+    console.info("[BankHub Form Assistant] All answers captured", { form: selectedForm.id, nextAnswers });
   }
 
   function handleSubmit(event: FormEvent) {
@@ -402,17 +761,18 @@ function SimpleSbiFormAssistant() {
     }
     if (!activeField || activeField.kind === "image") return;
     const rawValue = input.trim();
-    const validation = validateAnswer(activeField.key, rawValue);
+    const resolvedValue = rawValue || activeField.defaultValue?.() || "";
+    const validation = selectedForm.validateAnswer(activeField.key, resolvedValue);
     if (validation) {
       setValidationError(validation);
       return;
     }
 
-    const nextAnswers = normalizeAnswer(activeField, rawValue, answers);
+    const nextAnswers = selectedForm.normalizeAnswer(activeField, resolvedValue, answers);
     setAnswers(nextAnswers);
     setValidationError("");
-    setChat((messages) => [...messages, { id: `a-${Date.now()}`, role: "user", text: rawValue }]);
-    console.info("[BankHub SBI Form Assistant] Answer stored", { field: activeField.key, value: rawValue });
+    setChat((messages) => [...messages, { id: `a-${Date.now()}`, role: "user", text: resolvedValue }]);
+    console.info("[BankHub Form Assistant] Answer stored", { form: selectedForm.id, field: activeField.key, value: resolvedValue });
     askNext(nextAnswers, currentIndex + 1);
   }
 
@@ -423,19 +783,19 @@ function SimpleSbiFormAssistant() {
     setChat((messages) => [...messages, { id: `assistant-user-${Date.now()}`, role: "user", text: message }]);
 
     const lower = message.toLowerCase();
-    const correctionIndex = correctionQuestionIndex(lower);
+    const correctionIndex = selectedForm.correctionQuestionIndex(lower);
     if (correctionIndex >= 0) {
       setReturnToAssistantAfterAnswer(true);
       setGeneratedDocx(null);
       setCurrentIndex(correctionIndex);
       setChat((messages) => [
         ...messages,
-        { id: `correction-${Date.now()}`, role: "assistant", text: QUESTIONS[correctionIndex].question },
+        { id: `correction-${Date.now()}`, role: "assistant", text: selectedForm.questions[correctionIndex].question },
       ]);
       return;
     }
 
-    const response = bankingAssistantResponse(lower);
+    const response = selectedForm.assistantResponse(lower);
     setChat((messages) => [...messages, { id: `banking-help-${Date.now()}`, role: "assistant", text: response }]);
   }
 
@@ -444,57 +804,64 @@ function SimpleSbiFormAssistant() {
     setAnswers(nextAnswers);
     setValidationError("");
     setChat((messages) => [...messages, { id: `choice-${field.key}-${Date.now()}`, role: "user", text: label }]);
-    console.info("[BankHub SBI Form Assistant] Choice stored", { field: field.key, value });
+    console.info("[BankHub Form Assistant] Choice stored", { form: selectedForm.id, field: field.key, value });
     askNext(nextAnswers, currentIndex + 1);
   }
 
-  function handleSignatureUpload(event: ChangeEvent<HTMLInputElement>) {
+  function handleImageUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file || !activeField || activeField.kind !== "image") return;
     const reader = new FileReader();
     reader.onload = () => {
       const image: DocxImageValue = { name: file.name, dataUrl: String(reader.result || "") };
-      const nextAnswers = { ...answers, customer_signature: image };
+      const nextAnswers = { ...answers, [activeField.key]: image };
       setAnswers(nextAnswers);
       setValidationError("");
-      setChat((messages) => [...messages, { id: `sig-${Date.now()}`, role: "user", text: "Signature uploaded." }]);
-      console.info("[BankHub SBI Form Assistant] Signature stored", { file: file.name, size: file.size });
+      setChat((messages) => [...messages, { id: `img-${Date.now()}`, role: "user", text: `${activeField.label} uploaded.` }]);
+      console.info("[BankHub Form Assistant] Image stored", { form: selectedForm.id, field: activeField.key, file: file.name, size: file.size });
       askNext(nextAnswers, currentIndex + 1);
     };
     reader.readAsDataURL(file);
   }
 
-  function askMissingFieldAgain(key: (typeof REQUIRED_KEYS)[number]) {
-    const questionIndex = REQUIRED_QUESTION_INDEX[key];
-    const label = REQUIRED_FIELD_LABELS[key];
+  function askMissingFieldAgain(key: string) {
+    const questionIndex = selectedForm.requiredQuestionIndex[key] ?? selectedForm.questions.findIndex((question) => question.key === key);
+    const label = selectedForm.requiredFieldLabels[key] || "This field";
+    if (questionIndex < 0) {
+      setValidationError(`${label} is required. Please answer this question before generating the document.`);
+      return;
+    }
     setGeneratedDocx(null);
     setCurrentIndex(questionIndex);
     setInput("");
     setValidationError(`${label} is required. Please answer this question before generating the document.`);
     setChat((messages) => [
       ...messages,
-      { id: `missing-${key}-${Date.now()}`, role: "assistant", text: QUESTIONS[questionIndex].question },
+      { id: `missing-${key}-${Date.now()}`, role: "assistant", text: selectedForm.questions[questionIndex].question },
     ]);
-    console.warn("[BankHub SBI Form Assistant] Required fixed field missing", { field: key, label });
+    console.warn("[BankHub Form Assistant] Required fixed field missing", { form: selectedForm.id, field: key, label });
   }
 
   async function generateDocument() {
-    const generationAnswers = textAnswer(answers.submission_date) ? answers : { ...answers, submission_date: todayDate() };
+    const defaultDateKey = selectedForm.defaultDateKey;
+    const generationAnswers = defaultDateKey && !textAnswer(answers[defaultDateKey])
+      ? { ...answers, [defaultDateKey]: todayDate() }
+      : answers;
     if (generationAnswers !== answers) setAnswers(generationAnswers);
 
-    const missing = getMissingRequiredKeys(generationAnswers);
+    const missing = getMissingRequiredKeys(selectedForm, generationAnswers);
     if (missing.length > 0) {
       askMissingFieldAgain(missing[0]);
       return null;
     }
-    const renderMissing = getRenderMissingKeys(generationAnswers);
-    logRenderValidation(generationAnswers, renderMissing);
+    const renderMissing = getRenderMissingKeys(selectedForm, generationAnswers);
+    selectedForm.logRenderValidation(generationAnswers, renderMissing);
     if (renderMissing.length > 0) {
       const missingKey = renderMissing[0];
-      if (missingKey === "email_id" || missingKey === "customer_signature") {
+      if (selectedForm.requiredQuestionIndex[missingKey] !== undefined) {
         askMissingFieldAgain(missingKey);
       } else {
-        setDocumentError("Submission Date is required before generating the document.");
+        setDocumentError(`${selectedForm.requiredFieldLabels[missingKey] || "A required field"} is required before generating the document.`);
       }
       return null;
     }
@@ -502,14 +869,14 @@ function SimpleSbiFormAssistant() {
     setDocumentError("");
     setStatus("Generating populated DOCX...");
     try {
-      const docx = await buildFilledDocx(sbiTemplateUrl, generationAnswers, { blankUnanswered: true });
+      const docx = await buildFilledDocx(selectedForm.templateUrl, generationAnswers, { blankUnanswered: true, formType: selectedForm.docxFormType });
       setGeneratedDocx(docx);
       setStatus("Document Ready");
-      console.info("[BankHub SBI Form Assistant] Generated DOCX", { size: docx.size });
+      console.info("[BankHub Form Assistant] Generated DOCX", { form: selectedForm.id, size: docx.size });
       return docx;
     } catch (error) {
-      console.error("[BankHub SBI Form Assistant] DOCX generation failed", error);
-      setDocumentError("DOCX generation failed. Please check the local SBI template and try again.");
+      console.error("[BankHub Form Assistant] DOCX generation failed", error);
+      setDocumentError(`DOCX generation failed. Please check the local ${selectedForm.bankName} template and try again.`);
       return null;
     } finally {
       setIsGeneratingDocx(false);
@@ -519,9 +886,9 @@ function SimpleSbiFormAssistant() {
   async function downloadDocx() {
     const docx = generatedDocx || await generateDocument();
     if (!docx) return;
-    downloadBlob(docx, "sbi_internet_banking_registration_filled.docx");
+    downloadBlob(docx, selectedForm.generateDocxName);
     setStatus("DOCX downloaded.");
-    console.info("[BankHub SBI Form Assistant] DOCX download success", { size: docx.size });
+    console.info("[BankHub Form Assistant] DOCX download success", { form: selectedForm.id, size: docx.size });
   }
 
   async function downloadPdf() {
@@ -543,7 +910,7 @@ function SimpleSbiFormAssistant() {
       "PDF Render Success = NO",
     ];
     setPdfDiagnostics(diagnostics);
-    console.info("[BankHub SBI Form Assistant] PDF Conversion Started", diagnostics);
+    console.info("[BankHub Form Assistant] PDF Conversion Started", { form: selectedForm.id, diagnostics });
     const container = document.createElement("div");
     container.style.position = "fixed";
     container.style.inset = "0";
@@ -561,7 +928,7 @@ function SimpleSbiFormAssistant() {
       let sourcePageTarget: HTMLElement | null = null;
       const previewSearch = findPdfPageTarget(previewRef.current);
       const visiblePreviewPage = previewSearch.target;
-      console.info("[BankHub SBI Form Assistant] PDF Target:", visiblePreviewPage, {
+      console.info("[BankHub Form Assistant] PDF Target:", visiblePreviewPage, {
         expectedSelectors: PDF_TARGET_SELECTORS,
         previewSearchDetails: previewSearch.details,
       });
@@ -599,7 +966,7 @@ function SimpleSbiFormAssistant() {
           logUnsupportedColorNodes(pageTarget);
           sourcePageTarget = pageTarget;
         }
-        console.info("[BankHub SBI Form Assistant] PDF fallback target:", pageTarget, {
+        console.info("[BankHub Form Assistant] PDF fallback target:", pageTarget, {
           expectedSelectors: PDF_TARGET_SELECTORS,
           fallbackSearchDetails: fallbackSearch.details,
         });
@@ -607,18 +974,18 @@ function SimpleSbiFormAssistant() {
 
       if (!pageTarget) {
         const actualDom = summarizeDomStructure(container);
-        console.error("[BankHub SBI Form Assistant] PDF target lookup failed", {
+        console.error("[BankHub Form Assistant] PDF target lookup failed", {
           expectedSelectors: PDF_TARGET_SELECTORS,
           previewDom: summarizeDomStructure(previewRef.current),
           fallbackDom: actualDom,
         });
-        throw new Error(`Unable to locate the fixed SBI page for PDF rendering. Expected selectors: ${PDF_TARGET_SELECTORS.join(", ")}. Actual DOM: ${actualDom}`);
+        throw new Error(`Unable to locate the fixed form page for PDF rendering. Expected selectors: ${PDF_TARGET_SELECTORS.join(", ")}. Actual DOM: ${actualDom}`);
       }
 
       const pageDescription = describeElement(pageTarget);
       diagnostics.push(`PDF Target Element = ${pageDescription}`);
       setPdfDiagnostics([...diagnostics]);
-      console.info("[BankHub SBI Form Assistant] Element selected for PDF", {
+      console.info("[BankHub Form Assistant] Element selected for PDF", {
         element: pageTarget,
         description: pageDescription,
       });
@@ -645,7 +1012,7 @@ function SimpleSbiFormAssistant() {
 
       const globalOffenders = scanDocumentForUnsupportedColors(document);
       if (globalOffenders.length) {
-        console.info("[BankHub SBI Form Assistant] Document-wide OKLCH offenders", globalOffenders);
+        console.info("[BankHub Form Assistant] Document-wide OKLCH offenders", globalOffenders);
       }
 
       if ("fonts" in document) {
@@ -655,12 +1022,12 @@ function SimpleSbiFormAssistant() {
       await waitForNextFrame();
       const liveOffenders = collectUnsupportedColorNodes(pdfClone);
       if (liveOffenders.length) {
-        console.info("[BankHub SBI Form Assistant] PDF clone OKLCH offenders", liveOffenders);
+        console.info("[BankHub Form Assistant] PDF clone OKLCH offenders", liveOffenders);
       }
 
       diagnostics.push("html2canvas start = YES");
       setPdfDiagnostics([...diagnostics]);
-      console.info("[BankHub SBI Form Assistant] html2canvas start", {
+      console.info("[BankHub Form Assistant] html2canvas start", {
         target: pageDescription,
         clone: describeElement(pdfClone),
         width: DOCUMENT_PAGE_WIDTH,
@@ -682,27 +1049,27 @@ function SimpleSbiFormAssistant() {
             ? clonedHost.firstElementChild
             : findPdfPageTarget(clonedDocument.body).target;
           if (!clonedTarget) {
-            console.error("[BankHub SBI Form Assistant] html2canvas clone target missing", summarizeDomStructure(clonedDocument.body));
+            console.error("[BankHub Form Assistant] html2canvas clone target missing", summarizeDomStructure(clonedDocument.body));
             return;
           }
 
           forcePdfSafeDocument(clonedDocument, clonedTarget);
           const cloneOffenders = collectUnsupportedColorNodes(clonedTarget);
           if (cloneOffenders.length) {
-            console.info("[BankHub SBI Form Assistant] Clone OKLCH offenders", cloneOffenders);
+            console.info("[BankHub Form Assistant] Clone OKLCH offenders", cloneOffenders);
           }
         },
       });
       diagnostics.push("html2canvas success = YES");
       setPdfDiagnostics([...diagnostics]);
-      console.info("[BankHub SBI Form Assistant] html2canvas success", {
+      console.info("[BankHub Form Assistant] html2canvas success", {
         width: canvas.width,
         height: canvas.height,
       });
 
       diagnostics.push("jsPDF start = YES");
       setPdfDiagnostics([...diagnostics]);
-      console.info("[BankHub SBI Form Assistant] jsPDF start");
+      console.info("[BankHub Form Assistant] jsPDF start");
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "px",
@@ -713,15 +1080,15 @@ function SimpleSbiFormAssistant() {
       const pdfBlob = pdf.output("blob");
       diagnostics.push("jsPDF success = YES");
       setPdfDiagnostics([...diagnostics]);
-      console.info("[BankHub SBI Form Assistant] jsPDF success", {
+      console.info("[BankHub Form Assistant] jsPDF success", {
         blobSize: pdfBlob.size,
       });
-      downloadBlob(pdfBlob, "SBI_Internet_Banking_Registration.pdf");
+      downloadBlob(pdfBlob, selectedForm.generatePdfName);
       const successDiagnostics = diagnostics.map((line) => line === "PDF Render Success = NO" ? "PDF Render Success = YES" : line);
       setPdfDiagnostics(successDiagnostics);
       setStatus("PDF downloaded as a single page.");
-      console.info("[BankHub SBI Form Assistant] PDF Conversion Success", successDiagnostics, { width: canvas.width, height: canvas.height });
-      console.info("[BankHub SBI Form Assistant] PDF download success", { pages: 1, width: canvas.width, height: canvas.height });
+      console.info("[BankHub Form Assistant] PDF Conversion Success", successDiagnostics, { form: selectedForm.id, width: canvas.width, height: canvas.height });
+      console.info("[BankHub Form Assistant] PDF download success", { form: selectedForm.id, pages: 1, width: canvas.width, height: canvas.height });
     } catch (error) {
       const errorDetails = getErrorDetails(error);
       const failureDiagnostics = [
@@ -729,8 +1096,8 @@ function SimpleSbiFormAssistant() {
         `Actual Error Message = ${errorDetails}`,
       ];
       setPdfDiagnostics(failureDiagnostics);
-      console.error("[BankHub SBI Form Assistant] PDF Conversion Failure", failureDiagnostics, error);
-      console.error("[BankHub SBI Form Assistant] PDF download failed", error);
+      console.error("[BankHub Form Assistant] PDF Conversion Failure", failureDiagnostics, error);
+      console.error("[BankHub Form Assistant] PDF download failed", error);
       setDocumentError(`PDF generation failed: ${errorDetails}`);
     } finally {
       container.remove();
@@ -739,10 +1106,11 @@ function SimpleSbiFormAssistant() {
   }
 
   function resetFlow() {
+    setSelectedFormId("sbi");
     setBankSelected(false);
     setTemplateReady(false);
     setTemplateError("");
-    setAnswers({ submission_date: todayDate() });
+    setAnswers(initialAnswers("sbi"));
     setCurrentIndex(0);
     setInput("");
     setValidationError("");
@@ -753,7 +1121,8 @@ function SimpleSbiFormAssistant() {
     setPreviewError("");
     setPreviewZoom(0.58);
     setPreviewFitMode("page");
-    setChat([{ id: "welcome", role: "assistant", text: "Select SBI to start the Internet Banking Registration Form." }]);
+    setPdfDiagnostics([]);
+    setChat([{ id: "welcome", role: "assistant", text: FORM_CONFIGS.sbi.initialChatText }]);
   }
 
   return (
@@ -817,9 +1186,9 @@ function SimpleSbiFormAssistant() {
           <div className="flex flex-col gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-600">BankHub Form Assistant</p>
-              <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">SBI Internet Banking Registration</h1>
+              <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">{selectedForm.pageTitle}</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-                Answer a few questions to automatically fill your SBI form.
+                {selectedForm.pageDescription}
               </p>
             </div>
             <div>
@@ -838,14 +1207,25 @@ function SimpleSbiFormAssistant() {
           <section className="grid gap-4 sm:grid-cols-2">
             <button
               type="button"
-              onClick={startSbi}
+              onClick={() => startForm("sbi")}
               className="rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md"
             >
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-700">
                 <Landmark className="h-6 w-6" />
               </div>
-              <h2 className="mt-4 text-xl font-black text-slate-950">SBI</h2>
-              <p className="mt-1 text-sm text-slate-600">Internet Banking Registration Form</p>
+              <h2 className="mt-4 text-xl font-black text-slate-950">{FORM_CONFIGS.sbi.cardTitle}</h2>
+              <p className="mt-1 text-sm text-slate-600">{FORM_CONFIGS.sbi.cardSubtitle}</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => startForm("icici")}
+              className="rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-700">
+                <Landmark className="h-6 w-6" />
+              </div>
+              <h2 className="mt-4 text-xl font-black text-slate-950">{FORM_CONFIGS.icici.cardTitle}</h2>
+              <p className="mt-1 text-sm text-slate-600">{FORM_CONFIGS.icici.cardSubtitle}</p>
             </button>
           </section>
         ) : (
@@ -861,7 +1241,7 @@ function SimpleSbiFormAssistant() {
                   </div>
                 </div>
 
-                {templateError ? <InlineNotice tone="error" text="The SBI form could not be loaded. Please try again." /> : null}
+                {templateError ? <InlineNotice tone="error" text={selectedForm.templateErrorText} /> : null}
                 {validationError ? <InlineNotice tone="error" text={validationError} /> : null}
 
                 <div className="max-h-[520px] space-y-3 overflow-y-auto pr-1">
@@ -883,8 +1263,8 @@ function SimpleSbiFormAssistant() {
                   activeField.kind === "image" ? (
                     <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-sky-300 bg-sky-50 px-4 py-4 text-sm font-bold text-sky-800 transition hover:bg-sky-100">
                       <Upload className="h-5 w-5" />
-                      Upload Signature
-                      <input type="file" accept="image/*" className="hidden" onChange={handleSignatureUpload} />
+                      {activeField.uploadLabel || `Upload ${activeField.label}`}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                     </label>
                   ) : activeField.kind === "choice" ? (
                     <div className="grid grid-cols-2 gap-2">
@@ -942,7 +1322,7 @@ function SimpleSbiFormAssistant() {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h2 className="text-base font-black text-slate-950">Form Preview</h2>
-                    <p className="mt-1 text-sm text-slate-500">Review the filled SBI form before downloading.</p>
+                    <p className="mt-1 text-sm text-slate-500">{selectedForm.previewDescription}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button type="button" onClick={() => setPreviewZoom((zoom) => Math.max(0.5, Number((zoom - 0.1).toFixed(2))))} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">Zoom Out</button>
@@ -1033,10 +1413,22 @@ function applyFixedDocumentLayout(root: HTMLElement) {
     wrapper.style.background = "transparent";
   });
 
-  const pages = root.querySelectorAll<HTMLElement>(".docx-wrapper section, .docx");
+  let pages = Array.from(root.querySelectorAll<HTMLElement>(".docx-wrapper section, .docx"));
+  if (!pages.length && root.childNodes.length) {
+    const page = document.createElement("div");
+    const content = document.createElement("div");
+    page.className = "bankhub-fixed-page";
+    content.setAttribute("data-bankhub-direct-docx-content", "true");
+    while (root.firstChild) {
+      content.appendChild(root.firstChild);
+    }
+    page.appendChild(content);
+    root.appendChild(page);
+    pages = [page];
+  }
   pages.forEach((page) => {
     page.classList.add("bankhub-fixed-page");
-    page.setAttribute("data-bankhub-pdf-page", "sbi-form-page");
+    page.setAttribute("data-bankhub-pdf-page", "form-page");
     page.style.width = `${DOCUMENT_PAGE_WIDTH}px`;
     page.style.minWidth = `${DOCUMENT_PAGE_WIDTH}px`;
     page.style.maxWidth = `${DOCUMENT_PAGE_WIDTH}px`;
@@ -1048,10 +1440,31 @@ function applyFixedDocumentLayout(root: HTMLElement) {
     page.style.margin = "0 auto";
     page.style.padding = "0";
     page.style.background = "#ffffff";
+    fitDirectDocxContent(page);
+  });
+}
+
+function fitDirectDocxContent(page: HTMLElement) {
+  const content = page.querySelector<HTMLElement>('[data-bankhub-direct-docx-content="true"]');
+  if (!content) return;
+  content.style.transform = "none";
+  content.style.transformOrigin = "top left";
+  content.style.width = `${DOCUMENT_PAGE_WIDTH}px`;
+  content.style.minWidth = `${DOCUMENT_PAGE_WIDTH}px`;
+
+  window.requestAnimationFrame(() => {
+    const scale = Math.min(
+      1,
+      DOCUMENT_PAGE_WIDTH / Math.max(content.scrollWidth, 1),
+      DOCUMENT_PAGE_HEIGHT / Math.max(content.scrollHeight, 1),
+    );
+    content.style.width = `${DOCUMENT_PAGE_WIDTH / scale}px`;
+    content.style.transform = `scale(${scale})`;
   });
 }
 
 const PDF_TARGET_SELECTORS = [
+  '[data-bankhub-pdf-page="form-page"]',
   '[data-bankhub-pdf-page="sbi-form-page"]',
   ".bankhub-fixed-page",
   ".docx-wrapper section",
@@ -1125,7 +1538,7 @@ function applyPdfSafeStyles(sourceRoot: HTMLElement, targetRoot: HTMLElement) {
       if (!value) continue;
 
       let safeValue = value;
-      if (value.includes("oklch(")) {
+      if (hasUnsupportedCssColorFunction(value)) {
         safeValue = convertCssColorFunctions(value, property);
       }
 
@@ -1133,8 +1546,8 @@ function applyPdfSafeStyles(sourceRoot: HTMLElement, targetRoot: HTMLElement) {
     }
 
     targetNode.style.setProperty("color-scheme", "light");
-    targetNode.style.setProperty("background-color", computed.backgroundColor || "#ffffff");
-    targetNode.style.setProperty("border-color", computed.borderColor || "#d1d5db");
+    targetNode.style.setProperty("background-color", safeCssColorValue(computed.backgroundColor, "background-color", "#ffffff"));
+    targetNode.style.setProperty("border-color", safeCssColorValue(computed.borderColor, "border-color", "#d1d5db"));
   }
 }
 
@@ -1143,30 +1556,56 @@ function convertCssColorFunctions(value: string, property: string) {
     return "none";
   }
 
-  return value.replace(/oklch\([^()]+\)/g, (match) => normalizeCssColor(match));
+  const fallback = fallbackCssColor(property);
+  const converted = value.replace(/(?:oklch|color-mix)\([^()]+\)/g, (match) => normalizeCssColor(match, fallback));
+  return hasUnsupportedCssColorFunction(converted) ? fallback : converted;
 }
 
-function normalizeCssColor(colorValue: string) {
+function hasUnsupportedCssColorFunction(value: string) {
+  return /(?:oklch|color-mix)\(/.test(value);
+}
+
+function safeCssColorValue(value: string, property: string, fallback: string) {
+  if (!value) return fallback;
+  if (hasUnsupportedCssColorFunction(value)) {
+    return convertCssColorFunctions(value, property);
+  }
+  return value;
+}
+
+function fallbackCssColor(property: string) {
+  const normalizedProperty = property.toLowerCase();
+  if (normalizedProperty.includes("shadow") || normalizedProperty === "background-image" || normalizedProperty === "mask-image") {
+    return "none";
+  }
+  if (normalizedProperty.includes("background")) return "transparent";
+  if (normalizedProperty.includes("border") || normalizedProperty.includes("outline") || normalizedProperty.includes("rule")) {
+    return "#d1d5db";
+  }
+  return "#000000";
+}
+
+function normalizeCssColor(colorValue: string, fallback = "#000000") {
   const canvas = document.createElement("canvas");
   canvas.width = 1;
   canvas.height = 1;
   const context = canvas.getContext("2d");
-  if (!context) return "#000000";
+  if (!context) return fallback;
 
   try {
-    context.fillStyle = "#000000";
+    context.fillStyle = fallback;
     context.fillStyle = colorValue.trim();
     const normalized = context.fillStyle;
-    return typeof normalized === "string" && normalized ? normalized : "#000000";
+    return typeof normalized === "string" && normalized && !hasUnsupportedCssColorFunction(normalized) ? normalized : fallback;
   } catch {
-    return "#000000";
+    return fallback;
   }
 }
 
 function logUnsupportedColorNodes(root: HTMLElement) {
   const matches = collectUnsupportedColorNodes(root);
   if (matches.length) {
-    console.info("[BankHub SBI Form Assistant] OKLCH computed style matches", matches);
+    console.info("[BankHub Form Assistant] OKLCH computed style matches", matches);
   }
 }
 
@@ -1180,7 +1619,7 @@ function collectUnsupportedColorNodes(root: HTMLElement) {
       const property = computed.item(styleIndex);
       if (!property) continue;
       const value = computed.getPropertyValue(property);
-      if (value && value.includes("oklch(")) {
+      if (value && hasUnsupportedCssColorFunction(value)) {
         offenders.push({ property, value });
       }
     }
@@ -1210,7 +1649,7 @@ function scanDocumentForUnsupportedColors(doc: Document) {
     const computed = getComputedStyle(node);
     const offenders = propertiesToCheck.flatMap((property) => {
       const value = computed[property];
-      if (typeof value === "string" && value.includes("oklch")) {
+      if (typeof value === "string" && hasUnsupportedCssColorFunction(value)) {
         return [{ property, value }];
       }
       return [];
@@ -1256,7 +1695,7 @@ function forcePdfSafeDocument(clonedDocument: Document, clonedTarget: HTMLElemen
       if (!value) continue;
 
       let safeValue = value;
-      if (value.includes("oklch(")) {
+      if (hasUnsupportedCssColorFunction(value)) {
         safeValue = convertCssColorFunctions(value, property);
       }
       if (property === "background-image" || property === "mask-image" || property === "filter" || property === "backdrop-filter") {
@@ -1266,13 +1705,13 @@ function forcePdfSafeDocument(clonedDocument: Document, clonedTarget: HTMLElemen
     }
 
     if (node !== clonedTarget) {
-      node.style.setProperty("background-color", computed.backgroundColor || "transparent", "important");
+      node.style.setProperty("background-color", safeCssColorValue(computed.backgroundColor, "background-color", "transparent"), "important");
     } else {
       node.style.setProperty("background-color", "#ffffff", "important");
     }
-    node.style.setProperty("color", computed.color && !computed.color.includes("oklch(") ? computed.color : "#000000", "important");
-    node.style.setProperty("border-color", computed.borderColor && !computed.borderColor.includes("oklch(") ? computed.borderColor : "#d1d5db", "important");
-    node.style.setProperty("outline-color", computed.outlineColor && !computed.outlineColor.includes("oklch(") ? computed.outlineColor : "#d1d5db", "important");
+    node.style.setProperty("color", safeCssColorValue(computed.color, "color", "#000000"), "important");
+    node.style.setProperty("border-color", safeCssColorValue(computed.borderColor, "border-color", "#d1d5db"), "important");
+    node.style.setProperty("outline-color", safeCssColorValue(computed.outlineColor, "outline-color", "#d1d5db"), "important");
   });
 }
 
@@ -1289,10 +1728,10 @@ function enforcePdfSafeOverrides(root: HTMLElement) {
     node.style.setProperty("backdrop-filter", "none", "important");
     node.style.setProperty("outline-color", "#d1d5db", "important");
     node.style.setProperty("border-color", "#d1d5db", "important");
-    if (!node.style.backgroundColor || node.style.backgroundColor.includes("oklch")) {
+    if (!node.style.backgroundColor || hasUnsupportedCssColorFunction(node.style.backgroundColor)) {
       node.style.setProperty("background-color", index === 0 ? "#ffffff" : "transparent", "important");
     }
-    if (!node.style.color || node.style.color.includes("oklch")) {
+    if (!node.style.color || hasUnsupportedCssColorFunction(node.style.color)) {
       node.style.setProperty("color", "#000000", "important");
     }
   });
@@ -1312,7 +1751,7 @@ function getErrorDetails(error: unknown) {
   }
 }
 
-function validateAnswer(key: string, value: string) {
+function validateSbiAnswer(key: string, value: string) {
   if (!value) return "This answer is required.";
   if (key === "branch_name" && value.length < 2) return "Please enter a valid SBI branch name.";
   if (key === "customer_name_boxes" && !/^[A-Za-z ]{2,}$/.test(value)) return "Customer name must contain alphabets and spaces only.";
@@ -1323,7 +1762,19 @@ function validateAnswer(key: string, value: string) {
   return "";
 }
 
-function normalizeAnswer(field: AssistantField, value: string, answers: DocxAnswers): DocxAnswers {
+function validateIciciAnswer(key: string, value: string) {
+  if (!value) return "This answer is required.";
+  if (key === "branch_name" && value.length < 2) return "Please enter a valid ICICI branch name.";
+  if (key === "request_date" && !parseDate(value)) return "Please enter the request date in DD/MM/YYYY format.";
+  if (key === "primary_holder_name" && !/^[A-Za-z .'-]{2,}$/.test(value)) return "Primary holder name must contain alphabets and spaces only.";
+  if (key === "account_number_boxes" && !/^\d+$/.test(value)) return "Account number must contain digits only.";
+  if (key === "primary_mobile_number_boxes" && !/^\d{10}$/.test(value)) return "Mobile number must be exactly 10 digits.";
+  if (key === "primary_pan_boxes" && !/^[A-Z]{5}\d{4}[A-Z]$/.test(value.toUpperCase())) return "PAN number must be in ABCDE1234F format.";
+  if (key === "pin_code_boxes" && !/^\d{6}$/.test(value)) return "PIN Code must be exactly 6 digits.";
+  return "";
+}
+
+function normalizeSbiAnswer(field: AssistantField, value: string, answers: DocxAnswers): DocxAnswers {
   const key = field.key;
   if (key === "date_of_birth") {
     const parsed = parseDob(value);
@@ -1342,6 +1793,12 @@ function normalizeAnswer(field: AssistantField, value: string, answers: DocxAnsw
   return { ...answers, [key]: value };
 }
 
+function normalizeIciciAnswer(field: AssistantField, value: string, answers: DocxAnswers): DocxAnswers {
+  const key = field.key;
+  if (key === "primary_pan_boxes") return { ...answers, [key]: value.toUpperCase() };
+  return { ...answers, [key]: value };
+}
+
 function clearAccountRowAnswers(answers: DocxAnswers, row: number): DocxAnswers {
   if (!row) return answers;
   const nextAnswers = { ...answers };
@@ -1352,10 +1809,10 @@ function clearAccountRowAnswers(answers: DocxAnswers, row: number): DocxAnswers 
   return nextAnswers;
 }
 
-function findNextQuestionIndex(answers: DocxAnswers, startIndex: number) {
+function findNextSbiQuestionIndex(answers: DocxAnswers, startIndex: number) {
   let index = startIndex;
-  while (index < QUESTIONS.length) {
-    const field = QUESTIONS[index];
+  while (index < SBI_QUESTIONS.length) {
+    const field = SBI_QUESTIONS[index];
     if (!field.accountRow || field.key.startsWith("account_number_")) return index;
     if (answers[`account_number_${field.accountRow}_boxes`]) return index;
     index += 1;
@@ -1363,7 +1820,24 @@ function findNextQuestionIndex(answers: DocxAnswers, startIndex: number) {
   return index;
 }
 
+function findNextLinearQuestionIndex(_answers: DocxAnswers, startIndex: number) {
+  return startIndex;
+}
+
 function parseDob(value: string) {
+  const match = value.trim().replace(/[.-]/g, "/").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) return null;
+  const dayNumber = Number(match[1]);
+  const monthNumber = Number(match[2]);
+  if (dayNumber < 1 || dayNumber > 31 || monthNumber < 1 || monthNumber > 12) return null;
+  return {
+    day: match[1].padStart(2, "0"),
+    month: match[2].padStart(2, "0"),
+    year: match[3],
+  };
+}
+
+function parseDate(value: string) {
   const match = value.trim().replace(/[.-]/g, "/").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (!match) return null;
   const dayNumber = Number(match[1]);
@@ -1384,16 +1858,35 @@ function todayDate() {
   return `${day}/${month}/${year}`;
 }
 
-function getMissingRequiredKeys(answers: DocxAnswers) {
-  return REQUIRED_KEYS.filter((key) => !answers[key]);
+function initialAnswers(formId: FormId): DocxAnswers {
+  return formId === "icici" ? { request_date: todayDate() } : { submission_date: todayDate() };
 }
 
-function getRenderMissingKeys(answers: DocxAnswers) {
-  return RENDER_REQUIRED_KEYS.filter((key) => !answers[key]);
+function shouldShowSbiPreview(answers: DocxAnswers) {
+  return Boolean(
+    answers.branch_name
+      && answers.customer_name_boxes
+      && answers.mobile_number_boxes
+      && answers.email_id
+      && answers.dob
+      && answers.account_number_1_boxes,
+  );
 }
 
-function logRenderValidation(answers: DocxAnswers, missing: readonly string[]) {
-  console.info("[BankHub SBI Form Assistant] Render validation", {
+function shouldShowIciciPreview(answers: DocxAnswers) {
+  return Boolean(answers.branch_name || answers.primary_holder_name || answers.account_number_boxes || answers.primary_mobile_number_boxes);
+}
+
+function getMissingRequiredKeys(config: FormConfig, answers: DocxAnswers) {
+  return config.requiredKeys.filter((key) => !answers[key]);
+}
+
+function getRenderMissingKeys(config: FormConfig, answers: DocxAnswers) {
+  return config.renderRequiredKeys.filter((key) => !answers[key]);
+}
+
+function logSbiRenderValidation(answers: DocxAnswers, missing: readonly string[]) {
+  console.info("[BankHub Form Assistant] SBI render validation", {
     email_id: textAnswer(answers.email_id) || "MISSING",
     submission_date: textAnswer(answers.submission_date) || "MISSING",
     customer_signature: answers.customer_signature ? "uploaded" : "MISSING",
@@ -1401,25 +1894,62 @@ function logRenderValidation(answers: DocxAnswers, missing: readonly string[]) {
   });
 }
 
-function correctionQuestionIndex(message: string) {
+function logIciciRenderValidation(answers: DocxAnswers, missing: readonly string[]) {
+  console.info("[BankHub Form Assistant] ICICI render validation", {
+    request_date: textAnswer(answers.request_date) || "MISSING",
+    primary_holder_photo: answers.primary_holder_photo ? "uploaded" : "MISSING",
+    primary_signature: answers.primary_signature ? "uploaded" : "MISSING",
+    "Render Status": missing.length ? "FAILED" : "SUCCESS",
+  });
+}
+
+function sbiCorrectionQuestionIndex(message: string) {
   const accountMatch = message.match(/account(?:\s+number)?\s+([1-7])/);
   if (accountMatch) {
     const key = `account_number_${accountMatch[1]}_boxes`;
-    return QUESTIONS.findIndex((question) => question.key === key);
+    return SBI_QUESTIONS.findIndex((question) => question.key === key);
   }
   if (message.includes("branch")) return 0;
   if (message.includes("name")) return 1;
   if (message.includes("mobile") || message.includes("phone")) return 2;
   if (message.includes("email")) return 3;
   if (message.includes("dob") || message.includes("birth")) return 4;
-  if (message.includes("signature")) return QUESTIONS.findIndex((question) => question.key === "customer_signature");
-  if (message.includes("single") || message.includes("joint")) return QUESTIONS.findIndex((question) => question.key === "account_1_single_joint");
-  if (message.includes("transaction right")) return QUESTIONS.findIndex((question) => question.key === "account_1_transaction_rights");
-  if (message.includes("limited")) return QUESTIONS.findIndex((question) => question.key === "account_1_limited_transaction_rights");
+  if (message.includes("signature")) return SBI_QUESTIONS.findIndex((question) => question.key === "customer_signature");
+  if (message.includes("single") || message.includes("joint")) return SBI_QUESTIONS.findIndex((question) => question.key === "account_1_single_joint");
+  if (message.includes("transaction right")) return SBI_QUESTIONS.findIndex((question) => question.key === "account_1_transaction_rights");
+  if (message.includes("limited")) return SBI_QUESTIONS.findIndex((question) => question.key === "account_1_limited_transaction_rights");
   return -1;
 }
 
-function bankingAssistantResponse(message: string) {
+function iciciCorrectionQuestionIndex(message: string) {
+  const entries: Array<[string[], string]> = [
+    [["branch"], "branch_name"],
+    [["date"], "request_date"],
+    [["name", "holder"], "primary_holder_name"],
+    [["account"], "account_number_boxes"],
+    [["mobile", "phone"], "primary_mobile_number_boxes"],
+    [["pan"], "primary_pan_boxes"],
+    [["gender"], "primary_gender"],
+    [["occupation"], "primary_occupation"],
+    [["marital"], "primary_marital_status"],
+    [["category"], "primary_category"],
+    [["nationality"], "primary_nationality"],
+    [["income"], "primary_gross_annual_income"],
+    [["house", "building"], "house_building_name"],
+    [["street"], "street_name"],
+    [["locality"], "locality"],
+    [["city"], "city"],
+    [["state"], "state"],
+    [["country"], "country"],
+    [["pin"], "pin_code_boxes"],
+    [["photo"], "primary_holder_photo"],
+    [["signature"], "primary_signature"],
+  ];
+  const match = entries.find(([terms]) => terms.some((term) => message.includes(term)));
+  return match ? ICICI_QUESTIONS.findIndex((question) => question.key === match[1]) : -1;
+}
+
+function sbiAssistantResponse(message: string) {
   if (message.includes("submit") || message.includes("submission")) {
     return "Submit the generated SBI Internet Banking Registration form at your home branch or follow the branch's official instruction. Carry original ID proof and account proof for verification.";
   }
@@ -1430,6 +1960,19 @@ function bankingAssistantResponse(message: string) {
     return "Use Generate Document first, then Download DOCX or Download PDF. If you changed any answer, regenerate before downloading.";
   }
   return "I can help with SBI form doubts, submission guidance, required documents, or corrections. For example, type 'change mobile number' or 'update account number 2'.";
+}
+
+function iciciAssistantResponse(message: string) {
+  if (message.includes("submit") || message.includes("submission")) {
+    return "Submit the generated ICICI Customer Details Updation Form at your ICICI branch with the required supporting documents.";
+  }
+  if (message.includes("document") || message.includes("required") || message.includes("attach")) {
+    return "Carry the filled form with identity proof, PAN copy if applicable, address proof for communication address updates, photo, and signature as requested by the branch.";
+  }
+  if (message.includes("download") || message.includes("pdf") || message.includes("docx")) {
+    return "Use Generate Form first, then Download DOCX or Download PDF. If you changed any answer, regenerate before downloading.";
+  }
+  return "I can help with ICICI form doubts, submission guidance, required documents, or corrections. For example, type 'change PAN number' or 'update mobile number'.";
 }
 
 function textAnswer(value: DocxAnswers[string]) {

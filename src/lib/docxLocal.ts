@@ -18,6 +18,7 @@ export type DocxAnswers = Record<string, string | DocxImageValue | undefined>;
 export type BuildFilledDocxOptions = {
   blankUnanswered?: boolean;
   requireRenderedBoxKeys?: string[];
+  formType?: "sbi-internet-banking" | "icici-customer-details";
 };
 
 type DocxImagePart = {
@@ -404,10 +405,14 @@ function escapeRegex(value: string) {
 }
 
 function normalizeSplitPlaceholders(xml: string) {
-  return xml.replace(/(\{\{[\s\S]*?\}\}|\[\[[\s\S]*?\]\])/g, (match) => {
+  return repairMalformedWordXml(xml).replace(/(\{\{[\s\S]*?\}\}|\[\[[\s\S]*?\]\])/g, (match) => {
     const normalized = xmlText(match).replace(/\s+/g, "");
     return /^(\{\{[a-zA-Z0-9_]+\}\}|\[\[[a-zA-Z0-9_]+\]\])$/.test(normalized) ? normalized : match;
   });
+}
+
+function repairMalformedWordXml(xml: string) {
+  return xml.replace(/<w:vAlign([^>]*)\/<w:tcMar>/g, "<w:vAlign$1/><w:tcMar>");
 }
 
 function placeholderPattern(key: string) {
@@ -458,6 +463,7 @@ function replaceXmlPlaceholders(xml: string, answers: DocxAnswers, imageParts: D
       continue;
     }
     if (key.endsWith("_boxes")) {
+      if (!containsPlaceholder(output, key)) continue;
       if (rawValue && typeof rawValue === "string") {
         output = fillExistingBoxCells(output, key, rawValue);
         if (options.requireRenderedBoxKeys?.includes(key) && containsPlaceholder(output, key)) {
@@ -482,7 +488,10 @@ function replaceXmlPlaceholders(xml: string, answers: DocxAnswers, imageParts: D
     output = output.replace(/\[\[[\s\S]*?\]\]/g, "");
   }
   console.info("[BankHub Form Assistant] Replaced placeholders", replaced);
-  return lockSinglePageWordLayout(populateSbiInlineFields(populateSbiInternetBankingStructure(output, answers), answers, imageParts));
+  const populated = options.formType === "icici-customer-details"
+    ? populateIciciCustomerDetailsStructure(output, answers, imageParts)
+    : populateSbiInlineFields(populateSbiInternetBankingStructure(output, answers), answers, imageParts);
+  return lockSinglePageWordLayout(populated);
 }
 
 function lockSinglePageWordLayout(xml: string) {
@@ -729,6 +738,141 @@ function dobCellText(value: string) {
 
 function limitedDigitBoxChars(value: string, limit: number) {
   return digitBoxChars(value).slice(0, limit);
+}
+
+function populateIciciCustomerDetailsStructure(xml: string, answers: DocxAnswers, imageParts: DocxImagePart[]) {
+  let output = populateIciciParagraphFields(xml, answers);
+  output = populateIciciTables(output, answers);
+  output = replaceNamedDrawing(output, "primary_holder_photo", imageParts.find((part) => part.key === "primary_holder_photo"));
+  output = replaceNamedDrawing(output, "primary_signature", imageParts.find((part) => part.key === "primary_signature"));
+  return output;
+}
+
+function populateIciciParagraphFields(xml: string, answers: DocxAnswers) {
+  const branchName = textValue(answers.branch_name);
+  const requestDate = textValue(answers.request_date);
+  const primaryName = textValue(answers.primary_holder_name);
+  const accountNumber = textValue(answers.account_number_boxes);
+
+  return xml.replace(/<w:p(?:\s|>)[\s\S]*?<\/w:p>/g, (paragraph) => {
+    const text = xmlText(paragraph);
+    if (/Branch/i.test(text) && /Date\s*:/i.test(text) && /Dear Sir\/Madam/i.test(text)) {
+      return replaceParagraphText(paragraph, `${branchName} Branch Date : ${requestDate} Dear Sir/Madam,`);
+    }
+    if (/hereby authorise/i.test(text) && /Savings Account/i.test(text)) {
+      return replaceTextRuns(paragraph, [
+        ["qwertyuiop", primaryName],
+        ["1234567890", accountNumber],
+      ]);
+    }
+    if (/^Primary Holder Name\s*:/i.test(text)) {
+      return replaceParagraphText(paragraph, `Primary Holder Name: ${primaryName}`);
+    }
+    if (/^Branch\s*:/i.test(text)) {
+      return replaceParagraphText(paragraph, `Branch: ${branchName}`);
+    }
+    if (/^Date\s*:/i.test(text)) {
+      return replaceParagraphText(paragraph, `Date: ${requestDate}`);
+    }
+    return paragraph;
+  });
+}
+
+function populateIciciTables(xml: string, answers: DocxAnswers) {
+  let tableIndex = -1;
+  return xml.replace(/<w:tbl[\s\S]*?<\/w:tbl>/g, (table) => {
+    tableIndex += 1;
+    if (tableIndex === 0) {
+      return fillIciciAccountBoxes(table, textValue(answers.account_number_boxes));
+    }
+    if (tableIndex === 1) {
+      return fillIciciDetailsTable(table, answers);
+    }
+    if (tableIndex === 2) {
+      return fillIciciAddressTable(table, answers);
+    }
+    return table;
+  });
+}
+
+function fillIciciAccountBoxes(tableXml: string, accountNumber: string) {
+  const row = tableXml.match(/<w:tr[\s\S]*?<\/w:tr>/)?.[0];
+  if (!row) return tableXml;
+  const chars = digitBoxChars(accountNumber).slice(0, 12);
+  return tableXml.replace(row, fillRowCells(row, 0, chars, true));
+}
+
+function fillIciciDetailsTable(tableXml: string, answers: DocxAnswers) {
+  const values: Array<[RegExp, string]> = [
+    [/Mobile Number/i, textValue(answers.primary_mobile_number_boxes)],
+    [/PAN/i, textValue(answers.primary_pan_boxes).toUpperCase()],
+    [/Gender/i, textValue(answers.primary_gender)],
+    [/Occupation/i, textValue(answers.primary_occupation)],
+    [/Marital status/i, textValue(answers.primary_marital_status)],
+    [/Category/i, textValue(answers.primary_category)],
+    [/Nationality/i, textValue(answers.primary_nationality)],
+    [/Gross Annual Income/i, textValue(answers.primary_gross_annual_income)],
+  ];
+  return fillLabeledRows(tableXml, values);
+}
+
+function fillIciciAddressTable(tableXml: string, answers: DocxAnswers) {
+  const values: Array<[RegExp, string]> = [
+    [/House No\.?\/Building Name/i, textValue(answers.house_building_name)],
+    [/Street No\/Street Name/i, textValue(answers.street_name)],
+    [/Locality/i, textValue(answers.locality)],
+    [/City/i, textValue(answers.city)],
+    [/State/i, textValue(answers.state)],
+    [/Country/i, textValue(answers.country)],
+    [/PIN Code/i, textValue(answers.pin_code_boxes)],
+  ];
+  return fillLabeledRows(tableXml, values);
+}
+
+function fillLabeledRows(tableXml: string, values: Array<[RegExp, string]>) {
+  return tableXml.replace(/<w:tr[\s\S]*?<\/w:tr>/g, (row) => {
+    const cells = row.match(/<w:tc(?:\s|>)[\s\S]*?<\/w:tc>/g);
+    if (!cells || cells.length < 2) return row;
+    const label = xmlText(cells[0]);
+    const match = values.find(([pattern]) => pattern.test(label));
+    if (!match) return row;
+    return row.replace(cells[1], setCellText(cells[1], match[1]));
+  });
+}
+
+function replaceTextRuns(paragraph: string, replacements: Array<[string, string]>) {
+  return paragraph.replace(/<w:t(\s[^>]*)?>[\s\S]*?<\/w:t>/g, (textRun) => {
+    let text = xmlText(textRun);
+    let changed = false;
+    for (const [from, to] of replacements) {
+      if (!text.includes(from)) continue;
+      text = text.replace(from, to);
+      changed = true;
+    }
+    return changed ? textRun.replace(/<w:t(\s[^>]*)?>[\s\S]*?<\/w:t>/, `<w:t xml:space="preserve">${escapeXml(text)}</w:t>`) : textRun;
+  });
+}
+
+function replaceParagraphText(paragraph: string, value: string) {
+  const open = paragraph.match(/^<w:p(?:\s[^>]*)?>/)?.[0];
+  if (!open || !paragraph.endsWith("</w:p>")) return paragraph;
+  const pPr = paragraph.match(/<w:pPr[\s\S]*?<\/w:pPr>/)?.[0] || "";
+  const firstRun = paragraph.match(/<w:r(?:\s|>)[\s\S]*?<\/w:r>/)?.[0] || "";
+  const rPr = runPropertiesFromRun(firstRun);
+  return `${open}${pPr}<w:r>${rPr}<w:t xml:space="preserve">${escapeXml(value)}</w:t></w:r></w:p>`;
+}
+
+function replaceNamedDrawing(xml: string, drawingName: string, imagePart: DocxImagePart | undefined) {
+  let replaced = false;
+  const output = xml.replace(/<w:r(?:\s|>)[\s\S]*?<\/w:r>/g, (run) => {
+    if (!run.includes(`name="${drawingName}"`)) return run;
+    replaced = true;
+    return imagePart ? signatureDrawingXml(imagePart) : "";
+  });
+  console.info("[BankHub Form Assistant] ICICI image anchor", drawingName, {
+    "Render Status": imagePart ? (replaced ? "SUCCESS" : "FAILED") : "BLANK",
+  });
+  return output;
 }
 
 function textValue(value: DocxAnswers[string]) {
