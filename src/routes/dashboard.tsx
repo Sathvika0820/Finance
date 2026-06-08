@@ -1264,8 +1264,8 @@ function Dashboard() {
                 <FileText className="w-5 h-5 text-sky-600" />
               </div>
               <div className="min-w-0">
-                <h4 className="font-bold text-[14px] text-sky-900">Form Assistant <span className="inline-block px-2 py-0.5 ml-1 bg-sky-500 text-white text-[9px] font-bold uppercase rounded-full tracking-wider align-middle">{t("pro")}</span></h4>
-                <p className="text-[12px] font-medium text-sky-700/80 mt-0.5">Fill the SBI Internet Banking Registration form.</p>
+                <h4 className="font-bold text-[14px] text-sky-900">{t("formAssistantToolName")} <span className="inline-block px-2 py-0.5 ml-1 bg-sky-500 text-white text-[9px] font-bold uppercase rounded-full tracking-wider align-middle">{t("pro")}</span></h4>
+                <p className="text-[12px] font-medium text-sky-700/80 mt-0.5">{t("formAssistantToolDesc")}</p>
               </div>
             </div>
             <Link

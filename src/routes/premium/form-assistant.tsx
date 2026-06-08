@@ -7,6 +7,7 @@ import { jsPDF } from "jspdf";
 import { ArrowLeft, Bot, Download, FileCheck2, FileText, Landmark, Loader2, Send, Upload } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { buildFilledDocx, type DocxAnswers, type DocxImageValue } from "@/lib/docxLocal";
+import { useTranslation } from "@/lib/i18n";
 
 const sbiTemplateUrl = new URL("../../forms/sbi/ib_registration_original.docx", import.meta.url).href;
 const iciciTemplateUrl = new URL("../../forms/icici/customer_details_updation_form.docx", import.meta.url).href;
@@ -596,6 +597,7 @@ function SimpleSbiFormAssistant() {
   const previewViewportRef = useRef<HTMLDivElement | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
   const textInputRef = useRef<HTMLInputElement | null>(null);
+  const { t, lang } = useTranslation();
 
   const selectedForm = FORM_CONFIGS[selectedFormId];
   const activeField = selectedForm.questions[currentIndex];
@@ -603,6 +605,29 @@ function SimpleSbiFormAssistant() {
   const missingFields = useMemo(() => selectedForm.requiredKeys.filter((key) => !answers[key]), [answers, selectedForm]);
   const isComplete = missingFields.length === 0;
   const shouldShowPreview = selectedForm.shouldShowPreview(answers);
+  const formBaseKey = `formAssistant.forms.${selectedForm.id}`;
+  const translateForm = useCallback((suffix: string, fallback: string, values?: Record<string, string | number>) => {
+    const key = `${formBaseKey}.${suffix}`;
+    const value = t(key, values);
+    return value === key ? fallback : value;
+  }, [formBaseKey, t]);
+  const translateGlobal = useCallback((key: string, fallback: string, values?: Record<string, string | number>) => {
+    const value = t(key, values);
+    return value === key ? fallback : value;
+  }, [t]);
+  const fieldText = useCallback((field: AssistantField, suffix: "label" | "question" | "placeholder" | "uploadLabel") => {
+    const key = `${formBaseKey}.fields.${field.key}.${suffix}`;
+    const fallback = suffix === "uploadLabel"
+      ? field.uploadLabel || field.label
+      : String(field[suffix] || "");
+    const value = t(key, field.accountRow ? { row: field.accountRow } : undefined);
+    return value === key ? fallback : value;
+  }, [formBaseKey, t]);
+  const choiceText = useCallback((choice: { label: string; value: string }) => {
+    const key = `formAssistant.choices.${choice.label.toLowerCase()}`;
+    const value = t(key);
+    return value === key ? choice.label : value;
+  }, [t]);
 
   const fitPreviewToPage = useCallback(() => {
     if (previewFitMode !== "page" || !previewRef.current || !previewViewportRef.current) return;
@@ -645,8 +670,8 @@ function SimpleSbiFormAssistant() {
         setTemplateReady(true);
         setStatus("");
         setChat([
-          { id: "intro", role: "assistant", text: selectedForm.introText },
-          { id: "q-0", role: "assistant", text: selectedForm.questions[0].question },
+          { id: "intro", role: "assistant", text: translateForm("introText", selectedForm.introText) },
+          { id: "q-0", role: "assistant", text: fieldText(selectedForm.questions[0], "question") },
         ]);
         console.info("[BankHub Form Assistant] Template available. Fixed mapping active.", {
           form: selectedForm.id,
@@ -663,7 +688,25 @@ function SimpleSbiFormAssistant() {
     return () => {
       cancelled = true;
     };
-  }, [bankSelected, selectedForm]);
+  }, [bankSelected, selectedForm, fieldText, translateForm]);
+
+  useEffect(() => {
+    if (!bankSelected) {
+      setChat([{ id: "welcome", role: "assistant", text: translateForm("initialChatText", selectedForm.initialChatText) }]);
+      return;
+    }
+    if (!templateReady) return;
+    setChat((messages) => messages.map((message) => {
+      if (message.id === "intro") return { ...message, text: translateForm("introText", selectedForm.introText) };
+      if (message.id.startsWith("done-")) return { ...message, text: translateForm("completeText", selectedForm.completeText) };
+      const questionMatch = message.id.match(/^q-(\d+)/);
+      if (questionMatch) {
+        const field = selectedForm.questions[Number(questionMatch[1])];
+        if (field) return { ...message, text: fieldText(field, "question") };
+      }
+      return message;
+    }));
+  }, [bankSelected, fieldText, lang, selectedForm, templateReady, translateForm]);
 
   useEffect(() => {
     if (!templateReady || !shouldShowPreview || !previewRef.current) return;
@@ -691,7 +734,14 @@ function SimpleSbiFormAssistant() {
       .catch((error) => {
         if (cancelled) return;
         console.error("[BankHub Form Assistant] Live preview render failed", error);
-        setPreviewError("Live preview could not be rendered. DOCX/PDF generation may still work.");
+        const message = getErrorDetails(error);
+        if (message.includes("Signature image could not be loaded.")) {
+          setPreviewError(translateGlobal("formAssistant.errors.signatureImageLoad", "Signature image could not be loaded."));
+        } else if (message.includes("Photo image could not be loaded.")) {
+          setPreviewError(translateGlobal("formAssistant.errors.photoImageLoad", "Photo image could not be loaded."));
+        } else {
+          setPreviewError(translateGlobal("formAssistant.errors.previewFailed", "Live preview could not be rendered. DOCX/PDF generation may still work."));
+        }
       })
       .finally(() => {
         if (!cancelled) setIsRenderingPreview(false);
@@ -716,7 +766,9 @@ function SimpleSbiFormAssistant() {
     setPdfDiagnostics([]);
     setPreviewError("");
     setStatus("");
-    setChat([{ id: "welcome", role: "assistant", text: form.initialChatText }]);
+    const initialChatKey = `formAssistant.forms.${form.id}.initialChatText`;
+    const initialChatText = t(initialChatKey);
+    setChat([{ id: "welcome", role: "assistant", text: initialChatText === initialChatKey ? form.initialChatText : initialChatText }]);
     setBankSelected(true);
   }
 
@@ -730,7 +782,7 @@ function SimpleSbiFormAssistant() {
       setStatus("Correction saved. Regenerate the document to include the update.");
       setChat((messages) => [
         ...messages,
-        { id: `updated-${Date.now()}`, role: "assistant", text: "Updated. You can regenerate the document, ask another banking question, or request another correction." },
+        { id: `updated-${Date.now()}`, role: "assistant", text: translateGlobal("formAssistant.status.updatedCorrection", "Updated. You can regenerate the document, ask another banking question, or request another correction.") },
       ]);
       console.info("[BankHub Form Assistant] Correction saved", { form: selectedForm.id, nextAnswers });
       return;
@@ -741,14 +793,14 @@ function SimpleSbiFormAssistant() {
     if (resolvedNextIndex < selectedForm.questions.length) {
       setChat((messages) => [
         ...messages,
-        { id: `q-${resolvedNextIndex}-${Date.now()}`, role: "assistant", text: selectedForm.questions[resolvedNextIndex].question },
+        { id: `q-${resolvedNextIndex}-${Date.now()}`, role: "assistant", text: fieldText(selectedForm.questions[resolvedNextIndex], "question") },
       ]);
       return;
     }
-    setStatus("Answers captured. Review the summary and generate the document.");
+    setStatus(translateGlobal("formAssistant.status.answersCaptured", "Answers captured. Review the summary and generate the document."));
     setChat((messages) => [
       ...messages,
-      { id: `done-${Date.now()}`, role: "assistant", text: selectedForm.completeText },
+      { id: `done-${Date.now()}`, role: "assistant", text: translateForm("completeText", selectedForm.completeText) },
     ]);
     console.info("[BankHub Form Assistant] All answers captured", { form: selectedForm.id, nextAnswers });
   }
@@ -764,7 +816,7 @@ function SimpleSbiFormAssistant() {
     const resolvedValue = rawValue || activeField.defaultValue?.() || "";
     const validation = selectedForm.validateAnswer(activeField.key, resolvedValue);
     if (validation) {
-      setValidationError(validation);
+      setValidationError(localizeValidationMessage(validation, translateGlobal));
       return;
     }
 
@@ -790,12 +842,12 @@ function SimpleSbiFormAssistant() {
       setCurrentIndex(correctionIndex);
       setChat((messages) => [
         ...messages,
-        { id: `correction-${Date.now()}`, role: "assistant", text: selectedForm.questions[correctionIndex].question },
+        { id: `correction-${Date.now()}`, role: "assistant", text: fieldText(selectedForm.questions[correctionIndex], "question") },
       ]);
       return;
     }
 
-    const response = selectedForm.assistantResponse(lower);
+    const response = localizedFormAssistantResponse(selectedForm.id, lower, translateGlobal) || selectedForm.assistantResponse(lower);
     setChat((messages) => [...messages, { id: `banking-help-${Date.now()}`, role: "assistant", text: response }]);
   }
 
@@ -808,36 +860,56 @@ function SimpleSbiFormAssistant() {
     askNext(nextAnswers, currentIndex + 1);
   }
 
-  function handleImageUpload(event: ChangeEvent<HTMLInputElement>) {
+  async function handleImageUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file || !activeField || activeField.kind !== "image") return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const image: DocxImageValue = { name: file.name, dataUrl: String(reader.result || "") };
+
+    const signatureFile = activeField.key.toLowerCase().includes("signature") ? file : null;
+    const photoFile = activeField.key.toLowerCase().includes("photo") ? file : null;
+    if (signatureFile) console.log("Uploaded signature:", signatureFile);
+    if (photoFile) console.log("Uploaded photo:", photoFile);
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+      const dataUrl = await fileToDataUrl(file);
+      const image: DocxImageValue = { name: file.name, dataUrl, mimeType: file.type, bytes };
       const nextAnswers = { ...answers, [activeField.key]: image };
       setAnswers(nextAnswers);
       setValidationError("");
-      setChat((messages) => [...messages, { id: `img-${Date.now()}`, role: "user", text: `${activeField.label} uploaded.` }]);
-      console.info("[BankHub Form Assistant] Image stored", { form: selectedForm.id, field: activeField.key, file: file.name, size: file.size });
+      setChat((messages) => [...messages, { id: `img-${Date.now()}`, role: "user", text: translateGlobal("formAssistant.status.imageUploaded", "{field} uploaded.", { field: fieldText(activeField, "label") }) }]);
+      console.info("[BankHub Form Assistant] Image stored", {
+        form: selectedForm.id,
+        field: activeField.key,
+        file: file.name,
+        size: file.size,
+        arrayBuffer: arrayBuffer.byteLength,
+        uint8Array: bytes.length,
+      });
       askNext(nextAnswers, currentIndex + 1);
-    };
-    reader.readAsDataURL(file);
+    } catch (error) {
+      const message = activeField.key.toLowerCase().includes("signature")
+        ? translateGlobal("formAssistant.errors.signatureImageLoad", "Signature image could not be loaded.")
+        : translateGlobal("formAssistant.errors.photoImageLoad", "Photo image could not be loaded.");
+      console.error("[BankHub Form Assistant] Uploaded image load failed", { form: selectedForm.id, field: activeField.key, file: file.name, error });
+      setValidationError(message);
+    }
   }
 
   function askMissingFieldAgain(key: string) {
     const questionIndex = selectedForm.requiredQuestionIndex[key] ?? selectedForm.questions.findIndex((question) => question.key === key);
     const label = selectedForm.requiredFieldLabels[key] || "This field";
     if (questionIndex < 0) {
-      setValidationError(`${label} is required. Please answer this question before generating the document.`);
+      setValidationError(translateGlobal("formAssistant.errors.requiredBeforeGenerate", "{field} is required. Please answer this question before generating the document.", { field: label }));
       return;
     }
     setGeneratedDocx(null);
     setCurrentIndex(questionIndex);
     setInput("");
-    setValidationError(`${label} is required. Please answer this question before generating the document.`);
+    setValidationError(translateGlobal("formAssistant.errors.requiredBeforeGenerate", "{field} is required. Please answer this question before generating the document.", { field: label }));
     setChat((messages) => [
       ...messages,
-      { id: `missing-${key}-${Date.now()}`, role: "assistant", text: selectedForm.questions[questionIndex].question },
+      { id: `missing-${key}-${Date.now()}`, role: "assistant", text: fieldText(selectedForm.questions[questionIndex], "question") },
     ]);
     console.warn("[BankHub Form Assistant] Required fixed field missing", { form: selectedForm.id, field: key, label });
   }
@@ -861,22 +933,30 @@ function SimpleSbiFormAssistant() {
       if (selectedForm.requiredQuestionIndex[missingKey] !== undefined) {
         askMissingFieldAgain(missingKey);
       } else {
-        setDocumentError(`${selectedForm.requiredFieldLabels[missingKey] || "A required field"} is required before generating the document.`);
+        setDocumentError(translateGlobal("formAssistant.errors.requiredBeforeGenerate", "{field} is required. Please answer this question before generating the document.", { field: selectedForm.requiredFieldLabels[missingKey] || translateGlobal("formAssistant.labels.requiredField", "A required field") }));
       }
       return null;
     }
+    logImageValuesBeforeRender(selectedForm, generationAnswers);
     setIsGeneratingDocx(true);
     setDocumentError("");
-    setStatus("Generating populated DOCX...");
+    setStatus(translateGlobal("formAssistant.status.generatingDocx", "Generating populated DOCX..."));
     try {
       const docx = await buildFilledDocx(selectedForm.templateUrl, generationAnswers, { blankUnanswered: true, formType: selectedForm.docxFormType });
       setGeneratedDocx(docx);
-      setStatus("Document Ready");
+      setStatus(translateGlobal("formAssistant.status.documentReady", "Document Ready"));
       console.info("[BankHub Form Assistant] Generated DOCX", { form: selectedForm.id, size: docx.size });
       return docx;
     } catch (error) {
       console.error("[BankHub Form Assistant] DOCX generation failed", error);
-      setDocumentError(`DOCX generation failed. Please check the local ${selectedForm.bankName} template and try again.`);
+      const message = getErrorDetails(error);
+      if (message.includes("Signature image could not be loaded.")) {
+        setDocumentError(translateGlobal("formAssistant.errors.signatureImageLoad", "Signature image could not be loaded."));
+      } else if (message.includes("Photo image could not be loaded.")) {
+        setDocumentError(translateGlobal("formAssistant.errors.photoImageLoad", "Photo image could not be loaded."));
+      } else {
+        setDocumentError(translateGlobal("formAssistant.errors.docxGenerationFailed", "DOCX generation failed. Please check the local {bank} template and try again.", { bank: selectedForm.bankName }));
+      }
       return null;
     } finally {
       setIsGeneratingDocx(false);
@@ -887,13 +967,13 @@ function SimpleSbiFormAssistant() {
     const docx = generatedDocx || await generateDocument();
     if (!docx) return;
     downloadBlob(docx, selectedForm.generateDocxName);
-    setStatus("DOCX downloaded.");
+    setStatus(translateGlobal("formAssistant.status.docxDownloaded", "DOCX downloaded."));
     console.info("[BankHub Form Assistant] DOCX download success", { form: selectedForm.id, size: docx.size });
   }
 
   async function downloadPdf() {
     if (!isComplete) {
-      setValidationError("Please complete all required questions before downloading PDF.");
+      setValidationError(translateGlobal("formAssistant.errors.completeBeforePdf", "Please complete all required questions before downloading PDF."));
       return;
     }
     const docx = generatedDocx || await generateDocument();
@@ -902,7 +982,7 @@ function SimpleSbiFormAssistant() {
     setIsGeneratingPdf(true);
     setDocumentError("");
     setPdfDiagnostics([]);
-    setStatus("Generating PDF...");
+    setStatus(translateGlobal("formAssistant.status.generatingPdf", "Generating PDF..."));
     const diagnostics = [
       `Template Loaded = ${templateReady ? "YES" : "NO"}`,
       `Form Populated = ${docx ? "YES" : "NO"}`,
@@ -1086,7 +1166,7 @@ function SimpleSbiFormAssistant() {
       downloadBlob(pdfBlob, selectedForm.generatePdfName);
       const successDiagnostics = diagnostics.map((line) => line === "PDF Render Success = NO" ? "PDF Render Success = YES" : line);
       setPdfDiagnostics(successDiagnostics);
-      setStatus("PDF downloaded as a single page.");
+      setStatus(translateGlobal("formAssistant.status.pdfDownloaded", "PDF downloaded as a single page."));
       console.info("[BankHub Form Assistant] PDF Conversion Success", successDiagnostics, { form: selectedForm.id, width: canvas.width, height: canvas.height });
       console.info("[BankHub Form Assistant] PDF download success", { form: selectedForm.id, pages: 1, width: canvas.width, height: canvas.height });
     } catch (error) {
@@ -1098,7 +1178,7 @@ function SimpleSbiFormAssistant() {
       setPdfDiagnostics(failureDiagnostics);
       console.error("[BankHub Form Assistant] PDF Conversion Failure", failureDiagnostics, error);
       console.error("[BankHub Form Assistant] PDF download failed", error);
-      setDocumentError(`PDF generation failed: ${errorDetails}`);
+      setDocumentError(translateGlobal("formAssistant.errors.pdfGenerationFailed", "PDF generation failed: {error}", { error: errorDetails }));
     } finally {
       container.remove();
       setIsGeneratingPdf(false);
@@ -1122,7 +1202,7 @@ function SimpleSbiFormAssistant() {
     setPreviewZoom(0.58);
     setPreviewFitMode("page");
     setPdfDiagnostics([]);
-    setChat([{ id: "welcome", role: "assistant", text: FORM_CONFIGS.sbi.initialChatText }]);
+    setChat([{ id: "welcome", role: "assistant", text: translateGlobal("formAssistant.forms.sbi.initialChatText", FORM_CONFIGS.sbi.initialChatText) }]);
   }
 
   return (
@@ -1171,29 +1251,29 @@ function SimpleSbiFormAssistant() {
             className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-sky-200 hover:text-sky-700"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back
+            {translateGlobal("back", "Back")}
           </Link>
           <button
             type="button"
             onClick={resetFlow}
             className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-sky-200 hover:text-sky-700"
           >
-            Reset
+            {translateGlobal("formAssistant.actions.reset", "Reset")}
           </button>
         </div>
 
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
           <div className="flex flex-col gap-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-600">BankHub Form Assistant</p>
-              <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">{selectedForm.pageTitle}</h1>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-600">{translateGlobal("formAssistant.title", "BankHub Form Assistant")}</p>
+              <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">{translateForm("pageTitle", selectedForm.pageTitle)}</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-                {selectedForm.pageDescription}
+                {translateForm("pageDescription", selectedForm.pageDescription)}
               </p>
             </div>
             <div>
               <div className="flex items-center justify-between text-sm font-semibold text-slate-700">
-                <span>Progress</span>
+                <span>{translateGlobal("formAssistant.labels.progress", "Progress")}</span>
                 <span>{progress}%</span>
               </div>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
@@ -1213,8 +1293,8 @@ function SimpleSbiFormAssistant() {
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-700">
                 <Landmark className="h-6 w-6" />
               </div>
-              <h2 className="mt-4 text-xl font-black text-slate-950">{FORM_CONFIGS.sbi.cardTitle}</h2>
-              <p className="mt-1 text-sm text-slate-600">{FORM_CONFIGS.sbi.cardSubtitle}</p>
+              <h2 className="mt-4 text-xl font-black text-slate-950">{translateGlobal("formAssistant.forms.sbi.cardTitle", FORM_CONFIGS.sbi.cardTitle)}</h2>
+              <p className="mt-1 text-sm text-slate-600">{translateGlobal("formAssistant.forms.sbi.cardSubtitle", FORM_CONFIGS.sbi.cardSubtitle)}</p>
             </button>
             <button
               type="button"
@@ -1224,8 +1304,8 @@ function SimpleSbiFormAssistant() {
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-700">
                 <Landmark className="h-6 w-6" />
               </div>
-              <h2 className="mt-4 text-xl font-black text-slate-950">{FORM_CONFIGS.icici.cardTitle}</h2>
-              <p className="mt-1 text-sm text-slate-600">{FORM_CONFIGS.icici.cardSubtitle}</p>
+              <h2 className="mt-4 text-xl font-black text-slate-950">{translateGlobal("formAssistant.forms.icici.cardTitle", FORM_CONFIGS.icici.cardTitle)}</h2>
+              <p className="mt-1 text-sm text-slate-600">{translateGlobal("formAssistant.forms.icici.cardSubtitle", FORM_CONFIGS.icici.cardSubtitle)}</p>
             </button>
           </section>
         ) : (
@@ -1236,12 +1316,12 @@ function SimpleSbiFormAssistant() {
                     <Bot className="h-5 w-5" />
                   </div>
                   <div>
-                    <h2 className="text-base font-black text-slate-950">AI Assistant</h2>
-                    <p className="text-sm text-slate-500">Answer one question at a time.</p>
+                    <h2 className="text-base font-black text-slate-950">{translateGlobal("formAssistant.aiTitle", "AI Assistant")}</h2>
+                    <p className="text-sm text-slate-500">{translateGlobal("formAssistant.aiSubtitle", "Answer one question at a time.")}</p>
                   </div>
                 </div>
 
-                {templateError ? <InlineNotice tone="error" text={selectedForm.templateErrorText} /> : null}
+                {templateError ? <InlineNotice tone="error" text={translateForm("templateErrorText", selectedForm.templateErrorText)} /> : null}
                 {validationError ? <InlineNotice tone="error" text={validationError} /> : null}
 
                 <div className="max-h-[520px] space-y-3 overflow-y-auto pr-1">
@@ -1251,7 +1331,7 @@ function SimpleSbiFormAssistant() {
                       className={`max-w-[92%] rounded-3xl px-4 py-3 text-sm leading-6 ${message.role === "assistant" ? "bg-slate-100 text-slate-800" : "ml-auto bg-sky-600 text-white"}`}
                     >
                       <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.12em] opacity-60">
-                        {message.role === "assistant" ? "AI" : "You"}
+                        {message.role === "assistant" ? translateGlobal("formAssistant.labels.ai", "AI") : translateGlobal("formAssistant.labels.you", "You")}
                       </span>
                       {message.text}
                     </div>
@@ -1263,7 +1343,7 @@ function SimpleSbiFormAssistant() {
                   activeField.kind === "image" ? (
                     <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-sky-300 bg-sky-50 px-4 py-4 text-sm font-bold text-sky-800 transition hover:bg-sky-100">
                       <Upload className="h-5 w-5" />
-                      {activeField.uploadLabel || `Upload ${activeField.label}`}
+                      {fieldText(activeField, "uploadLabel")}
                       <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                     </label>
                   ) : activeField.kind === "choice" ? (
@@ -1272,10 +1352,10 @@ function SimpleSbiFormAssistant() {
                         <button
                           key={choice.value}
                           type="button"
-                          onClick={() => handleChoice(activeField, choice.value, choice.label)}
+                          onClick={() => handleChoice(activeField, choice.value, choiceText(choice))}
                           className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-bold text-sky-800 transition hover:bg-sky-100"
                         >
-                          {choice.label}
+                          {choiceText(choice)}
                         </button>
                       ))}
                     </div>
@@ -1285,12 +1365,12 @@ function SimpleSbiFormAssistant() {
                         ref={textInputRef}
                         value={input}
                         onChange={(event) => setInput(event.target.value)}
-                        placeholder="Type your answer..."
+                        placeholder={fieldText(activeField, "placeholder") || translateGlobal("formAssistant.placeholders.answer", "Type your answer...")}
                         className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
                       />
                       <button
                         type="submit"
-                        aria-label="Send answer"
+                        aria-label={translateGlobal("formAssistant.actions.sendAnswer", "Send answer")}
                         className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-600 text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <Send className="h-5 w-5" />
@@ -1303,12 +1383,12 @@ function SimpleSbiFormAssistant() {
                       ref={textInputRef}
                       value={input}
                       onChange={(event) => setInput(event.target.value)}
-                      placeholder="Type your answer..."
+                      placeholder={translateGlobal("formAssistant.placeholders.answer", "Type your answer...")}
                       className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
                     />
                     <button
                       type="submit"
-                      aria-label="Send assistant message"
+                      aria-label={translateGlobal("formAssistant.actions.sendAssistantMessage", "Send assistant message")}
                       className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-600 text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <Send className="h-5 w-5" />
@@ -1321,17 +1401,17 @@ function SimpleSbiFormAssistant() {
               <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <h2 className="text-base font-black text-slate-950">Form Preview</h2>
-                    <p className="mt-1 text-sm text-slate-500">{selectedForm.previewDescription}</p>
+                    <h2 className="text-base font-black text-slate-950">{translateGlobal("formAssistant.preview.title", "Form Preview")}</h2>
+                    <p className="mt-1 text-sm text-slate-500">{translateForm("previewDescription", selectedForm.previewDescription)}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <button type="button" onClick={() => setPreviewZoom((zoom) => Math.max(0.5, Number((zoom - 0.1).toFixed(2))))} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">Zoom Out</button>
-                    <button type="button" onClick={() => setPreviewZoom((zoom) => Math.min(1.6, Number((zoom + 0.1).toFixed(2))))} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">Zoom In</button>
-                    <button type="button" onClick={() => { setPreviewFitMode("page"); setPreviewZoom(0.58); }} className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-bold text-sky-800">Fit to Page</button>
+                    <button type="button" onClick={() => setPreviewZoom((zoom) => Math.max(0.5, Number((zoom - 0.1).toFixed(2))))} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">{translateGlobal("formAssistant.preview.zoomOut", "Zoom Out")}</button>
+                    <button type="button" onClick={() => setPreviewZoom((zoom) => Math.min(1.6, Number((zoom + 0.1).toFixed(2))))} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">{translateGlobal("formAssistant.preview.zoomIn", "Zoom In")}</button>
+                    <button type="button" onClick={() => { setPreviewFitMode("page"); setPreviewZoom(0.58); }} className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-bold text-sky-800">{translateGlobal("formAssistant.preview.fitPage", "Fit to Page")}</button>
                   </div>
                 </div>
-                {previewError ? <InlineNotice tone="error" text="Preview could not be shown. You can still generate the document." /> : null}
-                {isRenderingPreview ? <p className="mt-3 text-sm font-semibold text-sky-700">Updating preview...</p> : null}
+                {previewError ? <InlineNotice tone="error" text={previewError} /> : null}
+                {isRenderingPreview ? <p className="mt-3 text-sm font-semibold text-sky-700">{translateGlobal("formAssistant.preview.updating", "Updating preview...")}</p> : null}
                 <div ref={previewViewportRef} className={`mt-4 max-h-[820px] overflow-y-auto overflow-x-hidden rounded-2xl border border-slate-200 bg-slate-100 p-4 ${previewFitMode === "page" ? "flex justify-center" : ""}`} style={{ touchAction: "pan-x pan-y" }}>
                   <div
                     ref={previewRef}
@@ -1361,7 +1441,7 @@ function SimpleSbiFormAssistant() {
                     className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-sky-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {isGeneratingDocx ? <Loader2 className="h-5 w-5 animate-spin" /> : <FileCheck2 className="h-5 w-5" />}
-                    Generate Form
+                    {translateGlobal("formAssistant.actions.generateForm", "Generate Form")}
                   </button>
                 ) : (
                   <div className="flex flex-col gap-2 sm:flex-row">
@@ -1372,7 +1452,7 @@ function SimpleSbiFormAssistant() {
                       className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-800 transition hover:border-sky-200 hover:text-sky-700 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       <Download className="h-4 w-4" />
-                      Download DOCX
+                      {translateGlobal("formAssistant.actions.downloadDocx", "Download DOCX")}
                     </button>
                     <button
                       type="button"
@@ -1381,7 +1461,7 @@ function SimpleSbiFormAssistant() {
                       className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-                      Download PDF
+                      {translateGlobal("formAssistant.actions.downloadPdf", "Download PDF")}
                     </button>
                   </div>
                 )}
@@ -1858,6 +1938,15 @@ function todayDate() {
   return `${day}/${month}/${year}`;
 }
 
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("Image file could not be read."));
+    reader.readAsDataURL(file);
+  });
+}
+
 function initialAnswers(formId: FormId): DocxAnswers {
   return formId === "icici" ? { request_date: todayDate() } : { submission_date: todayDate() };
 }
@@ -1975,8 +2064,66 @@ function iciciAssistantResponse(message: string) {
   return "I can help with ICICI form doubts, submission guidance, required documents, or corrections. For example, type 'change PAN number' or 'update mobile number'.";
 }
 
+function localizedFormAssistantResponse(
+  formId: FormId,
+  message: string,
+  translateText: (key: string, fallback: string, values?: Record<string, string | number>) => string,
+) {
+  const baseKey = `formAssistant.forms.${formId}.help`;
+  if (message.includes("submit") || message.includes("submission")) {
+    return translateText(`${baseKey}.submission`, "");
+  }
+  if (message.includes("document") || message.includes("required") || message.includes("attach")) {
+    return translateText(`${baseKey}.documents`, "");
+  }
+  if (message.includes("download") || message.includes("pdf") || message.includes("docx")) {
+    return translateText(`${baseKey}.download`, "");
+  }
+  return translateText(`${baseKey}.fallback`, "");
+}
+
 function textAnswer(value: DocxAnswers[string]) {
   return typeof value === "string" ? value : "";
+}
+
+function localizeValidationMessage(
+  message: string,
+  translateText: (key: string, fallback: string, values?: Record<string, string | number>) => string,
+) {
+  const entries: Array<[string, string]> = [
+    ["This answer is required.", "formAssistant.errors.answerRequired"],
+    ["Please enter a valid SBI branch name.", "formAssistant.errors.validSbiBranch"],
+    ["Customer name must contain alphabets and spaces only.", "formAssistant.errors.customerNameAlpha"],
+    ["Mobile number must be exactly 10 digits.", "formAssistant.errors.mobile10"],
+    ["Please enter a valid email address.", "formAssistant.errors.validEmail"],
+    ["Please enter DOB in DD/MM/YYYY format, for example 20/08/2005.", "formAssistant.errors.dobFormat"],
+    ["Account number must contain 9 to 18 digits only, or type Skip for optional account rows.", "formAssistant.errors.sbiAccountDigits"],
+    ["Please enter a valid ICICI branch name.", "formAssistant.errors.validIciciBranch"],
+    ["Please enter the request date in DD/MM/YYYY format.", "formAssistant.errors.requestDateFormat"],
+    ["Primary holder name must contain alphabets and spaces only.", "formAssistant.errors.primaryNameAlpha"],
+    ["Account number must contain digits only.", "formAssistant.errors.accountDigits"],
+    ["PAN number must be in ABCDE1234F format.", "formAssistant.errors.panFormat"],
+    ["PIN Code must be exactly 6 digits.", "formAssistant.errors.pin6"],
+  ];
+  const match = entries.find(([source]) => source === message);
+  return match ? translateText(match[1], message) : message;
+}
+
+function logImageValuesBeforeRender(config: FormConfig, answers: DocxAnswers) {
+  const signatureField = config.questions.find((question) => question.kind === "image" && question.key.toLowerCase().includes("signature"));
+  const photoField = config.questions.find((question) => question.kind === "image" && question.key.toLowerCase().includes("photo"));
+  const signatureValue = signatureField ? answers[signatureField.key] : undefined;
+  const photoValue = photoField ? answers[photoField.key] : undefined;
+
+  console.log("Signature passed to renderer:", signatureValue);
+  if (photoField) console.log("Photo passed to renderer:", photoValue);
+  console.info("[BankHub Form Assistant] Image field IDs verified", {
+    form: config.id,
+    signatureField: signatureField?.key || "missing",
+    photoField: photoField?.key || "not-applicable",
+    signatureState: Boolean(signatureValue),
+    photoState: photoField ? Boolean(photoValue) : "not-applicable",
+  });
 }
 
 function downloadBlob(blob: Blob, fileName: string) {

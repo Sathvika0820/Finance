@@ -11,6 +11,8 @@ type ZipEntry = {
 export type DocxImageValue = {
   name: string;
   dataUrl: string;
+  mimeType?: string;
+  bytes?: Uint8Array;
 };
 
 export type DocxAnswers = Record<string, string | DocxImageValue | undefined>;
@@ -208,7 +210,7 @@ function escapeXml(value: string) {
 }
 
 function isDocxImageValue(value: DocxAnswers[string]): value is DocxImageValue {
-  return Boolean(value && typeof value === "object" && "dataUrl" in value);
+  return Boolean(value && typeof value === "object" && ("dataUrl" in value || "bytes" in value));
 }
 
 function extensionForMime(mimeType: string) {
@@ -225,13 +227,38 @@ function bytesFromBase64(base64: string) {
 }
 
 function parseImageDataUrl(value: DocxImageValue) {
+  const directMimeType = value.mimeType?.toLowerCase() === "image/jpg" ? "image/jpeg" : value.mimeType?.toLowerCase();
+  if (value.bytes && directMimeType) {
+    const extension = extensionForMime(directMimeType);
+    if (!extension) throw new Error(`Unsupported image format for ${value.name}. Use PNG or JPG.`);
+    validateImageBytes(value.bytes, directMimeType, value.name);
+    return { mimeType: directMimeType, extension, data: value.bytes, dimensions: imageDimensions(value.bytes, directMimeType) };
+  }
+
   const match = value.dataUrl.match(/^data:(image\/(?:png|jpe?g));base64,(.+)$/i);
   if (!match) throw new Error(`Unsupported image format for ${value.name}. Use PNG or JPG.`);
   const mimeType = match[1].toLowerCase() === "image/jpg" ? "image/jpeg" : match[1].toLowerCase();
   const extension = extensionForMime(mimeType);
   if (!extension) throw new Error(`Unsupported image format for ${value.name}. Use PNG or JPG.`);
   const data = bytesFromBase64(match[2]);
+  validateImageBytes(data, mimeType, value.name);
   return { mimeType, extension, data, dimensions: imageDimensions(data, mimeType) };
+}
+
+function validateImageBytes(bytes: Uint8Array, mimeType: string, name: string) {
+  if (mimeType === "image/png") {
+    const validPng = bytes.length > 8
+      && bytes[0] === 0x89
+      && bytes[1] === 0x50
+      && bytes[2] === 0x4e
+      && bytes[3] === 0x47;
+    if (!validPng) throw new Error(`${name} could not be loaded.`);
+    return;
+  }
+  if (mimeType === "image/jpeg") {
+    const validJpeg = bytes.length > 4 && bytes[0] === 0xff && bytes[1] === 0xd8;
+    if (!validJpeg) throw new Error(`${name} could not be loaded.`);
+  }
 }
 
 function signatureDrawingXml(part: DocxImagePart) {
@@ -869,6 +896,9 @@ function replaceNamedDrawing(xml: string, drawingName: string, imagePart: DocxIm
     replaced = true;
     return imagePart ? signatureDrawingXml(imagePart) : "";
   });
+  if (imagePart && !replaced) {
+    throw new Error(imageLoadErrorMessage(drawingName));
+  }
   console.info("[BankHub Form Assistant] ICICI image anchor", drawingName, {
     "Render Status": imagePart ? (replaced ? "SUCCESS" : "FAILED") : "BLANK",
   });
@@ -898,7 +928,7 @@ function ensureContentTypeDefaults(xml: string, imageParts: DocxImagePart[]) {
 }
 
 function ensureDocumentRelationships(xml: string | undefined, imageParts: DocxImagePart[]) {
-  const base = xml || '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+  const base = removeStaleBankHubImageRelationships(xml || '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>');
   const additions = imageParts
     .filter((part) => !base.includes(`Id="${part.rid}"`))
     .map((part) => `<Relationship Id="${part.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${part.fileName}"/>`)
@@ -906,11 +936,39 @@ function ensureDocumentRelationships(xml: string | undefined, imageParts: DocxIm
   return additions ? base.replace("</Relationships>", `${additions}</Relationships>`) : base;
 }
 
+function removeStaleBankHubImageRelationships(xml: string) {
+  return xml.replace(/<Relationship\b(?=[^>]*Type="http:\/\/schemas\.openxmlformats\.org\/officeDocument\/2006\/relationships\/image")(?=[^>]*Target="media\/bankhub_[^"]+")[^>]*\/>/g, "");
+}
+
+function isStaleBankHubImageEntry(name: string) {
+  return /^word\/media\/bankhub_[^/]+\.(?:png|jpe?g)$/i.test(name);
+}
+
+function imageLoadErrorMessage(key: string) {
+  return key.toLowerCase().includes("signature")
+    ? "Signature image could not be loaded."
+    : "Photo image could not be loaded.";
+}
+
 function collectImageParts(answers: DocxAnswers) {
   const imageParts: DocxImagePart[] = [];
   for (const [key, value] of Object.entries(answers)) {
     if (!isDocxImageValue(value)) continue;
-    const parsed = parseImageDataUrl(value);
+    let parsed: ReturnType<typeof parseImageDataUrl>;
+    try {
+      parsed = parseImageDataUrl(value);
+    } catch (error) {
+      console.error("[BankHub Form Assistant] Image load failed", { field: key, error });
+      throw new Error(imageLoadErrorMessage(key));
+    }
+    console.log(`${key.toLowerCase().includes("signature") ? "Signature" : "Photo"} passed to renderer:`, value);
+    console.info("[BankHub Form Assistant] Image converted for renderer", {
+      field: key,
+      name: value.name,
+      mimeType: parsed.mimeType,
+      arrayBuffer: value.bytes?.buffer instanceof ArrayBuffer ? value.bytes.buffer.byteLength : parsed.data.buffer.byteLength,
+      uint8Array: parsed.data.length,
+    });
     const size = containImageSize(key, parsed.dimensions.width, parsed.dimensions.height);
     imageParts.push({
       key,
@@ -939,8 +997,12 @@ export async function loadDocxTemplate(url: string) {
 export async function buildFilledDocx(templateUrl: string, answers: DocxAnswers, options: BuildFilledDocxOptions = {}) {
   const { entries } = await loadDocxTemplate(templateUrl);
   const imageParts = collectImageParts(answers);
+  const replacementImageEntries = new Set(imageParts.map((part) => `word/media/${part.fileName}`));
   const filled = entries.map((entry) => {
     if (!entry.data) throw new Error(`Unsupported DOCX entry compression for ${entry.name}`);
+    if (isStaleBankHubImageEntry(entry.name) || replacementImageEntries.has(entry.name)) {
+      return null;
+    }
     if (/^word\/(document|header|footer).*\.xml$/.test(entry.name)) {
       return { name: entry.name, data: encoder.encode(replaceXmlPlaceholders(decodeXml(entry), answers, imageParts, options)) };
     }
@@ -951,7 +1013,7 @@ export async function buildFilledDocx(templateUrl: string, answers: DocxAnswers,
       return { name: entry.name, data: encoder.encode(ensureDocumentRelationships(decodeXml(entry), imageParts)) };
     }
     return { name: entry.name, data: entry.data };
-  });
+  }).filter((entry): entry is { name: string; data: Uint8Array } => Boolean(entry));
   if (imageParts.length && !filled.some((entry) => entry.name === "word/_rels/document.xml.rels")) {
     filled.push({ name: "word/_rels/document.xml.rels", data: encoder.encode(ensureDocumentRelationships(undefined, imageParts)) });
   }

@@ -32,7 +32,7 @@ export const LANGUAGE_OPTIONS: { id: AppLanguage; code: string; label: string; n
   { id: "telugu", code: "te", label: "Telugu", nativeLabel: "తెలుగు" },
   { id: "tamil", code: "ta", label: "Tamil", nativeLabel: "தமிழ்" },
   { id: "kannada", code: "kn", label: "Kannada", nativeLabel: "ಕನ್ನಡ" },
-  { id: "malayalam", code: "ml", label: "Malayalam", nativeLabel: "Malayalam" },
+  { id: "malayalam", code: "ml", label: "Malayalam", nativeLabel: "മലയാളം" },
   { id: "odia", code: "or", label: "Odia", nativeLabel: "ଓଡ଼ିଆ" },
   { id: "urdu", code: "ur", label: "Urdu", nativeLabel: "اردو", dir: "rtl" },
   { id: "marathi", code: "mr", label: "Marathi", nativeLabel: "मराठी" },
