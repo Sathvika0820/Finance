@@ -14,6 +14,9 @@ const iciciTemplateUrl = new URL("../../forms/icici/customer_details_updation_fo
 const DOCUMENT_PAGE_WIDTH = 794;
 const DOCUMENT_PAGE_HEIGHT = 1123;
 const DOCUMENT_PAGE_PADDING = 24;
+const MAX_IMAGE_UPLOAD_BYTES = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const ALLOWED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
 
 export const Route = createFileRoute("/premium/form-assistant")({
   head: () => ({
@@ -812,7 +815,7 @@ function SimpleSbiFormAssistant() {
       return;
     }
     if (!activeField || activeField.kind === "image") return;
-    const rawValue = input.trim();
+    const rawValue = sanitizeFieldInput(activeField, input).trim();
     const resolvedValue = rawValue || activeField.defaultValue?.() || "";
     const validation = selectedForm.validateAnswer(activeField.key, resolvedValue);
     if (validation) {
@@ -870,10 +873,23 @@ function SimpleSbiFormAssistant() {
     if (photoFile) console.log("Uploaded photo:", photoFile);
 
     try {
-      const arrayBuffer = await file.arrayBuffer();
+      const fileError = validateUploadImageFile(file);
+      if (fileError) {
+        setAnswers((currentAnswers) => ({ ...currentAnswers, [activeField.key]: undefined }));
+        setValidationError(localizeValidationMessage(fileError, translateGlobal));
+        return;
+      }
+
+      const normalizedFile = file.type === "image/webp" ? await convertWebpToPng(file) : file;
+      const arrayBuffer = await normalizedFile.arrayBuffer();
       const bytes = new Uint8Array(arrayBuffer);
-      const dataUrl = await fileToDataUrl(file);
-      const image: DocxImageValue = { name: file.name, dataUrl, mimeType: file.type, bytes };
+      if (bytes.length > MAX_IMAGE_UPLOAD_BYTES) {
+        setAnswers((currentAnswers) => ({ ...currentAnswers, [activeField.key]: undefined }));
+        setValidationError(translateGlobal("formAssistant.errors.imageTooLarge", "Image size must be 5 MB or smaller."));
+        return;
+      }
+      const dataUrl = await fileToDataUrl(normalizedFile);
+      const image: DocxImageValue = { name: normalizedFile.name, dataUrl, mimeType: normalizedFile.type, bytes };
       const nextAnswers = { ...answers, [activeField.key]: image };
       setAnswers(nextAnswers);
       setValidationError("");
@@ -881,8 +897,8 @@ function SimpleSbiFormAssistant() {
       console.info("[BankHub Form Assistant] Image stored", {
         form: selectedForm.id,
         field: activeField.key,
-        file: file.name,
-        size: file.size,
+        file: normalizedFile.name,
+        size: normalizedFile.size,
         arrayBuffer: arrayBuffer.byteLength,
         uint8Array: bytes.length,
       });
@@ -892,7 +908,10 @@ function SimpleSbiFormAssistant() {
         ? translateGlobal("formAssistant.errors.signatureImageLoad", "Signature image could not be loaded.")
         : translateGlobal("formAssistant.errors.photoImageLoad", "Photo image could not be loaded.");
       console.error("[BankHub Form Assistant] Uploaded image load failed", { form: selectedForm.id, field: activeField.key, file: file.name, error });
+      setAnswers((currentAnswers) => ({ ...currentAnswers, [activeField.key]: undefined }));
       setValidationError(message);
+    } finally {
+      event.target.value = "";
     }
   }
 
@@ -935,6 +954,23 @@ function SimpleSbiFormAssistant() {
       } else {
         setDocumentError(translateGlobal("formAssistant.errors.requiredBeforeGenerate", "{field} is required. Please answer this question before generating the document.", { field: selectedForm.requiredFieldLabels[missingKey] || translateGlobal("formAssistant.labels.requiredField", "A required field") }));
       }
+      return null;
+    }
+    const invalidField = selectedForm.questions.find((field) => {
+      if (field.kind === "image") return false;
+      const value = textAnswer(generationAnswers[field.key]);
+      if (!value) return false;
+      return Boolean(selectedForm.validateAnswer(field.key, value));
+    });
+    if (invalidField) {
+      const invalidMessage = selectedForm.validateAnswer(invalidField.key, textAnswer(generationAnswers[invalidField.key]));
+      setCurrentIndex(selectedForm.questions.findIndex((field) => field.key === invalidField.key));
+      setValidationError(localizeValidationMessage(invalidMessage, translateGlobal));
+      setInput("");
+      setChat((messages) => [
+        ...messages,
+        { id: `invalid-${invalidField.key}-${Date.now()}`, role: "assistant", text: fieldText(invalidField, "question") },
+      ]);
       return null;
     }
     logImageValuesBeforeRender(selectedForm, generationAnswers);
@@ -1344,7 +1380,7 @@ function SimpleSbiFormAssistant() {
                     <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-sky-300 bg-sky-50 px-4 py-4 text-sm font-bold text-sky-800 transition hover:bg-sky-100">
                       <Upload className="h-5 w-5" />
                       {fieldText(activeField, "uploadLabel")}
-                      <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                      <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageUpload} />
                     </label>
                   ) : activeField.kind === "choice" ? (
                     <div className="grid grid-cols-2 gap-2">
@@ -1364,8 +1400,15 @@ function SimpleSbiFormAssistant() {
                       <input
                         ref={textInputRef}
                         value={input}
-                        onChange={(event) => setInput(event.target.value)}
+                        onChange={(event) => {
+                          const nextValue = sanitizeFieldInput(activeField, event.target.value);
+                          setInput(nextValue);
+                          if (validationError) setValidationError("");
+                        }}
                         placeholder={fieldText(activeField, "placeholder") || translateGlobal("formAssistant.placeholders.answer", "Type your answer...")}
+                        inputMode={isTenDigitPhoneField(activeField.key) ? "numeric" : undefined}
+                        pattern={isTenDigitPhoneField(activeField.key) ? "\\d{10}" : undefined}
+                        maxLength={isTenDigitPhoneField(activeField.key) ? 10 : undefined}
                         className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
                       />
                       <button
@@ -1832,10 +1875,11 @@ function getErrorDetails(error: unknown) {
 }
 
 function validateSbiAnswer(key: string, value: string) {
+  const normalizedValue = isTenDigitPhoneField(key) ? digitsOnly(value).slice(0, 10) : value;
   if (!value) return "This answer is required.";
   if (key === "branch_name" && value.length < 2) return "Please enter a valid SBI branch name.";
   if (key === "customer_name_boxes" && !/^[A-Za-z ]{2,}$/.test(value)) return "Customer name must contain alphabets and spaces only.";
-  if (key === "mobile_number_boxes" && !/^\d{10}$/.test(value)) return "Mobile number must be exactly 10 digits.";
+  if (key === "mobile_number_boxes" && !/^\d{10}$/.test(normalizedValue)) return "Phone number must contain exactly 10 digits.";
   if (key === "email_id" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Please enter a valid email address.";
   if (key === "date_of_birth" && !parseDob(value)) return "Please enter DOB in DD/MM/YYYY format, for example 20/08/2005.";
   if (/^account_number_\d+_boxes$/.test(key) && value.toLowerCase() !== "skip" && !/^\d{9,18}$/.test(value)) return "Account number must contain 9 to 18 digits only, or type Skip for optional account rows.";
@@ -1843,12 +1887,13 @@ function validateSbiAnswer(key: string, value: string) {
 }
 
 function validateIciciAnswer(key: string, value: string) {
+  const normalizedValue = isTenDigitPhoneField(key) ? digitsOnly(value).slice(0, 10) : value;
   if (!value) return "This answer is required.";
   if (key === "branch_name" && value.length < 2) return "Please enter a valid ICICI branch name.";
   if (key === "request_date" && !parseDate(value)) return "Please enter the request date in DD/MM/YYYY format.";
   if (key === "primary_holder_name" && !/^[A-Za-z .'-]{2,}$/.test(value)) return "Primary holder name must contain alphabets and spaces only.";
   if (key === "account_number_boxes" && !/^\d+$/.test(value)) return "Account number must contain digits only.";
-  if (key === "primary_mobile_number_boxes" && !/^\d{10}$/.test(value)) return "Mobile number must be exactly 10 digits.";
+  if (key === "primary_mobile_number_boxes" && !/^\d{10}$/.test(normalizedValue)) return "Phone number must contain exactly 10 digits.";
   if (key === "primary_pan_boxes" && !/^[A-Z]{5}\d{4}[A-Z]$/.test(value.toUpperCase())) return "PAN number must be in ABCDE1234F format.";
   if (key === "pin_code_boxes" && !/^\d{6}$/.test(value)) return "PIN Code must be exactly 6 digits.";
   return "";
@@ -1856,6 +1901,7 @@ function validateIciciAnswer(key: string, value: string) {
 
 function normalizeSbiAnswer(field: AssistantField, value: string, answers: DocxAnswers): DocxAnswers {
   const key = field.key;
+  if (isTenDigitPhoneField(key)) return { ...answers, [key]: digitsOnly(value).slice(0, 10) };
   if (key === "date_of_birth") {
     const parsed = parseDob(value);
     if (!parsed) return answers;
@@ -1875,6 +1921,7 @@ function normalizeSbiAnswer(field: AssistantField, value: string, answers: DocxA
 
 function normalizeIciciAnswer(field: AssistantField, value: string, answers: DocxAnswers): DocxAnswers {
   const key = field.key;
+  if (isTenDigitPhoneField(key)) return { ...answers, [key]: digitsOnly(value).slice(0, 10) };
   if (key === "primary_pan_boxes") return { ...answers, [key]: value.toUpperCase() };
   return { ...answers, [key]: value };
 }
@@ -2095,6 +2142,7 @@ function localizeValidationMessage(
     ["Please enter a valid SBI branch name.", "formAssistant.errors.validSbiBranch"],
     ["Customer name must contain alphabets and spaces only.", "formAssistant.errors.customerNameAlpha"],
     ["Mobile number must be exactly 10 digits.", "formAssistant.errors.mobile10"],
+    ["Phone number must contain exactly 10 digits.", "formAssistant.errors.mobile10"],
     ["Please enter a valid email address.", "formAssistant.errors.validEmail"],
     ["Please enter DOB in DD/MM/YYYY format, for example 20/08/2005.", "formAssistant.errors.dobFormat"],
     ["Account number must contain 9 to 18 digits only, or type Skip for optional account rows.", "formAssistant.errors.sbiAccountDigits"],
@@ -2104,9 +2152,65 @@ function localizeValidationMessage(
     ["Account number must contain digits only.", "formAssistant.errors.accountDigits"],
     ["PAN number must be in ABCDE1234F format.", "formAssistant.errors.panFormat"],
     ["PIN Code must be exactly 6 digits.", "formAssistant.errors.pin6"],
+    ["Unsupported image format. Please upload JPG, JPEG, PNG, or WEBP only.", "formAssistant.errors.imageFormat"],
+    ["Image size must be 5 MB or smaller.", "formAssistant.errors.imageTooLarge"],
   ];
   const match = entries.find(([source]) => source === message);
   return match ? translateText(match[1], message) : message;
+}
+
+function digitsOnly(value: string) {
+  return value.replace(/\D+/g, "");
+}
+
+function isTenDigitPhoneField(key: string) {
+  return key === "mobile_number_boxes" || key === "primary_mobile_number_boxes";
+}
+
+function sanitizeFieldInput(field: AssistantField, value: string) {
+  if (isTenDigitPhoneField(field.key)) return digitsOnly(value).slice(0, 10);
+  return value;
+}
+
+function validateUploadImageFile(file: File) {
+  const normalizedType = file.type.toLowerCase();
+  const normalizedName = file.name.toLowerCase();
+  const hasAllowedType = ALLOWED_IMAGE_MIME_TYPES.has(normalizedType);
+  const hasAllowedExtension = ALLOWED_IMAGE_EXTENSIONS.some((extension) => normalizedName.endsWith(extension));
+  if (!hasAllowedType && !hasAllowedExtension) {
+    return "Unsupported image format. Please upload JPG, JPEG, PNG, or WEBP only.";
+  }
+  if (file.size > MAX_IMAGE_UPLOAD_BYTES) {
+    return "Image size must be 5 MB or smaller.";
+  }
+  return "";
+}
+
+async function convertWebpToPng(file: File) {
+  const imageUrl = URL.createObjectURL(file);
+  try {
+    const image = await loadImageElement(imageUrl);
+    const canvas = document.createElement("canvas");
+    canvas.width = image.naturalWidth || image.width;
+    canvas.height = image.naturalHeight || image.height;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Canvas 2D context is unavailable.");
+    context.drawImage(image, 0, 0);
+    const convertedBlob = await new Promise<Blob | null>((resolve) => canvas.toBlob((blob) => resolve(blob), "image/png"));
+    if (!convertedBlob) throw new Error("WEBP conversion failed.");
+    return new File([convertedBlob], file.name.replace(/\.webp$/i, ".png"), { type: "image/png" });
+  } finally {
+    URL.revokeObjectURL(imageUrl);
+  }
+}
+
+function loadImageElement(url: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Image could not be loaded."));
+    image.src = url;
+  });
 }
 
 function logImageValuesBeforeRender(config: FormConfig, answers: DocxAnswers) {

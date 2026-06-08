@@ -478,7 +478,7 @@
   "formAssistant.errors.answerRequired": "ఈ సమాధానం అవసరం.",
   "formAssistant.errors.validSbiBranch": "Please enter a valid SBI branch name.",
   "formAssistant.errors.customerNameAlpha": "Customer name must contain alphabets and spaces only.",
-  "formAssistant.errors.mobile10": "మొబైల్ నంబర్ ఖచ్చితంగా 10 అంకెలు కావాలి.",
+  "formAssistant.errors.mobile10": "ఫోన్ నంబర్‌లో ఖచ్చితంగా 10 అంకెలు ఉండాలి.",
   "formAssistant.errors.validEmail": "Please enter a valid email address.",
   "formAssistant.errors.dobFormat": "Please enter DOB in DD/MM/YYYY format, for example 20/08/2005.",
   "formAssistant.errors.sbiAccountDigits": "Account number must contain 9 to 18 digits only, or type Skip for optional account rows.",
@@ -571,5 +571,7 @@
   "formAssistant.forms.sbi.fields.account_number_1_boxes.label": "SBI ఖాతా నంబర్",
   "formAssistant.forms.sbi.fields.customer_signature.label": "సంతకం",
   "formAssistant.forms.icici.fields.primary_holder_photo.label": "ఫోటో",
-  "formAssistant.forms.icici.fields.primary_signature.label": "సంతకం"
+  "formAssistant.forms.icici.fields.primary_signature.label": "సంతకం",
+  "formAssistant.errors.imageFormat": "మద్దతు లేని చిత్రం ఫార్మాట్. దయచేసి JPG, JPEG, PNG లేదా WEBP మాత్రమే అప్లోడ్ చేయండి.",
+  "formAssistant.errors.imageTooLarge": "చిత్ర పరిమాణం 5 MB లేదా అంతకంటే తక్కువగా ఉండాలి."
 }

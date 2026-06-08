@@ -478,7 +478,7 @@
   "formAssistant.errors.answerRequired": "This answer is required.",
   "formAssistant.errors.validSbiBranch": "Please enter a valid SBI branch name.",
   "formAssistant.errors.customerNameAlpha": "Customer name must contain alphabets and spaces only.",
-  "formAssistant.errors.mobile10": "Mobile number must be exactly 10 digits.",
+  "formAssistant.errors.mobile10": "Phone number must contain exactly 10 digits.",
   "formAssistant.errors.validEmail": "Please enter a valid email address.",
   "formAssistant.errors.dobFormat": "Please enter DOB in DD/MM/YYYY format, for example 20/08/2005.",
   "formAssistant.errors.sbiAccountDigits": "Account number must contain 9 to 18 digits only, or type Skip for optional account rows.",
@@ -571,5 +571,7 @@
   "formAssistant.forms.icici.fields.primary_holder_photo.uploadLabel": "Upload Photo",
   "formAssistant.forms.icici.fields.primary_signature.question": "Please upload the Primary Holder Signature.",
   "formAssistant.forms.icici.fields.primary_signature.label": "Signature",
-  "formAssistant.forms.icici.fields.primary_signature.uploadLabel": "Upload Signature"
+  "formAssistant.forms.icici.fields.primary_signature.uploadLabel": "Upload Signature",
+  "formAssistant.errors.imageFormat": "Unsupported image format. Please upload JPG, JPEG, PNG, or WEBP only.",
+  "formAssistant.errors.imageTooLarge": "Image size must be 5 MB or smaller."
 }

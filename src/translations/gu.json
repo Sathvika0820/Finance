@@ -469,7 +469,7 @@
   "formAssistant.errors.answerRequired": "This answer is required.",
   "formAssistant.errors.validSbiBranch": "Please enter a valid SBI branch name.",
   "formAssistant.errors.customerNameAlpha": "Customer name must contain alphabets and spaces only.",
-  "formAssistant.errors.mobile10": "Mobile number must be exactly 10 digits.",
+  "formAssistant.errors.mobile10": "ફોન નંબરમાં ચોક્કસ 10 અંક હોવા જોઈએ.",
   "formAssistant.errors.validEmail": "Please enter a valid email address.",
   "formAssistant.errors.dobFormat": "Please enter DOB in DD/MM/YYYY format, for example 20/08/2005.",
   "formAssistant.errors.sbiAccountDigits": "Account number must contain 9 to 18 digits only, or type Skip for optional account rows.",
@@ -571,5 +571,7 @@
   "noFormsAvailable": "કોઈ ફોર્મ ઉપલબ્ધ નથી",
   "selectBankForForms": "ફોર્મ જોવા માટે બેંક પસંદ કરો",
   "unsupportedPdf": "આ PDF સમર્થિત નથી",
-  "uploadPdfForm": "PDF ફોર્મ અપલોડ કરો"
+  "uploadPdfForm": "PDF ફોર્મ અપલોડ કરો",
+  "formAssistant.errors.imageFormat": "અસમર્થિત છબી ફોર્મેટ. કૃપા કરીને માત્ર JPG, JPEG, PNG અથવા WEBP અપલોડ કરો.",
+  "formAssistant.errors.imageTooLarge": "છબીનું કદ 5 MB અથવા તેનાથી ઓછું હોવું જોઈએ."
 }

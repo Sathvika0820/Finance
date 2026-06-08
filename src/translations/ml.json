@@ -478,7 +478,7 @@
   "formAssistant.errors.answerRequired": "ഈ മറുപടി ആവശ്യമാണ്.",
   "formAssistant.errors.validSbiBranch": "Please enter a valid SBI branch name.",
   "formAssistant.errors.customerNameAlpha": "Customer name must contain alphabets and spaces only.",
-  "formAssistant.errors.mobile10": "മൊബൈൽ നമ്പർ കൃത്യം 10 അക്കങ്ങളായിരിക്കണം.",
+  "formAssistant.errors.mobile10": "ഫോണ്‍ നമ്പറില്‍ കൃത്യം 10 അക്കങ്ങള്‍ ഉണ്ടായിരിക്കണം.",
   "formAssistant.errors.validEmail": "Please enter a valid email address.",
   "formAssistant.errors.dobFormat": "Please enter DOB in DD/MM/YYYY format, for example 20/08/2005.",
   "formAssistant.errors.sbiAccountDigits": "Account number must contain 9 to 18 digits only, or type Skip for optional account rows.",
@@ -571,5 +571,7 @@
   "formAssistant.forms.sbi.fields.account_number_1_boxes.label": "SBI അക്കൗണ്ട് നമ്പർ",
   "formAssistant.forms.sbi.fields.customer_signature.label": "ഒപ്പ്",
   "formAssistant.forms.icici.fields.primary_holder_photo.label": "ഫോട്ടോ",
-  "formAssistant.forms.icici.fields.primary_signature.label": "ഒപ്പ്"
+  "formAssistant.forms.icici.fields.primary_signature.label": "ഒപ്പ്",
+  "formAssistant.errors.imageFormat": "പിന്തുണയില്ലാത്ത ചിത്രം ഫോർമാറ്റ്. ദയവായി JPG, JPEG, PNG, അല്ലെങ്കിൽ WEBP മാത്രം അപ്‌ലോഡ് ചെയ്യുക.",
+  "formAssistant.errors.imageTooLarge": "ചിത്രത്തിന്റെ വലുപ്പം 5 MB അല്ലെങ്കിൽ അതിൽ താഴെയായിരിക്കണം."
 }

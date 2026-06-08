@@ -469,7 +469,7 @@
   "formAssistant.errors.answerRequired": "இந்த பதில் அவசியம்.",
   "formAssistant.errors.validSbiBranch": "Please enter a valid SBI branch name.",
   "formAssistant.errors.customerNameAlpha": "Customer name must contain alphabets and spaces only.",
-  "formAssistant.errors.mobile10": "மொபைல் எண் சரியாக 10 இலக்கங்கள் இருக்க வேண்டும்.",
+  "formAssistant.errors.mobile10": "தொலைபேசி எண்ணில் சரியாக 10 இலக்கங்கள் இருக்க வேண்டும்.",
   "formAssistant.errors.validEmail": "Please enter a valid email address.",
   "formAssistant.errors.dobFormat": "Please enter DOB in DD/MM/YYYY format, for example 20/08/2005.",
   "formAssistant.errors.sbiAccountDigits": "Account number must contain 9 to 18 digits only, or type Skip for optional account rows.",
@@ -571,5 +571,7 @@
   "noFormsAvailable": "படிவங்கள் கிடைக்கவில்லை",
   "selectBankForForms": "படிவங்களைப் பார்க்க வங்கியைத் தேர்ந்தெடுக்கவும்",
   "unsupportedPdf": "இந்த PDF ஆதரிக்கப்படவில்லை",
-  "uploadPdfForm": "PDF படிவத்தை பதிவேற்றவும்"
+  "uploadPdfForm": "PDF படிவத்தை பதிவேற்றவும்",
+  "formAssistant.errors.imageFormat": "ஆதரிக்கப்படாத பட வடிவம். தயவுசெய்து JPG, JPEG, PNG அல்லது WEBP மட்டும் பதிவேற்றவும்.",
+  "formAssistant.errors.imageTooLarge": "படத்தின் அளவு 5 MB அல்லது அதற்கும் குறைவாக இருக்க வேண்டும்."
 }

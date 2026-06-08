@@ -77,7 +77,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { name: "theme-color", content: "#0f172a" },
+      { name: "theme-color", content: "#004958" },
       { name: "application-name", content: "BankHub" },
       { name: "apple-mobile-web-app-title", content: "BankHub" },
       { title: "BankHub - All your banks, one smart gateway" },
@@ -132,7 +132,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body style={{ backgroundColor: "#004958" }}>
         {children}
         <Scripts />
       </body>

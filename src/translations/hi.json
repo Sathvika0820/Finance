@@ -482,7 +482,7 @@
   "formAssistant.errors.answerRequired": "यह उत्तर आवश्यक है।",
   "formAssistant.errors.validSbiBranch": "कृपया मान्य SBI शाखा नाम दर्ज करें।",
   "formAssistant.errors.customerNameAlpha": "नाम में केवल अक्षर और स्पेस होने चाहिए।",
-  "formAssistant.errors.mobile10": "मोबाइल नंबर ठीक 10 अंकों का होना चाहिए।",
+  "formAssistant.errors.mobile10": "फोन नंबर में ठीक 10 अंक होने चाहिए।",
   "formAssistant.errors.validEmail": "कृपया मान्य ईमेल पता दर्ज करें।",
   "formAssistant.errors.dobFormat": "कृपया जन्म तिथि DD/MM/YYYY प्रारूप में दर्ज करें, जैसे 20/08/2005।",
   "formAssistant.errors.sbiAccountDigits": "खाता नंबर 9 से 18 अंकों का होना चाहिए, या वैकल्पिक खाते के लिए Skip लिखें।",
@@ -571,5 +571,7 @@
   "formAssistant.forms.sbi.fields.account_number_1_boxes.label": "SBI खाता नंबर",
   "formAssistant.forms.sbi.fields.customer_signature.label": "हस्ताक्षर",
   "formAssistant.forms.icici.fields.primary_holder_photo.label": "फोटो",
-  "formAssistant.forms.icici.fields.primary_signature.label": "हस्ताक्षर"
+  "formAssistant.forms.icici.fields.primary_signature.label": "हस्ताक्षर",
+  "formAssistant.errors.imageFormat": "असमर्थित इमेज फ़ॉर्मेट। कृपया केवल JPG, JPEG, PNG, या WEBP अपलोड करें।",
+  "formAssistant.errors.imageTooLarge": "इमेज का आकार 5 MB या उससे कम होना चाहिए।"
 }

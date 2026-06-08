@@ -40,6 +40,7 @@ const SIGNATURE_WIDTH_EMU = 138 * EMU_PER_PIXEL;
 const SIGNATURE_HEIGHT_EMU = 30 * EMU_PER_PIXEL;
 const PHOTO_WIDTH_EMU = 95 * EMU_PER_PIXEL;
 const PHOTO_HEIGHT_EMU = 115 * EMU_PER_PIXEL;
+const MAX_IMAGE_UPLOAD_BYTES = 5 * 1024 * 1024;
 
 function readU16(bytes: Uint8Array, offset: number) {
   return bytes[offset] | (bytes[offset + 1] << 8);
@@ -230,17 +231,19 @@ function parseImageDataUrl(value: DocxImageValue) {
   const directMimeType = value.mimeType?.toLowerCase() === "image/jpg" ? "image/jpeg" : value.mimeType?.toLowerCase();
   if (value.bytes && directMimeType) {
     const extension = extensionForMime(directMimeType);
-    if (!extension) throw new Error(`Unsupported image format for ${value.name}. Use PNG or JPG.`);
+    if (!extension) throw new Error(`Unsupported image format for ${value.name}. Use JPG, JPEG, PNG, or WEBP.`);
+    if (value.bytes.length > MAX_IMAGE_UPLOAD_BYTES) throw new Error(`${value.name} exceeds the 5 MB upload limit.`);
     validateImageBytes(value.bytes, directMimeType, value.name);
     return { mimeType: directMimeType, extension, data: value.bytes, dimensions: imageDimensions(value.bytes, directMimeType) };
   }
 
   const match = value.dataUrl.match(/^data:(image\/(?:png|jpe?g));base64,(.+)$/i);
-  if (!match) throw new Error(`Unsupported image format for ${value.name}. Use PNG or JPG.`);
+  if (!match) throw new Error(`Unsupported image format for ${value.name}. Use JPG, JPEG, PNG, or WEBP.`);
   const mimeType = match[1].toLowerCase() === "image/jpg" ? "image/jpeg" : match[1].toLowerCase();
   const extension = extensionForMime(mimeType);
-  if (!extension) throw new Error(`Unsupported image format for ${value.name}. Use PNG or JPG.`);
+  if (!extension) throw new Error(`Unsupported image format for ${value.name}. Use JPG, JPEG, PNG, or WEBP.`);
   const data = bytesFromBase64(match[2]);
+  if (data.length > MAX_IMAGE_UPLOAD_BYTES) throw new Error(`${value.name} exceeds the 5 MB upload limit.`);
   validateImageBytes(data, mimeType, value.name);
   return { mimeType, extension, data, dimensions: imageDimensions(data, mimeType) };
 }
@@ -905,10 +908,6 @@ function replaceNamedDrawing(xml: string, drawingName: string, imagePart: DocxIm
   return output;
 }
 
-function textValue(value: DocxAnswers[string]) {
-  return typeof value === "string" ? value : "";
-}
-
 function ensureContentTypeDefaults(xml: string, imageParts: DocxImagePart[]) {
   let output = xml;
   const defaults = new Set(
@@ -948,6 +947,21 @@ function imageLoadErrorMessage(key: string) {
   return key.toLowerCase().includes("signature")
     ? "Signature image could not be loaded."
     : "Photo image could not be loaded.";
+}
+
+function textValue(value: DocxAnswers[string]) {
+  return typeof value === "string" ? value : "";
+}
+
+function validateCriticalAnswers(answers: DocxAnswers) {
+  const sbiMobile = textValue(answers.mobile_number_boxes);
+  if (sbiMobile && !/^\d{10}$/.test(sbiMobile)) {
+    throw new Error("Phone number must contain exactly 10 digits.");
+  }
+  const iciciMobile = textValue(answers.primary_mobile_number_boxes);
+  if (iciciMobile && !/^\d{10}$/.test(iciciMobile)) {
+    throw new Error("Phone number must contain exactly 10 digits.");
+  }
 }
 
 function collectImageParts(answers: DocxAnswers) {
@@ -995,6 +1009,7 @@ export async function loadDocxTemplate(url: string) {
 }
 
 export async function buildFilledDocx(templateUrl: string, answers: DocxAnswers, options: BuildFilledDocxOptions = {}) {
+  validateCriticalAnswers(answers);
   const { entries } = await loadDocxTemplate(templateUrl);
   const imageParts = collectImageParts(answers);
   const replacementImageEntries = new Set(imageParts.map((part) => `word/media/${part.fileName}`));
