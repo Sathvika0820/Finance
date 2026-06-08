@@ -1266,7 +1266,7 @@ function SimpleSbiFormAssistant() {
           <div className="flex flex-col gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-600">{translateGlobal("formAssistant.title", "BankHub Form Assistant")}</p>
-              <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">{translateForm("pageTitle", selectedForm.pageTitle)}</h1>
+              <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">The smart way to fill forms</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
                 {translateForm("pageDescription", selectedForm.pageDescription)}
               </p>
