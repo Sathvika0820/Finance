@@ -8,8 +8,17 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { nitro } from "nitro/vite";
+import { loadEnv } from "vite";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const localEnv = loadEnv(process.env.NODE_ENV || "development", process.cwd(), "");
+
+for (const key of ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"] as const) {
+  if (!process.env[key] && localEnv[key]) {
+    process.env[key] = localEnv[key];
+  }
+}
+
 const isVercel = process.env.VERCEL === "1";
 const isNetlify = process.env.NETLIFY === "true" || process.env.NETLIFY === "1";
 const usesNitroAdapter = isVercel || isNetlify;
