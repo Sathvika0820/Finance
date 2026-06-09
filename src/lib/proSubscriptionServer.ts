@@ -62,6 +62,17 @@ function getRazorpayKeys(env: unknown) {
   };
 }
 
+function describeMissingRazorpayKeys(keyId: string, keySecret: string) {
+  const missing = [
+    !keyId ? "RAZORPAY_KEY_ID" : "",
+    !keySecret ? "RAZORPAY_KEY_SECRET" : "",
+  ].filter(Boolean);
+
+  return missing.length
+    ? `Razorpay server configuration is missing: ${missing.join(", ")}.`
+    : "";
+}
+
 function normalizeProfileId(value: unknown) {
   const profileId = String(value || "").trim();
   return /^[A-Za-z0-9_-]{12,80}$/.test(profileId) ? profileId : "";
@@ -228,8 +239,13 @@ async function createRazorpayOrder(request: Request, env: unknown) {
   }
 
   if (!keyId || !keySecret) {
-    console.error("[BankHub Pro] order creation failed: Razorpay keys missing");
-    return json({ ok: false, message: "Razorpay order creation is not configured." }, { status: 500 });
+    const message = describeMissingRazorpayKeys(keyId, keySecret);
+    console.error("[BankHub Pro] order creation failed: Razorpay keys missing", {
+      hasKeyId: Boolean(keyId),
+      hasKeySecret: Boolean(keySecret),
+      message,
+    });
+    return json({ ok: false, message }, { status: 500 });
   }
 
   const response = await fetch("https://api.razorpay.com/v1/orders", {
@@ -313,7 +329,8 @@ async function verifyRazorpayPayment(request: Request, env: unknown) {
   }
 
   if (!keySecret) {
-    console.error("[BankHub Pro] signature verification failed: secret key missing");
+    const message = describeMissingRazorpayKeys("configured", keySecret);
+    console.error("[BankHub Pro] signature verification failed: secret key missing", { message });
     return json({ ok: false, message: "Verification Failed" }, { status: 500 });
   }
 
