@@ -20,6 +20,7 @@ const PRO_STORAGE_EVENT = "bankhub:pro-subscription-sync";
 const RAZORPAY_SCRIPT_ID = "bankhub-razorpay-checkout";
 const RAZORPAY_CHECKOUT_URL = "https://checkout.razorpay.com/v1/checkout.js";
 const PROFILE_STORAGE_KEY = "bankHubProProfileId";
+const PENDING_ORDER_STORAGE_KEY = "bankHubProPendingOrderId";
 
 const STORAGE_KEYS = {
   isPro: "isPro",
@@ -75,6 +76,7 @@ type RazorpayOptions = {
 
 type RazorpayInstance = {
   on?: (eventName: "payment.failed", handler: (payload: RazorpayFailurePayload) => void) => void;
+  close?: () => void;
   open: () => void;
 };
 
@@ -114,6 +116,10 @@ type ProNotice = {
   kind: NoticeKind;
   title: string;
   description: string;
+};
+
+type RecoverPaymentError = Error & {
+  responseStatus?: number;
 };
 
 type ProSubscriptionContextValue = {
@@ -191,6 +197,23 @@ function markStoredSubscriptionExpired(subscription: StoredProSubscription) {
   writeStoredSubscription({ ...subscription, isPro: false });
 }
 
+function writePendingOrderId(orderId: string) {
+  window.localStorage.setItem(PENDING_ORDER_STORAGE_KEY, orderId);
+}
+
+function readPendingOrderId() {
+  if (typeof window === "undefined") return "";
+  return window.localStorage.getItem(PENDING_ORDER_STORAGE_KEY) || "";
+}
+
+function clearPendingOrderId(orderId?: string) {
+  if (typeof window === "undefined") return;
+  const existingOrderId = readPendingOrderId();
+  if (!orderId || existingOrderId === orderId) {
+    window.localStorage.removeItem(PENDING_ORDER_STORAGE_KEY);
+  }
+}
+
 async function fetchPremiumStatus(profileId: string): Promise<PremiumStatusResponse> {
   const response = await fetch(`/api/pro/status?profileId=${encodeURIComponent(profileId)}`, {
     headers: { accept: "application/json" },
@@ -262,6 +285,33 @@ async function verifyPaymentOnBackend(profileId: string, payload: RazorpaySucces
     throw new Error(verification?.message || "Verification Failed");
   }
   return verification;
+}
+
+async function recoverPaymentOnBackend(profileId: string, orderId: string): Promise<PremiumStatusResponse> {
+  console.info("[BankHub Pro] payment recovery requested", { profileId, order_id: orderId });
+  const response = await fetch("/api/pro/recover-payment", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      accept: "application/json",
+    },
+    body: JSON.stringify({ profileId, orderId }),
+  });
+  const recovery = await response.json().catch(() => null) as PremiumStatusResponse | null;
+  console.info("[BankHub Pro] payment recovery response", {
+    profileId,
+    order_id: orderId,
+    status: response.status,
+    recovery_result: response.ok && Boolean(recovery?.ok) ? recovery?.status : "failed",
+    premium_active: Boolean(recovery?.isPro),
+    message: recovery?.message || "",
+  });
+  if (!response.ok || !recovery?.ok) {
+    const error = new Error(recovery?.message || "Payment recovery failed.") as RecoverPaymentError;
+    error.responseStatus = response.status;
+    throw error;
+  }
+  return recovery;
 }
 
 let razorpayScriptPromise: Promise<void> | null = null;
@@ -346,12 +396,48 @@ export function ProSubscriptionProvider({ children }: { children: ReactNode }) {
     setStatus(nextStatus);
   }, []);
 
+  const showPremiumActivatedNotice = useCallback(() => {
+    const successNotice = {
+      kind: "success" as const,
+      title: t("subscription.messages.successTitle", "Payment Successful"),
+      description: t("subscription.messages.premiumActivated", "Premium Activated"),
+    };
+    setNotice(successNotice);
+    toast.success(successNotice.title, { description: successNotice.description });
+  }, []);
+
+  const showPaymentFailedNotice = useCallback((description?: string) => {
+    const failedNotice = {
+      kind: "error" as const,
+      title: t("subscription.messages.failedTitle", "Payment Failed"),
+      description: description || t("subscription.messages.failedDescription", "Please Try Again"),
+    };
+    setPaymentStatus("failed");
+    setNotice(failedNotice);
+    toast.error(failedNotice.title, { description: failedNotice.description });
+  }, []);
+
+  const recoverPendingPayment = useCallback(async (profileId: string, orderId: string) => {
+    const recoveredStatus = await recoverPaymentOnBackend(profileId, orderId);
+
+    if (!recoveredStatus.isPro || !recoveredStatus.subscription) {
+      return false;
+    }
+
+    applyVerifiedStatus(recoveredStatus);
+    clearPendingOrderId(orderId);
+    setPaymentStatus("success");
+    broadcastProSync();
+    showPremiumActivatedNotice();
+    return true;
+  }, [applyVerifiedStatus, showPremiumActivatedNotice]);
+
   const syncFromBackend = useCallback(async () => {
     const profileId = getOrCreateProfileId();
     if (!profileId) {
       setSubscription(null);
       setStatus("inactive");
-      return;
+      return null;
     }
 
     try {
@@ -363,11 +449,13 @@ export function ProSubscriptionProvider({ children }: { children: ReactNode }) {
         premium_active: payload.isPro,
       });
       applyVerifiedStatus(payload);
+      return payload;
     } catch (error) {
       console.error("[BankHub Pro] startup premium status fetch failed", error);
       clearStoredSubscription();
       setSubscription(null);
       setStatus("inactive");
+      return null;
     }
   }, [applyVerifiedStatus]);
 
@@ -391,13 +479,8 @@ export function ProSubscriptionProvider({ children }: { children: ReactNode }) {
         applyVerifiedStatus(payload);
         setPaymentStatus(payload.isPro ? "success" : "failed");
         if (payload.isPro) {
-          const successNotice = {
-            kind: "success" as const,
-            title: t("subscription.messages.successTitle", "Payment Successful"),
-            description: t("subscription.messages.premiumActivated", "Premium Activated"),
-          };
-          setNotice(successNotice);
-          toast.success(successNotice.title, { description: successNotice.description });
+          clearPendingOrderId();
+          showPremiumActivatedNotice();
           broadcastProSync();
         }
       } catch (error) {
@@ -415,16 +498,29 @@ export function ProSubscriptionProvider({ children }: { children: ReactNode }) {
     setNotice(verificationNotice);
     toast.error(verificationNotice.title, { description: verificationNotice.description });
     return true;
-  }, [applyVerifiedStatus]);
+  }, [applyVerifiedStatus, showPremiumActivatedNotice]);
 
   useEffect(() => {
     void (async () => {
       const consumedRedirect = await consumePaymentRedirect();
       if (!consumedRedirect) {
-        await syncFromBackend();
+        const restoredStatus = await syncFromBackend();
+        const profileId = getOrCreateProfileId();
+        const pendingOrderId = readPendingOrderId();
+        if (profileId && !restoredStatus?.isPro) {
+          try {
+            await recoverPendingPayment(profileId, pendingOrderId);
+          } catch (error) {
+            if ((error as RecoverPaymentError).responseStatus === 402) {
+              showPaymentFailedNotice((error as Error).message);
+              return;
+            }
+            console.info("[BankHub Pro] pending payment recovery on startup did not activate premium yet", error);
+          }
+        }
       }
     })();
-  }, [consumePaymentRedirect, syncFromBackend]);
+  }, [consumePaymentRedirect, recoverPendingPayment, showPaymentFailedNotice, syncFromBackend]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -460,6 +556,7 @@ export function ProSubscriptionProvider({ children }: { children: ReactNode }) {
       if (!order.keyId || !order.orderId || !order.amount || !order.currency || !order.callbackUrl) {
         throw new Error(order.message || "Order creation failed.");
       }
+      writePendingOrderId(order.orderId);
 
       setPaymentStatus("opening");
       await ensureRazorpayLoaded();
@@ -469,7 +566,51 @@ export function ProSubscriptionProvider({ children }: { children: ReactNode }) {
       }
 
       let settled = false;
-      const razorpay = new window.Razorpay({
+      let recoveryAttempts = 0;
+      let recoveryTimer: ReturnType<typeof window.setInterval> | null = null;
+      let razorpay: RazorpayInstance | null = null;
+
+      const stopRecoveryTimer = () => {
+        if (recoveryTimer) {
+          window.clearInterval(recoveryTimer);
+          recoveryTimer = null;
+        }
+      };
+
+      const tryRecoverOrder = async (nextPendingStatus: PaymentStatus) => {
+        if (settled) return false;
+        setPaymentStatus("verifying");
+        try {
+          const activated = await recoverPendingPayment(profileId, order.orderId);
+          if (activated) {
+            settled = true;
+            stopRecoveryTimer();
+            razorpay?.close?.();
+            return true;
+          }
+        } catch (error) {
+          if ((error as RecoverPaymentError).responseStatus === 402) {
+            settled = true;
+            stopRecoveryTimer();
+            clearPendingOrderId(order.orderId);
+            razorpay?.close?.();
+            showPaymentFailedNotice((error as Error).message);
+            return false;
+          }
+          console.info("[BankHub Pro] payment recovery attempt did not activate premium yet", {
+            profileId,
+            order_id: order.orderId,
+            error,
+          });
+        }
+
+        if (!settled) {
+          setPaymentStatus(nextPendingStatus);
+        }
+        return false;
+      };
+
+      razorpay = new window.Razorpay({
         key: order.keyId,
         order_id: order.orderId,
         amount: order.amount,
@@ -496,22 +637,18 @@ export function ProSubscriptionProvider({ children }: { children: ReactNode }) {
           try {
             const verifiedStatus = await verifyPaymentOnBackend(profileId, payload);
             applyVerifiedStatus(verifiedStatus);
+            clearPendingOrderId(order.orderId);
             setPaymentStatus("success");
             broadcastProSync();
 
-            const successNotice = {
-              kind: "success" as const,
-              title: t("subscription.messages.successTitle", "Payment Successful"),
-              description: t("subscription.messages.premiumActivated", "Premium Activated"),
-            };
             console.info("[BankHub Pro] premium activation result", {
               profileId,
               payment_id: payload.razorpay_payment_id || "",
               order_id: payload.razorpay_order_id || "",
               premium_active: true,
             });
-            setNotice(successNotice);
-            toast.success(successNotice.title, { description: successNotice.description });
+            stopRecoveryTimer();
+            showPremiumActivatedNotice();
           } catch (error) {
             console.error("[BankHub Pro] verification failed after payment success", {
               profileId,
@@ -531,7 +668,10 @@ export function ProSubscriptionProvider({ children }: { children: ReactNode }) {
         },
         modal: {
           ondismiss: () => {
-            if (!settled) setPaymentStatus("idle");
+            stopRecoveryTimer();
+            if (!settled) {
+              void tryRecoverOrder("idle");
+            }
           },
         },
       });
@@ -543,19 +683,22 @@ export function ProSubscriptionProvider({ children }: { children: ReactNode }) {
           payment_id: payload.error?.metadata?.payment_id || "",
           order_id: payload.error?.metadata?.order_id || order.orderId,
           reason: payload.error?.reason || "",
-          description: payload.error?.description || "",
+        description: payload.error?.description || "",
         });
-        const failedNotice = {
-          kind: "error" as const,
-          title: t("subscription.messages.failedTitle", "Payment Failed"),
-          description: t("subscription.messages.failedDescription", "Please Try Again"),
-        };
-        setPaymentStatus("failed");
-        setNotice(failedNotice);
-        toast.error(failedNotice.title, { description: failedNotice.description });
+        clearPendingOrderId(order.orderId);
+        stopRecoveryTimer();
+        showPaymentFailedNotice(payload.error?.description);
       });
 
       razorpay.open();
+      recoveryTimer = window.setInterval(() => {
+        recoveryAttempts += 1;
+        if (recoveryAttempts > 30) {
+          stopRecoveryTimer();
+          return;
+        }
+        void tryRecoverOrder("opening");
+      }, 5000);
     } catch (error) {
       console.error("BankHub Pro checkout failed", error);
       const failedNotice = {
@@ -567,7 +710,7 @@ export function ProSubscriptionProvider({ children }: { children: ReactNode }) {
       setNotice(failedNotice);
       toast.error(failedNotice.title, { description: failedNotice.description });
     }
-  }, []);
+  }, [applyVerifiedStatus, recoverPendingPayment, showPaymentFailedNotice, showPremiumActivatedNotice]);
 
   const value = useMemo<ProSubscriptionContextValue>(() => {
     const expiryDateLabel = formatDateLabel(subscription?.subscriptionExpiryDate || "");

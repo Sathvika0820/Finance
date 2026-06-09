@@ -23,6 +23,18 @@ type OrderRecord = {
   status: "created" | "verified" | "failed";
 };
 
+type RazorpayPayment = {
+  id?: string;
+  order_id?: string;
+  amount?: number;
+  currency?: string;
+  status?: string;
+  captured?: boolean;
+  error_code?: string;
+  error_description?: string;
+  error_reason?: string;
+};
+
 type SubscriptionDb = {
   orders: Record<string, OrderRecord>;
   subscriptions: Record<string, SubscriptionRecord>;
@@ -76,6 +88,11 @@ function describeMissingRazorpayKeys(keyId: string, keySecret: string) {
 function normalizeProfileId(value: unknown) {
   const profileId = String(value || "").trim();
   return /^[A-Za-z0-9_-]{12,80}$/.test(profileId) ? profileId : "";
+}
+
+function normalizeOrderId(value: unknown) {
+  const orderId = String(value || "").trim();
+  return /^order_[A-Za-z0-9]+$/.test(orderId) ? orderId : "";
 }
 
 async function readRequestJson(request: Request) {
@@ -184,6 +201,12 @@ function buildSubscriptionRecord(profileId: string, paymentId: string, orderId: 
     subscriptionStartDate: now.toISOString(),
     subscriptionExpiryDate: new Date(now.getTime() + PRO_PLAN_VALIDITY_DAYS * DAY_IN_MS).toISOString(),
   } satisfies SubscriptionRecord;
+}
+
+function findLatestOrderForProfile(db: SubscriptionDb, profileId: string) {
+  return Object.values(db.orders)
+    .filter((order) => order.profileId === profileId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
 }
 
 function base64(value: string) {
@@ -381,6 +404,185 @@ async function verifyRazorpayPayment(request: Request, env: unknown) {
   });
 }
 
+async function recoverRazorpayPayment(request: Request, env: unknown) {
+  const body = await readRequestJson(request);
+  const profileId = normalizeProfileId(body.profileId);
+  const requestedOrderId = normalizeOrderId(body.orderId);
+  const { keyId, keySecret } = getRazorpayKeys(env);
+
+  console.info("[BankHub Pro] payment recovery requested", {
+    profileId,
+    order_id: requestedOrderId,
+    hasKeyId: Boolean(keyId),
+    hasKeySecret: Boolean(keySecret),
+  });
+
+  if (!profileId) {
+    return json({ ok: false, message: "Invalid profile id." }, { status: 400 });
+  }
+
+  if (!keyId || !keySecret) {
+    const message = describeMissingRazorpayKeys(keyId, keySecret);
+    console.error("[BankHub Pro] payment recovery failed: Razorpay keys missing", {
+      hasKeyId: Boolean(keyId),
+      hasKeySecret: Boolean(keySecret),
+      message,
+    });
+    return json({ ok: false, message }, { status: 500 });
+  }
+
+  const db = await readDb();
+  const order = requestedOrderId ? db.orders[requestedOrderId] : findLatestOrderForProfile(db, profileId);
+
+  if (!order || order.profileId !== profileId) {
+    console.error("[BankHub Pro] payment recovery failed: order not found for profile", {
+      profileId,
+      order_id: requestedOrderId,
+    });
+    return json({ ok: false, message: "Payment order could not be found." }, { status: 404 });
+  }
+
+  const existingSubscription = db.subscriptions[profileId];
+  if (getSubscriptionStatus(existingSubscription) === "active") {
+    console.info("[BankHub Pro] payment recovery skipped: premium already active", {
+      profileId,
+      order_id: order.orderId,
+      payment_id: existingSubscription?.paymentId || "",
+    });
+    return json({
+      ok: true,
+      message: "Premium Activated",
+      ...publicSubscription(existingSubscription),
+    });
+  }
+
+  const response = await fetch(`https://api.razorpay.com/v1/orders/${encodeURIComponent(order.orderId)}/payments`, {
+    method: "GET",
+    headers: {
+      authorization: `Basic ${base64(`${keyId}:${keySecret}`)}`,
+      accept: "application/json",
+    },
+  });
+
+  const payload = await response.json().catch(() => null) as { items?: RazorpayPayment[]; error?: { description?: string } } | null;
+  const payments = Array.isArray(payload?.items) ? payload.items : [];
+  let paidPayment = payments.find((payment) => (
+    payment.order_id === order.orderId
+    && payment.amount === order.amount
+    && payment.currency === order.currency
+    && (payment.captured === true || payment.status === "captured")
+  ));
+  const authorizedPayment = payments.find((payment) => (
+    payment.order_id === order.orderId
+    && payment.amount === order.amount
+    && payment.currency === order.currency
+    && payment.status === "authorized"
+    && payment.id
+  ));
+  const failedPayment = payments.find((payment) => (
+    payment.order_id === order.orderId
+    && payment.amount === order.amount
+    && payment.currency === order.currency
+    && payment.status === "failed"
+  ));
+
+  if (!paidPayment && authorizedPayment?.id) {
+    const captureResponse = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(authorizedPayment.id)}/capture`, {
+      method: "POST",
+      headers: {
+        authorization: `Basic ${base64(`${keyId}:${keySecret}`)}`,
+        "content-type": "application/json",
+        accept: "application/json",
+      },
+      body: JSON.stringify({
+        amount: order.amount,
+        currency: order.currency,
+      }),
+    });
+    const capturePayload = await captureResponse.json().catch(() => null) as RazorpayPayment & { error?: { description?: string } } | null;
+
+    console.info("[BankHub Pro] authorized payment capture result", {
+      profileId,
+      order_id: order.orderId,
+      payment_id: authorizedPayment.id,
+      status: captureResponse.status,
+      ok: captureResponse.ok,
+      capture_status: capturePayload?.status || "",
+      captured: Boolean(capturePayload?.captured),
+      error: capturePayload?.error?.description || "",
+    });
+
+    if (
+      captureResponse.ok
+      && capturePayload?.id
+      && capturePayload.amount === order.amount
+      && capturePayload.currency === order.currency
+      && (capturePayload.captured === true || capturePayload.status === "captured")
+    ) {
+      paidPayment = capturePayload;
+    }
+  }
+
+  console.info("[BankHub Pro] payment recovery result", {
+    profileId,
+    order_id: order.orderId,
+    status: response.status,
+    ok: response.ok,
+    payment_count: payments.length,
+    paid_payment_id: paidPayment?.id || "",
+    failed_payment_id: failedPayment?.id || "",
+    payment_statuses: payments.map((payment) => payment.status || "unknown").join(","),
+    error: failedPayment?.error_description || payload?.error?.description || "",
+  });
+
+  if (!response.ok) {
+    return json({ ok: false, message: payload?.error?.description || "Payment recovery failed." }, { status: 502 });
+  }
+
+  if (!paidPayment?.id) {
+    if (failedPayment?.id) {
+      db.orders[order.orderId] = { ...order, status: "failed" };
+      await writeDb(db);
+
+      return json({
+        ok: false,
+        message: failedPayment.error_description || "Payment Failed",
+        isPro: false,
+        status: "inactive",
+        subscription: null,
+      }, { status: 402 });
+    }
+
+    return json({
+      ok: true,
+      message: "Payment confirmation is still pending.",
+      isPro: false,
+      status: "inactive",
+      subscription: null,
+    }, { status: 202 });
+  }
+
+  const subscription = buildSubscriptionRecord(profileId, paidPayment.id, order.orderId);
+  db.orders[order.orderId] = { ...order, status: "verified" };
+  db.subscriptions[profileId] = subscription;
+  await writeDb(db);
+
+  console.info("[BankHub Pro] premium activation result", {
+    payment_id: paidPayment.id,
+    order_id: order.orderId,
+    profileId,
+    premium_active: true,
+    source: "payment_recovery",
+    expiry: subscription.subscriptionExpiryDate,
+  });
+
+  return json({
+    ok: true,
+    message: "Premium Activated",
+    ...publicSubscription(subscription),
+  });
+}
+
 function appendQueryValue(path: string, key: string, value: string) {
   const separator = path.includes("?") ? "&" : "?";
   return `${path}${separator}${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
@@ -476,6 +678,9 @@ export async function handleProSubscriptionApi(request: Request, env: unknown) {
     }
     if (url.pathname === "/api/pro/verify-payment" && method === "POST") {
       return await verifyRazorpayPayment(request, env);
+    }
+    if (url.pathname === "/api/pro/recover-payment" && method === "POST") {
+      return await recoverRazorpayPayment(request, env);
     }
     if (url.pathname === "/api/pro/status" && method === "GET") {
       return await getPremiumStatus(request);
