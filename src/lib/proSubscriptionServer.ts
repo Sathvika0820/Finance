@@ -41,11 +41,14 @@ type SubscriptionDb = {
 };
 
 type EnvLike = Record<string, unknown> | undefined | null;
+type LocalEnvCache = Record<string, string>;
 
 const memoryDb: SubscriptionDb = {
   orders: {},
   subscriptions: {},
 };
+
+let localEnvCache: LocalEnvCache | null = null;
 
 function json(data: unknown, init?: ResponseInit) {
   return Response.json(data, {
@@ -57,20 +60,76 @@ function json(data: unknown, init?: ResponseInit) {
   });
 }
 
-function getEnvValue(env: unknown, key: string) {
+function parseEnvText(text: string) {
+  const values: LocalEnvCache = {};
+
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+
+    const separatorIndex = line.indexOf("=");
+    if (separatorIndex <= 0) continue;
+
+    const key = line.slice(0, separatorIndex).trim();
+    let value = line.slice(separatorIndex + 1).trim();
+
+    if (
+      (value.startsWith("\"") && value.endsWith("\""))
+      || (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    if (key) values[key] = value;
+  }
+
+  return values;
+}
+
+async function readLocalEnvFiles() {
+  if (localEnvCache) return localEnvCache;
+
+  localEnvCache = {};
+
+  try {
+    const fs = await import("node:fs/promises");
+    const path = await import("node:path");
+    const processLike = (globalThis as typeof globalThis & { process?: { cwd?: () => string } }).process;
+    const cwd = processLike?.cwd?.() || ".";
+
+    for (const fileName of [".env", ".env.local", ".dev.vars"]) {
+      try {
+        const text = await fs.readFile(path.join(cwd, fileName), "utf8");
+        localEnvCache = { ...localEnvCache, ...parseEnvText(text) };
+      } catch {
+        // Missing local env files are normal outside development.
+      }
+    }
+  } catch {
+    // Non-Node server runtimes receive secrets through the env binding instead.
+  }
+
+  return localEnvCache;
+}
+
+async function getEnvValue(env: unknown, key: string) {
   const envRecord = env && typeof env === "object" ? env as EnvLike : null;
   const fromRuntimeEnv = envRecord?.[key];
   if (typeof fromRuntimeEnv === "string" && fromRuntimeEnv.trim()) return fromRuntimeEnv.trim();
 
   const processEnv = (globalThis as typeof globalThis & { process?: { env?: Record<string, string | undefined> } }).process?.env;
   const fromProcess = processEnv?.[key];
-  return typeof fromProcess === "string" && fromProcess.trim() ? fromProcess.trim() : "";
+  if (typeof fromProcess === "string" && fromProcess.trim()) return fromProcess.trim();
+
+  const localEnv = await readLocalEnvFiles();
+  const fromLocalFile = localEnv[key];
+  return typeof fromLocalFile === "string" && fromLocalFile.trim() ? fromLocalFile.trim() : "";
 }
 
-function getRazorpayKeys(env: unknown) {
+async function getRazorpayKeys(env: unknown) {
   return {
-    keyId: getEnvValue(env, "RAZORPAY_KEY_ID") || getEnvValue(env, "VITE_RAZORPAY_KEY_ID"),
-    keySecret: getEnvValue(env, "RAZORPAY_KEY_SECRET"),
+    keyId: await getEnvValue(env, "RAZORPAY_KEY_ID") || await getEnvValue(env, "VITE_RAZORPAY_KEY_ID"),
+    keySecret: await getEnvValue(env, "RAZORPAY_KEY_SECRET"),
   };
 }
 
@@ -248,7 +307,7 @@ async function createRazorpayOrder(request: Request, env: unknown) {
   const body = await readRequestJson(request);
   const profileId = normalizeProfileId(body.profileId);
   const returnPath = String(body.returnPath || "").trim();
-  const { keyId, keySecret } = getRazorpayKeys(env);
+  const { keyId, keySecret } = await getRazorpayKeys(env);
 
   console.info("[BankHub Pro] order creation requested", {
     profileId,
@@ -332,7 +391,7 @@ async function verifyRazorpayPayment(request: Request, env: unknown) {
   const paymentId = String(body.razorpay_payment_id || "").trim();
   const orderId = String(body.razorpay_order_id || "").trim();
   const signature = String(body.razorpay_signature || "").trim();
-  const { keySecret } = getRazorpayKeys(env);
+  const { keySecret } = await getRazorpayKeys(env);
 
   console.info("[BankHub Pro] payment success callback received by backend", {
     profileId,
@@ -408,7 +467,7 @@ async function recoverRazorpayPayment(request: Request, env: unknown) {
   const body = await readRequestJson(request);
   const profileId = normalizeProfileId(body.profileId);
   const requestedOrderId = normalizeOrderId(body.orderId);
-  const { keyId, keySecret } = getRazorpayKeys(env);
+  const { keyId, keySecret } = await getRazorpayKeys(env);
 
   console.info("[BankHub Pro] payment recovery requested", {
     profileId,
