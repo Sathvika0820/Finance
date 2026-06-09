@@ -6,6 +6,7 @@ import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { ArrowLeft, Bot, Download, FileCheck2, FileText, Landmark, Loader2, Send, Upload } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { RequireProAccess } from "@/components/RequireProAccess";
 import { buildFilledDocx, type DocxAnswers, type DocxImageValue } from "@/lib/docxLocal";
 import { useTranslation } from "@/lib/i18n";
 
@@ -25,12 +26,23 @@ export const Route = createFileRoute("/premium/form-assistant")({
       { name: "description", content: "Fill bank forms with guided questions." },
     ],
   }),
-  component: () => (
-    <AppShell>
-      <SimpleSbiFormAssistant />
-    </AppShell>
-  ),
+  component: PremiumFormAssistantPage,
 });
+
+function PremiumFormAssistantPage() {
+  const { t } = useTranslation();
+
+  return (
+    <AppShell>
+      <RequireProAccess
+        title={t("formAssistantToolName", "Form Assistant")}
+        description={t("formAssistantToolDesc", "The smart way to fill bank forms.")}
+      >
+        <SimpleSbiFormAssistant />
+      </RequireProAccess>
+    </AppShell>
+  );
+}
 
 type FieldKind = "text" | "date" | "image" | "choice";
 

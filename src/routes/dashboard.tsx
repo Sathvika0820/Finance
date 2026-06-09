@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { memo, useMemo, useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, ChevronDown, Search, ExternalLink, ArrowDownUp, Settings, Landmark, Building2, Wallet, CreditCard, Home, Users, X, Mail, PiggyBank, Globe, MapPin, Shield, Activity, HeartHandshake, Award } from "lucide-react";
+import { Heart, ChevronDown, Search, ExternalLink, ArrowDownUp, Settings, Landmark, Building2, Wallet, CreditCard, Home, Users, X, Mail, PiggyBank, Globe, MapPin, Shield, Activity, HeartHandshake, Award, Lock } from "lucide-react";
 import { BANKS, CATEGORIES, getBankDisplayName, Bank, logoUrl, bankMatchesSearch } from "@/data/banks";
 import { SERVICES_DATA, FinanceService, ServiceCategory, getServiceDescription, getServiceName } from "@/data/services";
 import { runServicesHealthCheckBackground } from "@/lib/urlHealth";
@@ -19,6 +19,8 @@ import { ShieldCheck, ArrowLeftRight, FileText, Calculator } from "lucide-react"
 import { SearchBar } from "@/components/SearchBar";
 import { SmartRedirectActions } from "@/components/SmartRedirectActions";
 import { getInstitutionRedirect } from "@/data/institutionRedirects";
+import { ProSubscriptionCard } from "@/components/ProSubscriptionCard";
+import { useProSubscription } from "@/lib/proSubscription";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -52,6 +54,82 @@ const SURFACE_CARD_INTERACTIVE = "fintech-card-interactive rounded-[18px]";
 const PRIMARY_ACTION = "fintech-button rounded-[12px] font-bold active:scale-[0.98] transition-all";
 const SECONDARY_ACTION = "fintech-button-secondary rounded-[12px] font-bold active:scale-[0.98] transition-all";
 const CONTROL_INPUT = "fintech-input rounded-xl outline-none transition-all";
+
+type PremiumToolCardProps = {
+  actionLabel: string;
+  badgeLabel: string;
+  buttonClassName: string;
+  description: string;
+  icon: any;
+  iconColorClassName: string;
+  isUnlocked: boolean;
+  onUnlock: () => void;
+  panelClassName: string;
+  statusLabel: string;
+  title: string;
+  to: string;
+};
+
+function PremiumToolCard({
+  actionLabel,
+  badgeLabel,
+  buttonClassName,
+  description,
+  icon: Icon,
+  iconColorClassName,
+  isUnlocked,
+  onUnlock,
+  panelClassName,
+  statusLabel,
+  title,
+  to,
+}: PremiumToolCardProps) {
+  return (
+    <div className={`${panelClassName} p-4 rounded-[18px] flex flex-col gap-3 relative overflow-hidden group`}>
+      <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
+        <Icon className={`w-16 h-16 ${iconColorClassName}`} />
+      </div>
+      <div className="absolute right-4 top-4 z-10">
+        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.08em] ${
+          isUnlocked ? "bg-emerald-500 text-white" : "bg-white/90 text-slate-700 border border-slate-200"
+        }`}>
+          {isUnlocked ? <Award className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+          {statusLabel}
+        </span>
+      </div>
+      <div className="flex items-start gap-3 relative z-10 pr-12">
+        <div className="w-10 h-10 rounded-[12px] bg-white shadow-sm flex items-center justify-center shrink-0">
+          <Icon className={`w-5 h-5 ${iconColorClassName}`} />
+        </div>
+        <div className="min-w-0">
+          <h4 className="font-bold text-[14px] text-slate-900">
+            {title}
+            <span className="inline-block px-2 py-0.5 ml-1 bg-slate-900 text-white text-[9px] font-bold uppercase rounded-full tracking-wider align-middle">
+              {badgeLabel}
+            </span>
+          </h4>
+          <p className="text-[12px] font-medium text-slate-700/80 mt-0.5">{description}</p>
+        </div>
+      </div>
+      {isUnlocked ? (
+        <Link
+          to={to}
+          className={`w-full mt-1 py-2.5 text-[13px] text-center block text-white rounded-[12px] font-bold active:scale-[0.98] transition-all relative z-10 ${buttonClassName}`}
+        >
+          {actionLabel}
+        </Link>
+      ) : (
+        <button
+          type="button"
+          onClick={onUnlock}
+          className={`w-full mt-1 py-2.5 text-[13px] text-center block text-white rounded-[12px] font-bold active:scale-[0.98] transition-all relative z-10 ${buttonClassName}`}
+        >
+          {actionLabel}
+        </button>
+      )}
+    </div>
+  );
+}
 
 function getCatKey(cat: string) {
   const map: Record<string, string> = {
@@ -720,6 +798,12 @@ function Dashboard() {
   const { t, lang, setLang } = useTranslation();
   const { ids, toggle, isFavorite } = useFavorites();
   const { speakVoice, openBankSafely } = useVoiceAssistant();
+  const {
+    isPro,
+    openCheckout,
+    paymentStatus,
+    status: proStatus,
+  } = useProSubscription();
   
   const { toggle: toggleServiceFav, isFavorite: isServiceFav } = useServiceFavorites();
 
@@ -825,6 +909,25 @@ function Dashboard() {
     event?.preventDefault?.();
     setActionBank(bank);
   }, []);
+
+  const openProCheckout = useCallback(() => {
+    void openCheckout("dashboard-premium-card");
+  }, [openCheckout]);
+
+  const isPaymentBusy = paymentStatus === "creating_order" || paymentStatus === "opening" || paymentStatus === "verifying";
+  const premiumActionLabel = isPro
+    ? t("accessTool")
+    : isPaymentBusy
+      ? t("subscription.actions.processing", "Opening Razorpay...")
+      : proStatus === "expired"
+        ? t("subscription.actions.renew", "Renew Now - ₹10")
+        : t("subscription.actions.unlock", "Unlock Pro - ₹10");
+
+  const premiumStatusLabel = isPro
+    ? t("subscription.status.active", "Pro Active")
+    : proStatus === "expired"
+      ? t("subscription.status.expired", "Expired")
+      : t("subscription.status.locked", "Locked");
 
   return (
     <div className="space-y-8 pb-6 pt-2">
@@ -1186,95 +1289,71 @@ function Dashboard() {
             <p className="text-[12px] text-slate-500 font-medium">{t("advancedAutomation")}</p>
           </div>
         </div>
+
+        <div className="mb-4">
+          <ProSubscriptionCard />
+        </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {/* AI Banking Letter Generator Pro */}
-          <div className={`bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200/60 p-4 rounded-[18px] flex flex-col gap-3 relative overflow-hidden group`}>
-            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
-              <FileText className="w-16 h-16 text-indigo-500" />
-            </div>
-            <div className="flex items-start gap-3 relative z-10">
-              <div className="w-10 h-10 rounded-[12px] bg-white shadow-sm flex items-center justify-center shrink-0">
-                <FileText className="w-5 h-5 text-indigo-600" />
-              </div>
-              <div className="min-w-0">
-                <h4 className="font-bold text-[14px] text-indigo-900">{t("letterGenerator")} <span className="inline-block px-2 py-0.5 ml-1 bg-indigo-500 text-white text-[9px] font-bold uppercase rounded-full tracking-wider align-middle">{t("pro")}</span></h4>
-                <p className="text-[12px] font-medium text-indigo-700/80 mt-0.5">{t("generateLettersInstantly")}</p>
-              </div>
-            </div>
-            <Link
-              to="/premium/letter-generator"
-              className="w-full mt-1 py-2.5 text-[13px] text-center block bg-indigo-600 hover:bg-indigo-700 text-white rounded-[12px] font-bold active:scale-[0.98] transition-all relative z-10"
-            >
-              {t("accessTool")}
-            </Link>
-          </div>
+          <PremiumToolCard
+            actionLabel={premiumActionLabel}
+            badgeLabel={t("pro")}
+            buttonClassName="bg-indigo-600 hover:bg-indigo-700"
+            description={t("generateLettersInstantly")}
+            icon={FileText}
+            iconColorClassName="text-indigo-500"
+            isUnlocked={isPro}
+            onUnlock={openProCheckout}
+            panelClassName="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200/60"
+            statusLabel={premiumStatusLabel}
+            title={t("letterGenerator")}
+            to="/premium/letter-generator"
+          />
 
-          {/* EMI Planner & Loan Simulator Pro */}
-          <div className={`bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200/60 p-4 rounded-[18px] flex flex-col gap-3 relative overflow-hidden group`}>
-            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
-              <Calculator className="w-16 h-16 text-emerald-500" />
-            </div>
-            <div className="flex items-start gap-3 relative z-10">
-              <div className="w-10 h-10 rounded-[12px] bg-white shadow-sm flex items-center justify-center shrink-0">
-                <Calculator className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div className="min-w-0">
-                <h4 className="font-bold text-[14px] text-emerald-900">{t("emiPlanner")} <span className="inline-block px-2 py-0.5 ml-1 bg-emerald-500 text-white text-[9px] font-bold uppercase rounded-full tracking-wider align-middle">{t("pro")}</span></h4>
-                <p className="text-[12px] font-medium text-emerald-700/80 mt-0.5">{t("simulateLoanCosts")}</p>
-              </div>
-            </div>
-            <Link
-              to="/premium/emi-planner"
-              className="w-full mt-1 py-2.5 text-[13px] text-center block bg-emerald-600 hover:bg-emerald-700 text-white rounded-[12px] font-bold active:scale-[0.98] transition-all relative z-10"
-            >
-              {t("accessTool")}
-            </Link>
-          </div>
+          <PremiumToolCard
+            actionLabel={premiumActionLabel}
+            badgeLabel={t("pro")}
+            buttonClassName="bg-emerald-600 hover:bg-emerald-700"
+            description={t("simulateLoanCosts")}
+            icon={Calculator}
+            iconColorClassName="text-emerald-500"
+            isUnlocked={isPro}
+            onUnlock={openProCheckout}
+            panelClassName="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200/60"
+            statusLabel={premiumStatusLabel}
+            title={t("emiPlanner")}
+            to="/premium/emi-planner"
+          />
 
-          {/* Premium Banking Shield */}
-          <div className={`bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200/60 p-4 rounded-[18px] flex flex-col gap-3 relative overflow-hidden group`}>
-            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
-              <ShieldCheck className="w-16 h-16 text-purple-500" />
-            </div>
-            <div className="flex items-start gap-3 relative z-10">
-              <div className="w-10 h-10 rounded-[12px] bg-white shadow-sm flex items-center justify-center shrink-0">
-                <ShieldCheck className="w-5 h-5 text-purple-600" />
-              </div>
-              <div>
-                <h4 className="font-bold text-[14px] text-purple-900">{t("bankingShield")} <span className="inline-block px-2 py-0.5 ml-1 bg-purple-500 text-white text-[9px] font-bold uppercase rounded-full tracking-wider align-middle">{t("pro")}</span></h4>
-                <p className="text-[12px] font-medium text-purple-700/80 mt-0.5">{t("advancedSmsAnalyzer")}</p>
-              </div>
-            </div>
-            <Link
-              to="/premium/safety-shield"
-              className="w-full mt-1 py-2.5 text-[13px] text-center block bg-purple-600 hover:bg-purple-700 text-white rounded-[12px] font-bold active:scale-[0.98] transition-all relative z-10"
-            >
-              {t("accessTool")}
-            </Link>
-          </div>
+          <PremiumToolCard
+            actionLabel={premiumActionLabel}
+            badgeLabel={t("pro")}
+            buttonClassName="bg-purple-600 hover:bg-purple-700"
+            description={t("advancedSmsAnalyzer")}
+            icon={ShieldCheck}
+            iconColorClassName="text-purple-500"
+            isUnlocked={isPro}
+            onUnlock={openProCheckout}
+            panelClassName="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200/60"
+            statusLabel={premiumStatusLabel}
+            title={t("bankingShield")}
+            to="/premium/safety-shield"
+          />
 
-          {/* SBI Form Assistant */}
-          <div className={`bg-gradient-to-br from-sky-50 to-blue-50 border border-sky-200/60 p-4 rounded-[18px] flex flex-col gap-3 relative overflow-hidden group`}>
-            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
-              <FileText className="w-16 h-16 text-sky-500" />
-            </div>
-            <div className="flex items-start gap-3 relative z-10">
-              <div className="w-10 h-10 rounded-[12px] bg-white shadow-sm flex items-center justify-center shrink-0">
-                <FileText className="w-5 h-5 text-sky-600" />
-              </div>
-              <div className="min-w-0">
-                <h4 className="font-bold text-[14px] text-sky-900">{t("formAssistantToolName")} <span className="inline-block px-2 py-0.5 ml-1 bg-sky-500 text-white text-[9px] font-bold uppercase rounded-full tracking-wider align-middle">{t("pro")}</span></h4>
-                <p className="text-[12px] font-medium text-sky-700/80 mt-0.5">{t("formAssistantToolDesc")}</p>
-              </div>
-            </div>
-            <Link
-              to="/premium/form-assistant"
-              className="w-full mt-1 py-2.5 text-[13px] text-center block bg-sky-600 hover:bg-sky-700 text-white rounded-[12px] font-bold active:scale-[0.98] transition-all relative z-10"
-            >
-              {t("accessTool")}
-            </Link>
-          </div>
+          <PremiumToolCard
+            actionLabel={premiumActionLabel}
+            badgeLabel={t("pro")}
+            buttonClassName="bg-sky-600 hover:bg-sky-700"
+            description={t("formAssistantToolDesc")}
+            icon={FileText}
+            iconColorClassName="text-sky-500"
+            isUnlocked={isPro}
+            onUnlock={openProCheckout}
+            panelClassName="bg-gradient-to-br from-sky-50 to-blue-50 border border-sky-200/60"
+            statusLabel={premiumStatusLabel}
+            title={t("formAssistantToolName")}
+            to="/premium/form-assistant"
+          />
 
         </div>
       </section>

@@ -10,6 +10,8 @@ import {
 
 import appCss from "../styles.css?url";
 import { useTranslation } from "@/lib/i18n";
+import { ProSubscriptionProvider } from "@/lib/proSubscription";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   const { t } = useTranslation();
@@ -144,8 +146,11 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <Outlet />
-    </QueryClientProvider>
+    <ProSubscriptionProvider>
+      <QueryClientProvider client={queryClient}>
+        <Outlet />
+        <Toaster position="top-center" richColors />
+      </QueryClientProvider>
+    </ProSubscriptionProvider>
   );
 }

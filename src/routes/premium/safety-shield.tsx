@@ -19,6 +19,7 @@ import { useTranslation } from "@/lib/i18n";
 import { useVoiceAssistant } from "@/lib/voice";
 import { analyzeScamInput, ScamAnalysisResult } from "@/services/scamAnalyzer";
 import { AppShell } from '@/components/AppShell';
+import { RequireProAccess } from '@/components/RequireProAccess';
 
 const HELPLINE_NUMBER = CYBER_FRAUD_HELPLINE;
 
@@ -50,12 +51,23 @@ const ACTIVE_SCAM_CATEGORIES: ScamCategory[] = CYBER_SCAM_CATEGORIES.map((scam) 
 }));
 
 export const Route = createFileRoute('/premium/safety-shield')({
-  component: () => (
-    <AppShell>
-      <PremiumSafetyShield />
-    </AppShell>
-  ),
+  component: PremiumSafetyShieldPage,
 });
+
+function PremiumSafetyShieldPage() {
+  const { t } = useTranslation();
+
+  return (
+    <AppShell>
+      <RequireProAccess
+        title={t("bankingShield", "Banking Shield")}
+        description={t("advancedSmsAnalyzer", "Advanced SMS & Scam URL Analyzer")}
+      >
+        <PremiumSafetyShield />
+      </RequireProAccess>
+    </AppShell>
+  );
+}
 
 function PremiumSafetyShield() {
   const { t } = useTranslation();
