@@ -13,6 +13,7 @@ import {
   CYBER_FRAUD_WARNING,
   CYBER_SCAM_CATEGORIES,
 } from "@/data/cyberSafetyData";
+import { bankingSafetyExtended } from "@/data/bankingSafetyExtended";
 import { getOfficialLinkEntry } from "@/data/officialLinks";
 import { openVerifiedExternalLink } from "@/lib/security";
 
@@ -200,6 +201,8 @@ export function SafetyShieldModal({
   isOpen,
   onClose,
   t,
+  lang,
+  speakVoice,
 }: SafetyShieldModalProps) {
   const [selectedScam, setSelectedScam] = useState<ScamCategory | null>(null);
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
@@ -209,10 +212,27 @@ export function SafetyShieldModal({
     t("bankHubOfficialRedirectTrust"),
     t("callImmediatelyIfMoneyLost"),
   ];
-  const getScamCopy = (_scam: ScamCategory) => ({
-    title: t("bankingSafetyShield"),
-    description: t("cyberFraudWarning"),
-  });
+  const getScamCopy = (scam: ScamCategory) => {
+    const langCode = lang === "hindi" ? "hi" : "en";
+    const normalizedId =
+      scam.id === "fake-banking-website"
+        ? "fake-website"
+        : scam.id === "kyc-update-scam"
+        ? "kyc-scam"
+        : scam.id === "fake-customer-care-number"
+        ? "fake-customer-care"
+        : scam.id;
+
+    const extendedCategories = (bankingSafetyExtended as any)[langCode]?.scamCategories;
+    const extendedCategory = Array.isArray(extendedCategories)
+      ? extendedCategories.find((cat: any) => cat.id === normalizedId)
+      : null;
+
+    return {
+      title: extendedCategory?.title || scam.title,
+      description: extendedCategory?.description || scam.description,
+    };
+  };
 
   if (!isOpen) return null;
 
@@ -356,7 +376,7 @@ export function SafetyShieldModal({
                                   {t("immediateSafetySteps")}
                                 </p>
                                 <ul className="space-y-2">
-                                  {localizedSafetySteps.map((step, i) => (
+                                  {scam.steps.map((step, i) => (
                                     <li key={i} className="flex items-start gap-2.5">
                                       <span className="w-5 h-5 rounded-full bg-green-100 text-green-700 text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">
                                         {i + 1}

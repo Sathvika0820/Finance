@@ -19,7 +19,6 @@ import { ShieldCheck, ArrowLeftRight, FileText, Calculator } from "lucide-react"
 import { SearchBar } from "@/components/SearchBar";
 import { SmartRedirectActions } from "@/components/SmartRedirectActions";
 import { getInstitutionRedirect } from "@/data/institutionRedirects";
-import { ProSubscriptionCard } from "@/components/ProSubscriptionCard";
 import { useProSubscription } from "@/lib/proSubscription";
 
 export const Route = createFileRoute("/dashboard")({
@@ -57,7 +56,6 @@ const CONTROL_INPUT = "fintech-input rounded-xl outline-none transition-all";
 
 type PremiumToolCardProps = {
   actionLabel: string;
-  badgeLabel: string;
   buttonClassName: string;
   description: string;
   icon: any;
@@ -65,14 +63,12 @@ type PremiumToolCardProps = {
   isUnlocked: boolean;
   onUnlock: () => void;
   panelClassName: string;
-  statusLabel: string;
   title: string;
   to: string;
 };
 
 function PremiumToolCard({
   actionLabel,
-  badgeLabel,
   buttonClassName,
   description,
   icon: Icon,
@@ -80,7 +76,6 @@ function PremiumToolCard({
   isUnlocked,
   onUnlock,
   panelClassName,
-  statusLabel,
   title,
   to,
 }: PremiumToolCardProps) {
@@ -89,24 +84,13 @@ function PremiumToolCard({
       <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
         <Icon className={`w-16 h-16 ${iconColorClassName}`} />
       </div>
-      <div className="absolute right-4 top-4 z-10">
-        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.08em] ${
-          isUnlocked ? "bg-emerald-500 text-white" : "bg-white/90 text-slate-700 border border-slate-200"
-        }`}>
-          {isUnlocked ? <Award className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-          {statusLabel}
-        </span>
-      </div>
-      <div className="flex items-start gap-3 relative z-10 pr-12">
+      <div className="flex items-start gap-3 relative z-10">
         <div className="w-10 h-10 rounded-[12px] bg-white shadow-sm flex items-center justify-center shrink-0">
           <Icon className={`w-5 h-5 ${iconColorClassName}`} />
         </div>
         <div className="min-w-0">
           <h4 className="font-bold text-[14px] text-slate-900">
             {title}
-            <span className="inline-block px-2 py-0.5 ml-1 bg-slate-900 text-white text-[9px] font-bold uppercase rounded-full tracking-wider align-middle">
-              {badgeLabel}
-            </span>
           </h4>
           <p className="text-[12px] font-medium text-slate-700/80 mt-0.5">{description}</p>
         </div>
@@ -956,6 +940,12 @@ function Dashboard() {
             <p className="mt-3 max-w-[34rem] text-[16px] sm:text-[17px] font-bold leading-[1.32] text-muted-foreground [text-wrap:balance] [word-break:keep-all] [overflow-wrap:normal] hyphens-none">
               {t("tagline")}
             </p>
+            <div className="mt-4">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-100 text-[12px] font-semibold text-foreground/60">
+                <Shield className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                {t("credentialsNote")}
+              </span>
+            </div>
           </div>
         </div>
       </header>
@@ -1282,22 +1272,9 @@ function Dashboard() {
 
       {/* Premium Features */}
       <section className="mt-8">
-        <div className="flex items-center gap-2 mb-4">
-          <Award className="w-6 h-6 text-amber-500" />
-          <div>
-            <h3 className="font-bold text-[16px] text-slate-900 leading-tight">{t("premiumFeatures")}</h3>
-            <p className="text-[12px] text-slate-500 font-medium">{t("advancedAutomation")}</p>
-          </div>
-        </div>
-
-        <div className="mb-4">
-          <ProSubscriptionCard />
-        </div>
-        
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <PremiumToolCard
             actionLabel={premiumActionLabel}
-            badgeLabel={t("pro")}
             buttonClassName="bg-indigo-600 hover:bg-indigo-700"
             description={t("generateLettersInstantly")}
             icon={FileText}
@@ -1305,14 +1282,12 @@ function Dashboard() {
             isUnlocked={isPro}
             onUnlock={openProCheckout}
             panelClassName="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200/60"
-            statusLabel={premiumStatusLabel}
             title={t("letterGenerator")}
             to="/premium/letter-generator"
           />
 
           <PremiumToolCard
             actionLabel={premiumActionLabel}
-            badgeLabel={t("pro")}
             buttonClassName="bg-emerald-600 hover:bg-emerald-700"
             description={t("simulateLoanCosts")}
             icon={Calculator}
@@ -1320,14 +1295,12 @@ function Dashboard() {
             isUnlocked={isPro}
             onUnlock={openProCheckout}
             panelClassName="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200/60"
-            statusLabel={premiumStatusLabel}
             title={t("emiPlanner")}
             to="/premium/emi-planner"
           />
 
           <PremiumToolCard
             actionLabel={premiumActionLabel}
-            badgeLabel={t("pro")}
             buttonClassName="bg-purple-600 hover:bg-purple-700"
             description={t("advancedSmsAnalyzer")}
             icon={ShieldCheck}
@@ -1335,14 +1308,12 @@ function Dashboard() {
             isUnlocked={isPro}
             onUnlock={openProCheckout}
             panelClassName="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200/60"
-            statusLabel={premiumStatusLabel}
             title={t("bankingShield")}
             to="/premium/safety-shield"
           />
 
           <PremiumToolCard
             actionLabel={premiumActionLabel}
-            badgeLabel={t("pro")}
             buttonClassName="bg-sky-600 hover:bg-sky-700"
             description={t("formAssistantToolDesc")}
             icon={FileText}
@@ -1350,7 +1321,6 @@ function Dashboard() {
             isUnlocked={isPro}
             onUnlock={openProCheckout}
             panelClassName="bg-gradient-to-br from-sky-50 to-blue-50 border border-sky-200/60"
-            statusLabel={premiumStatusLabel}
             title={t("formAssistantToolName")}
             to="/premium/form-assistant"
           />
@@ -1358,14 +1328,6 @@ function Dashboard() {
         </div>
       </section>
 
-      {/* Security Notice Footer */}
-      <div className="pt-4 pb-2">
-        <div className="mx-auto block text-center">
-          <p className="text-[12px] font-medium text-foreground/60">
-            {t("credentialsNote")}
-          </p>
-        </div>
-      </div>
 
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       <AnimatePresence>
